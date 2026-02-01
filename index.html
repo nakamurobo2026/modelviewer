@@ -23,9 +23,21 @@
       background: #000;
     }
 
-    /* UIを消す */
-    model-viewer::part(default-progress-bar) {
-      display: none;
+    /* ▼ ARボタンを巨大化 */
+    model-viewer::part(ar-button) {
+      width: 160px;
+      height: 160px;
+      border-radius: 80px;
+      font-size: 22px;
+      font-weight: bold;
+      background: #ffffff;
+      color: #000000;
+      box-shadow: 0 0 30px rgba(255,255,255,0.8);
+    }
+
+    /* 中のアイコンも拡大 */
+    model-viewer::part(ar-button)::before {
+      transform: scale(1.6);
     }
   </style>
 </head>
@@ -39,7 +51,6 @@
     ar-scale="fixed"
     autoplay
     loop
-    camera-controls="false"
     interaction-prompt="none">
   </model-viewer>
 
