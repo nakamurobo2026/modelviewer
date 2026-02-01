@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>model-viewer demo</title>
+
+  <!-- model-viewer 読み込み -->
+  <script type="module"
+    src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js">
+  </script>
+
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: #fff;
+      font-family: sans-serif;
+      text-align: center;
+    }
+    model-viewer {
+      width: 100vw;
+      height: 80vh;
+    }
+    .buttons {
+      margin-top: 10px;
+    }
+    button {
+      font-size: 16px;
+      padding: 10px 20px;
+      margin: 0 5px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h2>Robot Dance</h2>
+
+  <model-viewer
+    id="mv"
+    src="dance.glb"
+    camera-controls
+    shadow-intensity="0.8"
+    exposure="1.1"
+    interaction-prompt="none">
+  </model-viewer>
+
+  <div class="buttons">
+    <button onclick="playDance()">▶ 再生</button>
+    <button onclick="stopDance()">⏸ 停止</button>
+  </div>
+
+  <script>
+    const mv = document.getElementById("mv");
+
+    function playDance() {
+      mv.play(); // アニメが1つならこれでOK
+    }
+
+    function stopDance() {
+      mv.pause();
+    }
+
+    // URLパラメータ対応（NFC用）
+    // 例： index.html?play=on
+    const params = new URLSearchParams(location.search);
+    if (params.get("play") === "on") {
+      mv.play();
+    }
+    if (params.get("play") === "off") {
+      mv.pause();
+    }
+  </script>
+
+</body>
+</html>
