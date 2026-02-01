@@ -1,94 +1,93 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<style>
-html, body {
-  margin: 0;
-  padding: 0;
-  background: black;
-  height: 100%;
-}
+  <script type="module"
+    src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js">
+  </script>
 
-/* 転送エフェクト */
-@keyframes teleport {
-  0% {
-    transform: translateY(40px) scale(0.15);
-    opacity: 0;
-    filter: brightness(2) blur(8px);
-  }
-  40% {
-    opacity: 1;
-    filter: brightness(2.5) blur(4px);
-  }
-  100% {
-    transform: translateY(0) scale(1);
-    opacity: 1;
-    filter: brightness(1) blur(0);
-  }
-}
+  <title>NakamuRobo AR</title>
 
-model-viewer {
-  width: 100vw;
-  height: 100vh;
-  animation: teleport 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-}
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      overflow: hidden;
+    }
 
-/* 転送ビーム（床） */
-#beam {
-  position: absolute;
-  bottom: 20%;
-  left: 50%;
-  width: 180px;
-  height: 180px;
-  background: radial-gradient(circle, rgba(0,255,255,0.8) 0%, rgba(0,255,255,0.3) 40%, transparent 70%);
-  transform: translateX(-50%) scale(0);
-  animation: beam 1.4s ease-out forwards;
-  pointer-events: none;
-}
+    model-viewer {
+      width: 100vw;
+      height: 100vh;
+      background: radial-gradient(circle at center, #111 0%, #000 70%);
+    }
 
-@keyframes beam {
-  0% { transform: translateX(-50%) scale(0); opacity: 0; }
-  30% { opacity: 1; }
-  100% { transform: translateX(-50%) scale(1.2); opacity: 0; }
-}
-</style>
+    /* ARボタンをデカくする（Android対応） */
+    model-viewer::part(ar-button) {
+      bottom: 24px;
+      right: 24px;
+      padding: 20px 28px;
+      font-size: 20px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #00f0ff, #0066ff);
+      color: white;
+      border: none;
+    }
+
+    /* SF転送（Web側での限界演出） */
+    .teleport {
+      animation: teleport 2s ease-out forwards;
+    }
+
+    @keyframes teleport {
+      0% {
+        opacity: 0;
+        transform: scale(0.15) translateY(120px);
+        filter: brightness(4) blur(8px);
+      }
+      40% {
+        opacity: 1;
+        transform: scale(1.2) translateY(-20px);
+        filter: brightness(3) blur(2px);
+      }
+      70% {
+        transform: scale(0.95) translateY(0);
+        filter: brightness(1.5);
+      }
+      100% {
+        transform: scale(1) translateY(0);
+        filter: brightness(1);
+      }
+    }
+  </style>
 </head>
 
 <body>
-
-<div id="beam"></div>
 
 <model-viewer
   id="viewer"
   src="dance.glb"
   ar
-  ar-modes="scene-viewer webxr quick-look"
+  ar-modes="scene-viewer quick-look"
+  ar-scale="fixed"
   camera-controls
+  auto-rotate
+  autoplay
+  animation-name=""
+  interaction-prompt="none"
   exposure="1.1"
-  shadow-intensity="1"
-  environment-image="neutral"
+  shadow-intensity="0.8"
+  scale="0.05 0.05 0.05"
 >
 </model-viewer>
 
 <script>
-const viewer = document.getElementById("viewer");
-const beam = document.getElementById("beam");
+  const viewer = document.getElementById("viewer");
 
-viewer.addEventListener("ar-status", (e) => {
-  if (e.detail.status === "session-started") {
-    // アニメーション再発動
-    viewer.style.animation = "none";
-    beam.style.animation = "none";
-    void viewer.offsetWidth;
-
-    viewer.style.animation = "teleport 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards";
-    beam.style.animation = "beam 1.4s ease-out forwards";
-  }
-});
+  viewer.addEventListener("load", () => {
+    viewer.classList.add("teleport");
+  });
 </script>
 
 </body>
