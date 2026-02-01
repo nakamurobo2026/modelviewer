@@ -1,70 +1,58 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+  <!-- model-viewer -->
   <script type="module"
     src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js">
   </script>
 
-  <title>NakamuRobo AR</title>
-
   <style>
-    body {
+    html, body {
       margin: 0;
-      background: black;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
       overflow: hidden;
     }
 
     model-viewer {
       width: 100vw;
       height: 100vh;
-      background: radial-gradient(circle at center, #111 0%, #000 70%);
+      background: #000;
     }
 
-    /* iPhone用：純正ARボタンをデカくする */
+    /* ARボタンをデカく中央下に */
     model-viewer::part(ar-button) {
+      position: fixed;
       bottom: 24px;
       left: 50%;
       transform: translateX(-50%);
-      padding: 22px 36px;
-      font-size: 22px;
-      border-radius: 18px;
-      background: linear-gradient(135deg, #00f0ff, #0066ff);
-      color: white;
-      box-shadow: 0 0 20px rgba(0,240,255,0.6);
-    }
-
-    /* ガイド文 */
-    #hint {
-      position: fixed;
-      bottom: 90px;
-      width: 100%;
-      text-align: center;
-      color: #9ff;
-      font-size: 16px;
-      opacity: 0.9;
-      pointer-events: none;
+      padding: 16px 28px;
+      font-size: 18px;
+      border-radius: 999px;
+      background: #00e5ff;
+      color: #000;
+      font-weight: bold;
     }
   </style>
 </head>
 
 <body>
-
-<model-viewer
-  src="dance.glb"
-  ar
-  ar-modes="scene-viewer quick-look"
-  ar-scale="fixed"
-  camera-controls
-  autoplay
-  interaction-prompt="none"
-  scale="0.05 0.05 0.05"
->
-</model-viewer>
-
-<div id="hint">⬇ ARボタンを押して召喚 ⬇</div>
-
+  <model-viewer
+    src="dance.glb"
+    ios-src="dance.usdz"
+    ar
+    ar-modes="scene-viewer quick-look webxr"
+    ar-scale="auto"
+    camera-controls
+    auto-rotate
+    shadow-intensity="1"
+    exposure="1"
+    alt="AR model">
+  </model-viewer>
 </body>
 </html>
