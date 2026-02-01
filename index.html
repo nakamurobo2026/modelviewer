@@ -23,21 +23,29 @@
       background: #000;
     }
 
-    /* ▼ ARボタンを巨大化 */
-    model-viewer::part(ar-button) {
-      width: 160px;
-      height: 160px;
-      border-radius: 80px;
-      font-size: 22px;
+    /* ★ 自作ARボタン */
+    .ar-big-button {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 200px;
+      height: 200px;
+      border-radius: 100px;
+      background: white;
+      color: black;
+      font-size: 24px;
       font-weight: bold;
-      background: #ffffff;
-      color: #000000;
-      box-shadow: 0 0 30px rgba(255,255,255,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 30px rgba(255,255,255,0.9);
+      z-index: 9999;
+      user-select: none;
     }
 
-    /* 中のアイコンも拡大 */
-    model-viewer::part(ar-button)::before {
-      transform: scale(1.6);
+    .ar-big-button:active {
+      transform: translateX(-50%) scale(0.95);
     }
   </style>
 </head>
@@ -45,6 +53,7 @@
 <body>
 
   <model-viewer
+    id="mv"
     src="dance.glb"
     ar
     ar-modes="scene-viewer quick-look"
@@ -53,6 +62,18 @@
     loop
     interaction-prompt="none">
   </model-viewer>
+
+  <!-- ★ デカいARボタン -->
+  <div class="ar-big-button" onclick="enterAR()">
+    ARで見る
+  </div>
+
+  <script>
+    function enterAR() {
+      const mv = document.getElementById('mv');
+      mv.activateAR();
+    }
+  </script>
 
 </body>
 </html>
