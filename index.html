@@ -19,29 +19,23 @@
     }
 
     h1 {
-      margin: 10px 0;
-      font-size: 20px;
+      margin: 12px 0;
+      font-size: 18px;
     }
 
-  model-viewer {
+    /* ★ model-viewerを包む箱（ARはみ出し対策） */
+    .viewer-wrap {
       width: 100%;
-      height: 200px;   /* ← 約5cm */
-      max-width: 300px;
+      max-width: 320px;
       margin: 0 auto;
+      padding-bottom: 64px; /* ← ARボタン用の余白 */
+    }
+
+    /* ★ 画面表示サイズ（約5cm） */
+    model-viewer {
+      width: 100%;
+      height: 200px; /* 約5cm */
       background: #000;
-    }
-
-    .controls {
-      margin: 10px;
-    }
-
-    button {
-      padding: 10px 20px;
-      margin: 0 5px;
-      font-size: 16px;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
     }
   </style>
 </head>
@@ -50,36 +44,21 @@
 
   <h1>Nakamu Robo</h1>
 
-  <model-viewer
-    id="mv"
-    src="dance.glb"
-    camera-controls
-    autoplay
-    loop
-    ar
-    ar-modes="scene-viewer quick-look"
-    ar-scale="fixed"
-    shadow-intensity="0.8"
-    exposure="1.1"
-    interaction-prompt="none">
-  </model-viewer>
-
-  <div class="controls">
-    <button onclick="play()">▶ 再生</button>
-    <button onclick="pause()">⏸ 停止</button>
+  <div class="viewer-wrap">
+    <model-viewer
+      id="mv"
+      src="dance.glb"
+      camera-controls
+      autoplay
+      loop
+      ar
+      ar-modes="scene-viewer quick-look"
+      ar-scale="fixed"
+      interaction-prompt="none"
+      shadow-intensity="0.8"
+      exposure="1.1">
+    </model-viewer>
   </div>
-
-  <script>
-    const mv = document.getElementById("mv");
-
-    function play() {
-      mv.play();
-    }
-
-    function pause() {
-      mv.pause();
-    }
-  </script>
 
 </body>
 </html>
