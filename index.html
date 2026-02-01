@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <script type="module"
     src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js">
@@ -23,19 +23,29 @@
       background: radial-gradient(circle at center, #111 0%, #000 70%);
     }
 
-    /* ARボタンを大きく（Android対応） */
+    /* デフォルトの小さいARボタンは完全に消す */
     model-viewer::part(ar-button) {
+      display: none;
+    }
+
+    /* 自前のデカいARボタン */
+    #arButton {
+      position: fixed;
       bottom: 24px;
-      right: 24px;
-      padding: 20px 28px;
-      font-size: 20px;
-      border-radius: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 22px 36px;
+      font-size: 22px;
+      font-weight: bold;
+      border-radius: 18px;
       background: linear-gradient(135deg, #00f0ff, #0066ff);
       color: white;
       border: none;
+      box-shadow: 0 0 20px rgba(0,240,255,0.6);
+      z-index: 10;
     }
 
-    /* 下から召喚されるSF転送演出 */
+    /* 下から召喚されるSF転送演出（Web表示用） */
     .teleport {
       animation: teleport 2s ease-out forwards;
     }
@@ -72,7 +82,6 @@
   ar-modes="scene-viewer quick-look"
   ar-scale="fixed"
   camera-controls
-  auto-rotate
   autoplay
   interaction-prompt="none"
   exposure="1.1"
@@ -81,11 +90,19 @@
 >
 </model-viewer>
 
+<!-- 自前ARボタン -->
+<button id="arButton">ARで召喚</button>
+
 <script>
   const viewer = document.getElementById("viewer");
+  const arButton = document.getElementById("arButton");
 
   viewer.addEventListener("load", () => {
     viewer.classList.add("teleport");
+  });
+
+  arButton.addEventListener("click", () => {
+    viewer.activateAR();
   });
 </script>
 
