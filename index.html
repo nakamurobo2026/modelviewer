@@ -23,52 +23,29 @@
       background: radial-gradient(circle at center, #111 0%, #000 70%);
     }
 
-    /* デフォルトの小さいARボタンは完全に消す */
+    /* iPhone用：純正ARボタンをデカくする */
     model-viewer::part(ar-button) {
-      display: none;
-    }
-
-    /* 自前のデカいARボタン */
-    #arButton {
-      position: fixed;
       bottom: 24px;
       left: 50%;
       transform: translateX(-50%);
       padding: 22px 36px;
       font-size: 22px;
-      font-weight: bold;
       border-radius: 18px;
       background: linear-gradient(135deg, #00f0ff, #0066ff);
       color: white;
-      border: none;
       box-shadow: 0 0 20px rgba(0,240,255,0.6);
-      z-index: 10;
     }
 
-    /* 下から召喚されるSF転送演出（Web表示用） */
-    .teleport {
-      animation: teleport 2s ease-out forwards;
-    }
-
-    @keyframes teleport {
-      0% {
-        opacity: 0;
-        transform: scale(0.15) translateY(-120px);
-        filter: brightness(4) blur(8px);
-      }
-      40% {
-        opacity: 1;
-        transform: scale(1.2) translateY(20px);
-        filter: brightness(3) blur(2px);
-      }
-      70% {
-        transform: scale(0.95) translateY(0);
-        filter: brightness(1.5);
-      }
-      100% {
-        transform: scale(1) translateY(0);
-        filter: brightness(1);
-      }
+    /* ガイド文 */
+    #hint {
+      position: fixed;
+      bottom: 90px;
+      width: 100%;
+      text-align: center;
+      color: #9ff;
+      font-size: 16px;
+      opacity: 0.9;
+      pointer-events: none;
     }
   </style>
 </head>
@@ -76,7 +53,6 @@
 <body>
 
 <model-viewer
-  id="viewer"
   src="dance.glb"
   ar
   ar-modes="scene-viewer quick-look"
@@ -84,27 +60,11 @@
   camera-controls
   autoplay
   interaction-prompt="none"
-  exposure="1.1"
-  shadow-intensity="0.8"
   scale="0.05 0.05 0.05"
 >
 </model-viewer>
 
-<!-- 自前ARボタン -->
-<button id="arButton">ARで召喚</button>
-
-<script>
-  const viewer = document.getElementById("viewer");
-  const arButton = document.getElementById("arButton");
-
-  viewer.addEventListener("load", () => {
-    viewer.classList.add("teleport");
-  });
-
-  arButton.addEventListener("click", () => {
-    viewer.activateAR();
-  });
-</script>
+<div id="hint">⬇ ARボタンを押して召喚 ⬇</div>
 
 </body>
 </html>
