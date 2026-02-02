@@ -45,6 +45,7 @@
       border-radius: 999px;
       background: #00ffcc;
       color: #000;
+      cursor: pointer;
     }
 
     .note {
@@ -54,11 +55,17 @@
       line-height: 1.5;
     }
 
+    /* LINEブラウザ用案内 */
     .safari-guide {
       display: none;
       margin-top: 24px;
-      font-size: 14px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      font-size: 15px;
       line-height: 1.6;
+      text-align: center;
+      color: #fff;
     }
 
     .safari-guide img {
@@ -66,21 +73,8 @@
       margin: 12px 0;
     }
 
-    /* Safari誘導ボタン（固定） */
-    #openSafari {
-      display: none;
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 14px 28px;
-      background: #00ffcc;
-      color: #000;
-      font-weight: bold;
-      border-radius: 999px;
-      z-index: 1000;
-      text-decoration: none;
-      text-align: center;
+    .safari-guide strong {
+      color: #ffeb3b; /* 注意を黄色で強調 */
     }
   </style>
 </head>
@@ -108,15 +102,12 @@
     <div class="safari-guide" id="safariGuide">
       <img src="./safari.png" alt="Safari" />
       <div>
-        LINE内ブラウザではARが起動しません<br>
-        右上「︙」→「Safariで開く」
+        <strong>LINE内ブラウザではARが起動しません</strong><br>
+        右下「︙」→ <strong>Safariで開く</strong> をタップしてください
       </div>
     </div>
 
   </div>
-
-  <!-- Safari誘導ボタン -->
-  <a id="openSafari" href="">Safariで開く</a>
 
   <script>
     function isLine() {
@@ -137,10 +128,6 @@
     // iPhone + LINE のときだけ案内表示
     if (isIOS() && isLine()) {
       document.getElementById("safariGuide").style.display = "block";
-
-      const safariBtn = document.getElementById("openSafari");
-      safariBtn.style.display = "inline-block";
-      safariBtn.href = window.location.href; // 現在ページをSafariで開く
     }
   </script>
 </body>
