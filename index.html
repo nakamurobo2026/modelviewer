@@ -1,61 +1,58 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8">
-<title>Nakamurobo AR</title>
+  <meta charset="utf-8">
+  <title>AR Viewer</title>
 
-<script type="module"
-  src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js">
-</script>
+  <!-- model-viewer -->
+  <script type="module"
+    src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js">
+  </script>
 
-<meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      overflow: hidden;
+    }
 
-<style>
-html, body {
-  margin: 0;
-  width: 100%;
-  height: 100%;
-  background: #000;
-  overflow: hidden;
-}
+    model-viewer {
+      width: 100vw;
+      height: 100vh;
+    }
 
-model-viewer {
-  width: 100%;
-  height: 100%;
-}
-
-.tap-guide {
-  position: absolute;
-  bottom: 40px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 14px 22px;
-  background: rgba(0,0,0,0.7);
-  color: #fff;
-  font-size: 16px;
-  border-radius: 999px;
-  pointer-events: none;
-}
-</style>
+    /* ARボタンを大きく・目立たせる */
+    model-viewer::part(ar-button) {
+      width: 160px;
+      height: 44px;
+      border-radius: 22px;
+      background: #ffffff;
+      color: #000000;
+      font-size: 14px;
+      font-weight: bold;
+      bottom: 24px;
+      right: calc(50% - 80px);
+    }
+  </style>
 </head>
 
 <body>
+  <model-viewer
+    src="dance.glb"
+    ios-src="dance.usdz"
 
-<model-viewer
-  src="dance.glb"
-  ios-src="dance.usdz"
-  ar
-  ar-modes="scene-viewer quick-look"
-  camera-controls
-  autoplay
-  animation-name="dance"
-  scale="1 1 1"
-  ar-placement="floor">
-</model-viewer>
+    ar
+    ar-modes="scene-viewer webxr quick-look"
 
-<div class="tap-guide">
-  📱 モデルをタップしてAR起動
-</div>
+    camera-controls
+    auto-rotate
 
+    scale="1 1 1"
+    exposure="1"
+    shadow-intensity="1"
+
+    alt="AR model">
+
+  </model-viewer>
 </body>
 </html>
