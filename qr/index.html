@@ -2,6 +2,93 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+  <title>AR起動案内</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+      text-align: center;
+      padding: 40px 20px;
+    }
+    h1 {
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+    p {
+      font-size: 14px;
+      line-height: 1.7;
+      opacity: 0.9;
+    }
+    .safari {
+      margin-top: 30px;
+    }
+    .safari img {
+      width: 80px;
+      margin-bottom: 10px;
+    }
+    .note {
+      margin-top: 20px;
+      font-size: 13px;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>ARを起動しています…</h1>
+
+<p id="message">しばらくお待ちください</p>
+
+<div id="safariGuide" class="safari" style="display:none;">
+  <img src="safari.png" alt="Safari">
+  <p>
+    iPhoneでは<br>
+    <strong>Safariで開く</strong>必要があります
+  </p>
+  <p>
+    画面下の<strong>共有ボタン（□↑）</strong>をタップし<br>
+    <strong>「Safariで開く」</strong>を選んでください
+  </p>
+  <p class="note">
+    ※ LINEアプリ内ブラウザでは<br>
+    ARは起動できません
+  </p>
+</div>
+
+<script>
+  const ua = navigator.userAgent.toLowerCase();
+  const arPage = "https://nakamurobo2026.github.io/modelviewer/";
+
+  // Android → 直接ARページへ
+  if (ua.includes("android")) {
+    window.location.href = arPage;
+  }
+
+  // iPhone / iPad → Safari案内
+  else if (ua.includes("iphone") || ua.includes("ipad")) {
+    document.getElementById("message").innerText =
+      "iPhoneではSafariが必要です";
+    document.getElementById("safariGuide").style.display = "block";
+  }
+
+  // その他
+  else {
+    document.getElementById("message").innerText =
+      "この端末はARに対応していません";
+  }
+</script>
+
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
   <title>AR起動</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
