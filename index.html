@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AR Viewer</title>
 
-  <!-- model-viewer -->
   <script type="module"
     src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js">
   </script>
@@ -26,62 +25,54 @@
     }
     button {
       margin-top: 20px;
-      padding: 14px 24px;
-      font-size: 16px;
-      border-radius: 8px;
+      padding: 16px 28px;
+      font-size: 18px;
+      border-radius: 999px;
       border: none;
       background: #00aaff;
       color: #fff;
+      font-weight: bold;
     }
   </style>
 </head>
 
 <body>
 
-  <!-- 3D表示 -->
-  <model-viewer
-    id="viewer"
-    src="dance.glb"
-    ios-src="dance.usdz"
-    ar
-    ar-modes="scene-viewer quick-look"
-    camera-controls
-    auto-rotate
-    alt="3D model">
-  </model-viewer>
+<model-viewer
+  src="https://nakamurobo2026.github.io/modelviewer/dance.glb"
+  ios-src="https://nakamurobo2026.github.io/modelviewer/dance.usdz"
+  ar
+  ar-modes="scene-viewer quick-look"
+  camera-controls
+  auto-rotate>
+</model-viewer>
 
-  <!-- 自前AR起動ボタン -->
-  <button onclick="startAR()">ARで表示する</button>
+<button onclick="startAR()">ARで表示する</button>
 
-  <script>
-    function startAR() {
-      const ua = navigator.userAgent.toLowerCase();
+<script>
+function startAR() {
+  const ua = navigator.userAgent.toLowerCase();
 
-      // iPhone (Quick Look)
-      if (ua.includes("iphone") || ua.includes("ipad")) {
-        const link = document.createElement("a");
-        link.rel = "ar";
-        link.href = "https://nakamurobo2026.github.io/modelviewer/dance.usdz";
-        document.body.appendChild(link);
-        link.click();
-      }
-      // Android (Scene Viewer)
-      else if (ua.includes("android")) {
-        const intent =
-          "intent://arvr.google.com/scene-viewer/1.0" +
-          "?file=https://nakamurobo2026.github.io/modelviewer/dance.glb" +
-          "&mode=ar_preferred" +
-          "#Intent;scheme=https;" +
-          "package=com.google.ar.core;" +
-          "action=android.intent.action.VIEW;" +
-          "end;";
-        window.location.href = intent;
-      }
-      else {
-        alert("この端末はAR非対応です");
-      }
-    }
-  </script>
+  // ✅ iPhone / iPad（Quick Look）
+  if (ua.includes("iphone") || ua.includes("ipad")) {
+    window.location.href =
+      "https://nakamurobo2026.github.io/modelviewer/dance.usdz";
+  }
+
+  // ✅ Android（Scene Viewer）
+  else if (ua.includes("android")) {
+    window.location.href =
+      "intent://arvr.google.com/scene-viewer/1.0" +
+      "?file=https://nakamurobo2026.github.io/modelviewer/dance.glb" +
+      "&mode=ar_preferred" +
+      "#Intent;scheme=https;package=com.google.ar.core;end;";
+  }
+
+  else {
+    alert("この端末はAR非対応です");
+  }
+}
+</script>
 
 </body>
 </html>
