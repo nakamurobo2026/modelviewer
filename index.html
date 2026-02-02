@@ -2,57 +2,116 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <title>AR Viewer</title>
+  <title>Nakamurobo AR</title>
 
-  <!-- model-viewer -->
   <script type="module"
     src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js">
   </script>
 
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <style>
-    body {
+    html, body {
       margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
       background: #000;
+      font-family: sans-serif;
       overflow: hidden;
     }
 
     model-viewer {
-      width: 100vw;
-      height: 100vh;
+      width: 100%;
+      height: 100%;
     }
 
-    /* ARボタンを大きく・目立たせる */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      color: #fff;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+      z-index: 100;
+    }
+
+    .overlay h1 {
+      font-size: 20px;
+      margin-bottom: 12px;
+    }
+
+    .overlay p {
+      font-size: 15px;
+      opacity: 0.9;
+    }
+
+    .btn {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 14px 26px;
+      border-radius: 999px;
+      background: #00ffcc;
+      color: #000;
+      font-weight: bold;
+      text-decoration: none;
+    }
+
+    /* ARボタン（通常時） */
     model-viewer::part(ar-button) {
-      width: 160px;
-      height: 44px;
-      border-radius: 22px;
-      background: #ffffff;
-      color: #000000;
-      font-size: 14px;
+      width: 180px;
+      height: 46px;
+      border-radius: 23px;
+      font-size: 15px;
       font-weight: bold;
       bottom: 24px;
-      right: calc(50% - 80px);
+      right: calc(50% - 90px);
     }
   </style>
 </head>
 
 <body>
-  <model-viewer
-    src="dance.glb"
-    ios-src="dance.usdz"
 
-    ar
-    ar-modes="scene-viewer webxr quick-look"
+<!-- LINE内ブラウザ用オーバーレイ -->
+<div id="lineOverlay" class="overlay">
+  <div>
+    <h1>⚠️ ARはLINEでは起動できません</h1>
+    <p>
+      右上の「︙」をタップして<br>
+      <b>「他のブラウザで開く（Chrome / Safari）」</b><br>
+      を選んでください
+    </p>
+    <a href="https://nakamurobo2026.github.io/modelviewer/" class="btn">
+      🌐 ブラウザで開く
+    </a>
+  </div>
+</div>
 
-    camera-controls
-    auto-rotate
+<!-- 3D / AR本体 -->
+<model-viewer
+  src="dance.glb"
+  ios-src="dance.usdz"
+  ar
+  ar-modes="scene-viewer webxr quick-look"
+  camera-controls
+  autoplay
+  animation-name="dance"
+  scale="1 1 1"
+  exposure="1"
+  shadow-intensity="1">
+</model-viewer>
 
-    scale="1 1 1"
-    exposure="1"
-    shadow-intensity="1"
+<script>
+  const ua = navigator.userAgent;
+  const isLINE = /Line/i.test(ua);
 
-    alt="AR model">
+  if (isLINE) {
+    document.getElementById("lineOverlay").style.display = "flex";
+  }
+</script>
 
-  </model-viewer>
 </body>
 </html>
