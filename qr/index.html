@@ -27,6 +27,7 @@
       justify-content: center;
       height: 100%;
       text-align: center;
+      padding: 0 16px;
     }
 
     model-viewer {
@@ -64,6 +65,23 @@
       width: 64px;
       margin: 12px 0;
     }
+
+    /* Safari誘導ボタン（固定） */
+    #openSafari {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 14px 28px;
+      background: #00ffcc;
+      color: #000;
+      font-weight: bold;
+      border-radius: 999px;
+      z-index: 1000;
+      text-decoration: none;
+      text-align: center;
+    }
   </style>
 </head>
 
@@ -72,8 +90,8 @@
 
     <model-viewer
       id="mv"
-      src="../dance.glb"
-      ios-src="../dance.usdz"
+      src="https://nakamurobo2026.github.io/modelviewer/dance.glb"
+      ios-src="https://nakamurobo2026.github.io/modelviewer/dance.usdz"
       ar
       ar-modes="quick-look scene-viewer webxr"
       camera-controls
@@ -97,6 +115,9 @@
 
   </div>
 
+  <!-- Safari誘導ボタン -->
+  <a id="openSafari" href="">Safariで開く</a>
+
   <script>
     function isLine() {
       return navigator.userAgent.includes("Line");
@@ -116,6 +137,10 @@
     // iPhone + LINE のときだけ案内表示
     if (isIOS() && isLine()) {
       document.getElementById("safariGuide").style.display = "block";
+
+      const safariBtn = document.getElementById("openSafari");
+      safariBtn.style.display = "inline-block";
+      safariBtn.href = window.location.href; // 現在ページをSafariで開く
     }
   </script>
 </body>
