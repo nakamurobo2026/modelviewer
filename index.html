@@ -4,7 +4,6 @@
   <meta charset="utf-8">
   <title>Nakamurobo AR</title>
 
-  <!-- model-viewer -->
   <script type="module"
     src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js">
   </script>
@@ -19,6 +18,7 @@
       height: 100%;
       background: #000;
       overflow: hidden;
+      font-family: sans-serif;
     }
 
     model-viewer {
@@ -27,45 +27,43 @@
       background: #000;
     }
 
-    /* ARボタンをデカく中央下に */
-    .ar-button {
-      position: absolute;
+    .ar-btn {
+      position: fixed;
       bottom: 24px;
       left: 50%;
       transform: translateX(-50%);
       padding: 16px 28px;
       font-size: 18px;
       font-weight: bold;
+      border-radius: 999px;
       background: #00ffcc;
       color: #000;
-      border-radius: 999px;
-      border: none;
-      cursor: pointer;
+      text-decoration: none;
       box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+      z-index: 10;
     }
   </style>
 </head>
 
 <body>
 
+<!-- 3D表示（全端末共通） -->
 <model-viewer
   src="dance.glb"
-  ios-src="dance.usdz"
-  ar
-  ar-modes="scene-viewer quick-look webxr"
   camera-controls
   autoplay
   animation-name="dance"
-  scale="1 1 1"
-  shadow-intensity="1"
   exposure="1"
-  ar-placement="floor">
-
-  <button slot="ar-button" class="ar-button">
-    🤖 ARで召喚する
-  </button>
-
+  shadow-intensity="1">
 </model-viewer>
+
+<!-- iPhone用 AR起動ボタン（これが本命） -->
+<a
+  href="dance.usdz"
+  rel="ar"
+  class="ar-btn">
+  AR起動
+</a>
 
 </body>
 </html>
