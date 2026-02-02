@@ -25,14 +25,18 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100%;
+      min-height: 100vh;
       text-align: center;
+      padding: 0 16px;
     }
 
     model-viewer {
       width: 100%;
+      max-width: 500px;
       height: 60vh;
       background: #000;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0,255,204,0.4);
     }
 
     button {
@@ -44,6 +48,7 @@
       border-radius: 999px;
       background: #00ffcc;
       color: #000;
+      cursor: pointer;
     }
 
     .note {
@@ -56,13 +61,22 @@
     .safari-guide {
       display: none;
       margin-top: 24px;
-      font-size: 14px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      font-size: 15px;
       line-height: 1.6;
+      text-align: center;
+      color: #fff;
     }
 
     .safari-guide img {
       width: 64px;
       margin: 12px 0;
+    }
+
+    .safari-guide strong {
+      color: #ffeb3b;
     }
   </style>
 </head>
@@ -70,6 +84,7 @@
 <body>
   <div class="wrap">
 
+    <!-- モデルビューア -->
     <model-viewer
       id="mv"
       src="https://nakamurobo2026.github.io/modelviewer/dance.glb"
@@ -78,6 +93,7 @@
       ar-modes="quick-look scene-viewer webxr"
       camera-controls
       autoplay
+      auto-rotate
       exposure="1">
     </model-viewer>
 
@@ -90,8 +106,8 @@
     <div class="safari-guide" id="safariGuide">
       <img src="./safari.png" alt="Safari" />
       <div>
-        LINE内ブラウザではARが起動しません<br>
-        右上「︙」→「Safariで開く」
+        <strong>LINE内ブラウザではARが起動しません</strong><br>
+        右下「︙」→ <strong>Safariで開く</strong> をタップしてください
       </div>
     </div>
 
