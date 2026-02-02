@@ -1,79 +1,87 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <title>Nakamurobo AR</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AR Viewer</title>
 
+  <!-- model-viewer -->
   <script type="module"
     src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js">
   </script>
 
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
   <style>
-    html, body {
+    body {
       margin: 0;
       padding: 0;
-      width: 100%;
-      height: 100%;
+      text-align: center;
       background: #000;
+      color: #fff;
       font-family: sans-serif;
-      overflow: hidden;
     }
-
     model-viewer {
       width: 100%;
-      height: 100%;
+      height: 60vh;
+      background: #111;
     }
-
-    .btn {
-      position: fixed;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 14px 26px;
-      border-radius: 999px;
+    button {
+      margin-top: 20px;
+      padding: 14px 24px;
       font-size: 16px;
-      font-weight: bold;
-      text-decoration: none;
-      color: #000;
-      background: #00ffcc;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-      z-index: 10;
-    }
-
-    .btn-ar {
-      bottom: 24px;
+      border-radius: 8px;
+      border: none;
+      background: #00aaff;
+      color: #fff;
     }
   </style>
 </head>
 
 <body>
 
-<!-- 3D表示（全端末共通） -->
-<model-viewer
-  src="dance.glb"
-  camera-controls
-  autoplay
-  animation-name="dance"
-  scale="1 1 1">
-</model-viewer>
+  <!-- 3D表示 -->
+  <model-viewer
+    id="viewer"
+    src="model.glb"
+    ios-src="model.usdz"
+    ar
+    ar-modes="scene-viewer quick-look"
+    camera-controls
+    auto-rotate
+    alt="3D model">
+  </model-viewer>
 
-<!-- Android：Scene Viewer 直起動 -->
-<a
-  class="btn btn-ar"
-  href="intent://arvr.google.com/scene-viewer/1.0
-?file=https://nakamurobo2026.github.io/modelviewer/dance.glb
-&mode=ar_preferred
-#Intent;scheme=https;package=com.google.ar.core;end;">
-🤖 ARで召喚する
-</a>
+  <!-- 自前AR起動ボタン -->
+  <button onclick="startAR()">ARで表示する</button>
 
-<!-- iPhone用（Safariのみ反応） -->
-<a
-  rel="ar"
-  href="dance.usdz"
-  style="display:none;">
-</a>
+  <script>
+    function startAR() {
+      const ua = navigator.userAgent.toLowerCase();
+
+      // iPhone (Quick Look)
+      if (ua.includes("iphone") || ua.includes("ipad")) {
+        const link = document.createElement("a");
+        link.rel = "ar";
+        link.href = "model.usdz";
+        document.body.appendChild(link);
+        link.click();
+      }
+      // Android (Scene Viewer)
+      else if (ua.includes("android")) {
+        const intent =
+          "intent://arvr.google.com/scene-viewer/1.0" +
+          "?file=https://nakamurobo2026.github.io/modelviewer/dance.glb" +
+          "&mode=ar_preferred" +
+          "#Intent;scheme=https;" +
+          "package=com.google.ar.core;" +
+          "action=android.intent.action.VIEW;" +
+          "end;";
+        window.location.href = intent;
+      }
+      else {
+        alert("この端末はAR非対応です");
+      }
+    }
+  </script>
 
 </body>
 </html>
