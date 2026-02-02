@@ -26,98 +26,54 @@
       height: 100%;
     }
 
-    .overlay {
-      position: fixed;
-      inset: 0;
-      background: #000;
-      color: #fff;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 24px;
-      z-index: 100;
-    }
-
     .btn {
-      display: inline-block;
-      margin-top: 20px;
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
       padding: 14px 26px;
       border-radius: 999px;
-      background: #00ffcc;
-      color: #000;
+      font-size: 16px;
       font-weight: bold;
       text-decoration: none;
+      color: #000;
+      background: #00ffcc;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+      z-index: 10;
     }
 
-    model-viewer::part(ar-button) {
-      width: 180px;
-      height: 46px;
-      border-radius: 23px;
-      font-size: 15px;
-      font-weight: bold;
+    .btn-ar {
       bottom: 24px;
-      right: calc(50% - 90px);
     }
   </style>
 </head>
 
 <body>
 
-<!-- LINE用オーバーレイ -->
-<div id="lineOverlay" class="overlay">
-  <div>
-    <h2>⚠️ LINEではARが起動できません</h2>
-    <p>
-      下のボタンから<br>
-      <b>Chrome / Safari</b> で開いてください
-    </p>
-
-    <!-- Android：Chromeを強制起動 -->
-    <a
-      id="openBrowser"
-      class="btn">
-      🌐 ブラウザで開く
-    </a>
-  </div>
-</div>
-
-<!-- AR本体 -->
+<!-- 3D表示（全端末共通） -->
 <model-viewer
   src="dance.glb"
-  ios-src="dance.usdz"
-  ar
-  ar-modes="scene-viewer webxr quick-look"
   camera-controls
   autoplay
   animation-name="dance"
   scale="1 1 1">
 </model-viewer>
 
-<script>
-  const ua = navigator.userAgent;
-  const isLINE = /Line/i.test(ua);
-  const isAndroid = /Android/i.test(ua);
-  const isiPhone = /iPhone|iPad/i.test(ua);
+<!-- Android：Scene Viewer 直起動 -->
+<a
+  class="btn btn-ar"
+  href="intent://arvr.google.com/scene-viewer/1.0
+?file=https://nakamurobo2026.github.io/modelviewer/dance.glb
+&mode=ar_preferred
+#Intent;scheme=https;package=com.google.ar.core;end;">
+🤖 ARで召喚する
+</a>
 
-  if (isLINE) {
-    document.getElementById("lineOverlay").style.display = "flex";
-
-    const btn = document.getElementById("openBrowser");
-
-    if (isAndroid) {
-      // Android：Chromeを直接起動
-      btn.href =
-        "intent://nakamurobo2026.github.io/modelviewer/#Intent;" +
-        "scheme=https;" +
-        "package=com.android.chrome;" +
-        "end;";
-    } else if (isiPhone) {
-      // iPhone：Safariで開く（ユーザー操作必須）
-      btn.href = "https://nakamurobo2026.github.io/modelviewer/";
-    }
-  }
-</script>
+<!-- iPhone用（Safariのみ反応） -->
+<a
+  rel="ar"
+  href="dance.usdz"
+  style="display:none;">
+</a>
 
 </body>
 </html>
