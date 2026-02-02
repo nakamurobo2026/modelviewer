@@ -1,71 +1,122 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AR Viewer</title>
+  <meta charset="UTF-8" />
+  <title>AR Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-<script type="module"
-  src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js">
-</script>
+  <!-- model-viewer -->
+  <script type="module"
+    src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js">
+  </script>
 
-<style>
-body {
-  margin: 0;
-  background: #000;
-  color: #fff;
-  font-family: sans-serif;
-  text-align: center;
-}
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+      height: 100%;
+    }
 
-model-viewer {
-  width: 100%;
-  height: 60vh;
-  background: #111;
-}
+    .wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+    }
 
-/* 共通ボタン風 */
-.ar-button {
-  display: inline-block;
-  margin-top: 20px;
-  padding: 16px 28px;
-  font-size: 18px;
-  font-weight: bold;
-  border-radius: 999px;
-  text-decoration: none;
-  color: #000;
-  background: #00aaff;
-}
-</style>
+    model-viewer {
+      width: 100%;
+      height: 60vh;
+      background: #000;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 18px 32px;
+      font-size: 18px;
+      font-weight: bold;
+      border: none;
+      border-radius: 999px;
+      background: #00ffcc;
+      color: #000;
+    }
+
+    .note {
+      margin-top: 16px;
+      font-size: 14px;
+      opacity: 0.8;
+      line-height: 1.5;
+    }
+
+    .safari-guide {
+      display: none;
+      margin-top: 24px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .safari-guide img {
+      width: 64px;
+      margin: 12px 0;
+    }
+  </style>
 </head>
 
 <body>
+  <div class="wrap">
 
-<model-viewer
-  src="https://nakamurobo2026.github.io/modelviewer/dance.glb"
-  ios-src="https://nakamurobo2026.github.io/modelviewer/dance.usdz"
-  camera-controls
-  auto-rotate>
-</model-viewer>
+    <model-viewer
+      id="mv"
+      src="../dance.glb"
+      ios-src="../dance.usdz"
+      ar
+      ar-modes="quick-look scene-viewer webxr"
+      camera-controls
+      autoplay
+      exposure="1">
+    </model-viewer>
 
-<!-- iPhone用：タップでAR起動（これが最重要） -->
-<a
-  class="ar-button"
-  rel="ar"
-  href="https://nakamurobo2026.github.io/modelviewer/dance.usdz">
-  ARで表示する
-</a>
+    <button onclick="startAR()">ARで見る</button>
 
-<!-- Android用 -->
-<script>
-if (navigator.userAgent.toLowerCase().includes("android")) {
-  document.querySelector(".ar-button").href =
-    "intent://arvr.google.com/scene-viewer/1.0" +
-    "?file=https://nakamurobo2026.github.io/modelviewer/dance.glb" +
-    "&mode=ar_preferred" +
-    "#Intent;scheme=https;package=com.google.ar.core;end;";
-}
-</script>
+    <div class="note">
+      ※ iPhoneはSafariで開く必要があります
+    </div>
 
+    <div class="safari-guide" id="safariGuide">
+      <img src="./safari.png" alt="Safari" />
+      <div>
+        LINE内ブラウザではARが起動しません<br>
+        右上「︙」→「Safariで開く」
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function isLine() {
+      return navigator.userAgent.includes("Line");
+    }
+
+    function isIOS() {
+      return /iPhone|iPad|iPod/.test(navigator.userAgent);
+    }
+
+    function startAR() {
+      const mv = document.getElementById("mv");
+      if (mv) {
+        mv.activateAR();
+      }
+    }
+
+    // iPhone + LINE のときだけ案内表示
+    if (isIOS() && isLine()) {
+      document.getElementById("safariGuide").style.display = "block";
+    }
+  </script>
 </body>
 </html>
