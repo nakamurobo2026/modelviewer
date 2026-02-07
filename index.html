@@ -3,20 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-  <title>ナカムロボ AR 操作完全版</title>
+  <title>ナカムロボ AR Pro</title>
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
   <style>
     :root { --primary-color: #4285f4; }
     body { margin: 0; background-color: #ffffff; font-family: sans-serif; overflow: hidden; }
     
+    /* 上部：プレビューエリア */
     model-viewer { 
       width: 100vw; 
       height: 70vh; 
       background-color: #f8f9fa;
-      /* 指の操作をブラウザに奪われないための設定 */
-      touch-action: none; 
+      touch-action: none; /* ブラウザのスクロールを無効化し操作をモデルに集中 */
     }
 
+    /* 下部：操作パネル */
     .controls {
       width: 100vw; height: 30vh; display: flex; flex-direction: column;
       align-items: center; justify-content: center; background: white;
@@ -31,22 +32,18 @@
       font-size: 20px; font-weight: bold; border-radius: 40px; border: none;
       box-shadow: 0 6px 20px rgba(66, 133, 244, 0.4); cursor: pointer;
     }
-    
-    .progress-bar {
-      display: block; width: 50%; height: 4px; position: absolute;
-      left: 50%; top: 35%; transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.1); border-radius: 2px;
-    }
-    .update-bar { background-color: var(--primary-color); width: 0%; height: 100%; transition: width 0.3s; }
-    p { margin-top: 15px; color: #666; font-size: 14px; text-align: center; }
+    #ar-button:active { transform: scale(0.96); }
+
+    .instruction { margin-top: 15px; color: #666; font-size: 13px; text-align: center; line-height: 1.5; }
   </style>
 </head>
 <body>
 
   <model-viewer 
+    id="ar-viewer"
     src="dance.glb" 
     ar 
-    ar-modes="webxr scene-viewer quick-look" 
+    ar-modes="webxr scene-viewer" 
     camera-controls 
     ar-scale="auto" 
     scale="3 3 3" 
@@ -54,30 +51,30 @@
     environment-image="neutral" 
     ar-placement="floor"
     interaction-prompt="auto"
-    /* 指での操作を強制許可する属性 */
+    /* AR内での操作を強制許可する属性 */
     enable-pan
-    interaction-attributes="all"
-    touch-action="none">
-    
-    <div class="progress-bar" slot="progress-bar">
-      <div class="update-bar"></div>
-    </div>
+    interaction-attributes="all">
   </model-viewer>
 
   <div class="controls">
-    <button id="ar-button" onclick="document.querySelector('model-viewer').activateAR()">
+    <button id="ar-button" onclick="document.querySelector('#ar-viewer').activateAR()">
       ナカムロボをAR召喚
     </button>
-    <p>指1本で回転、指2本で移動・拡大ができます</p>
+    <div class="instruction">
+      【AR内の操作ガイド】<br>
+      ① 床を認識するまでスマホを左右に動かす<br>
+      ② 1本指で回転 / 2本指で移動・拡大
+    </div>
   </div>
 
   <script>
-    const modelViewer = document.querySelector('model-viewer');
-    modelViewer.addEventListener('progress', (event) => {
-      const progressBar = document.querySelector('.update-bar');
-      progressBar.style.width = `${event.detail.totalProgress * 100}%`;
-      if (event.detail.totalProgress === 1) {
-        setTimeout(() => { document.querySelector('.progress-bar').style.display = 'none'; }, 300);
+    const mv = document.querySelector('#ar-viewer');
+    
+    // ARセッション開始時に改めてスケーリングを有効化するスクリプト
+    mv.addEventListener('ar-status', (event) => {
+      if(event.detail.status === 'session-started'){
+        // Android 16のWebXRで操作がロックされないよう明示的に指示
+        mv.arScale = 'auto';
       }
     });
   </script>
