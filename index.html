@@ -2,103 +2,62 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>ナカムロボ AR Viewer</title>
+  <title>ナカムロボ AR 復活版</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 
   <style>
     html, body {
-      margin: 0;
-      padding: 0;
-      background: #000; /* ナカムロボが映える黒背景 */
-      color: #fff;
-      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
-      height: 100%;
-      overflow: hidden;
+      margin: 0; padding: 0; background: #000; color: #fff;
+      font-family: sans-serif; height: 100%; overflow: hidden;
     }
+    .wrap { display: flex; flex-direction: column; height: 100%; }
 
-    .wrap {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-    }
+    /* モデルを大きく表示 */
+    model-viewer { width: 100%; height: 75vh; background: #000; }
 
-    /* モデル表示エリア：画面の70%を占有して大きく見せる */
-    model-viewer {
-      width: 100%;
-      height: 70vh;
-      background: #000;
-    }
-
-    /* 操作エリア：下部30%にボタンを配置 */
+    /* 下部固定の巨大ボタンエリア */
     .controls {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 30vh;
-      background: #111; /* ボタンエリアを少し明るくして区別 */
-      border-top: 1px solid #333;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 25vh; background: #111; border-top: 1px solid #333;
     }
 
-    /* 召喚ボタン：元の「00ffcc」を活かした巨大ボタン */
     button {
-      width: 85%;
-      height: 75px;
-      font-size: 20px;
-      font-weight: bold;
-      border: none;
-      border-radius: 999px;
-      background: #00ffcc;
-      color: #000;
-      cursor: pointer;
-      box-shadow: 0 4px 20px rgba(0, 255, 204, 0.3);
+      width: 85%; height: 75px; font-size: 20px; font-weight: bold;
+      border: none; border-radius: 999px; background: #00ffcc; color: #000;
+      box-shadow: 0 4px 20px rgba(0, 255, 204, 0.4);
     }
-
-    button:active {
-      transform: scale(0.96);
-    }
-
-    .note {
-      margin-top: 15px;
-      font-size: 13px;
-      opacity: 0.8;
-      line-height: 1.5;
-      text-align: center;
-    }
+    button:active { transform: scale(0.96); }
+    .note { margin-top: 12px; font-size: 12px; opacity: 0.7; text-align: center; }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-
     <model-viewer
       id="mv"
-      /* リンク先は元の index_qr.html のまま一切変えていません */
       src="https://nakamurobo2026.github.io/modelviewer/dance.glb"
       ios-src="https://nakamurobo2026.github.io/modelviewer/dance.usdz"
       ar
-      /* 動いていた時と同じモード順序 */
-      ar-modes="quick-look scene-viewer webxr"
+      /* Android 16で「戻される」のを防ぐため、安定のScene Viewerに絞る */
+      ar-modes="scene-viewer quick-look"
       camera-controls
       autoplay
-      exposure="1">
+      exposure="1"
+      ar-placement="floor">
     </model-viewer>
 
     <div class="controls">
       <button onclick="startAR()">ARでナカムロボ召喚</button>
-      
       <div class="note">
-        指1本で回転、2本指で移動・拡大<br>
-        ※iPhoneはSafari推奨
+        ※ 起動しない場合は、Chromeの全タブを閉じて<br>
+        ページを再読み込みしてください。
       </div>
     </div>
-
   </div>
 
   <script>
-    // 元の index_qr.html と同じ起動関数
     function startAR() {
       const mv = document.getElementById('mv');
       if (mv) {
