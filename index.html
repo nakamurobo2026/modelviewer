@@ -1,24 +1,94 @@
 <!doctype html>
-<html>
+<html lang="ja">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ナカムロボ AR Viewer</title>
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+  <style>
+    :root { --primary-color: #4285f4; }
+    body { margin: 0; background-color: #f0f0f0; font-family: sans-serif; }
+    model-viewer { width: 100vw; height: 100vh; background-color: #eee; }
+
+    /* AR起動ボタンのカスタマイズ */
+    #ar-button {
+      background-image: url(https://modelviewer.dev/assets/ic_view_in_ar_new_googblue_48dp.png);
+      background-repeat: no-repeat;
+      background-size: 20px 20px;
+      background-position: 12px 50%;
+      background-color: #fff;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      bottom: 32px;
+      padding: 0px 16px 0px 40px;
+      font-family: Roboto Regular, Helvetica Neue, sans-serif;
+      font-size: 14px;
+      color: var(--primary-color);
+      height: 36px;
+      line-height: 36px;
+      border-radius: 18px;
+      border: 1px solid #DADCE0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      cursor: pointer;
+    }
+    #ar-button:active { background-color: #E8EAED; }
+    #ar-button:focus { outline: none; }
+
+    /* 読み込み中プログレスバー */
+    .progress-bar {
+      display: block; width: 33%; height: 10%; max-height: 2px;
+      position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.1); border-radius: 25px; box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+    }
+    .update-bar {
+      background-color: var(--primary-color); width: 0%; height: 100%;
+      border-radius: 25px; transition: width 0.3s;
+    }
+    
+    /* モデル読み込み後に隠すアニメーション用 */
+    model-viewer[ar-status="session-started"] > #ar-button { display: none; }
+  </style>
 </head>
-<body style="margin:0">
+<body>
+
   <model-viewer 
-    src="dance.glb"
+    src="dance.glb" 
     ar 
     ar-modes="webxr scene-viewer quick-look" 
     camera-controls 
-    touch-action="pan-y"
+    poster="poster.webp" 
+    shadow-intensity="1" 
+    environment-image="neutral" 
+    exposure="1"
     ar-placement="floor"
-    alt="A 3D model of an astronaut"
-    style="width:100vw; height:100vh;">
+    touch-action="pan-y">
     
-    <button slot="ar-button" style="background-color: white; border-radius: 4px; border: none; position: absolute; top: 16px; right: 16px; padding: 10px;">
-      👋 ARで表示
+    <button slot="ar-button" id="ar-button">
+      ARで踊らせる
     </button>
+
+    <div class="progress-bar" slot="progress-bar">
+      <div class="update-bar"></div>
+    </div>
+
   </model-viewer>
+
+  <script>
+    // 読み込み状況に合わせてバーを伸ばすスクリプト
+    const onProgress = (event) => {
+      const progressBar = event.target.querySelector('.update-bar');
+      if (progressBar) {
+        progressBar.style.width = `${event.detail.totalProgress * 100}%`;
+        if (event.detail.totalProgress === 1) {
+          setTimeout(() => {
+            event.target.querySelector('.progress-bar').style.display = 'none';
+          }, 300);
+        }
+      }
+    };
+    document.querySelector('model-viewer').addEventListener('progress', onProgress);
+  </script>
 </body>
 </html>
