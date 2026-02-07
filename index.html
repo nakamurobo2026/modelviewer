@@ -3,21 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-  <title>ナカムロボ AR Pro</title>
+  <title>ナカムロボ AR Pro (Android 16対応版)</title>
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
   <style>
     :root { --primary-color: #4285f4; }
     body { margin: 0; background-color: #ffffff; font-family: sans-serif; overflow: hidden; }
     
-    /* 上部：プレビューエリア */
     model-viewer { 
       width: 100vw; 
       height: 70vh; 
       background-color: #f8f9fa;
-      touch-action: none; /* ブラウザのスクロールを無効化し操作をモデルに集中 */
+      touch-action: none;
     }
 
-    /* 下部：操作パネル */
     .controls {
       width: 100vw; height: 30vh; display: flex; flex-direction: column;
       align-items: center; justify-content: center; background: white;
@@ -34,7 +32,7 @@
     }
     #ar-button:active { transform: scale(0.96); }
 
-    .instruction { margin-top: 15px; color: #666; font-size: 13px; text-align: center; line-height: 1.5; }
+    .instruction { margin-top: 15px; color: #666; font-size: 13px; text-align: center; line-height: 1.5; padding: 0 20px; }
   </style>
 </head>
 <body>
@@ -42,40 +40,36 @@
   <model-viewer 
     id="ar-viewer"
     src="dance.glb" 
+    ios-src="dance.usdz"
     ar 
-    ar-modes="webxr scene-viewer" 
+    ar-modes="scene-viewer webxr quick-look" 
     camera-controls 
     ar-scale="auto" 
-    scale="3 3 3" 
+    scale="1 1 1" 
     shadow-intensity="1" 
     environment-image="neutral" 
     ar-placement="floor"
-    interaction-prompt="auto"
-    /* AR内での操作を強制許可する属性 */
-    enable-pan
-    interaction-attributes="all">
+    interaction-prompt="auto">
+    
+    <div slot="progress-bar" style="width: 100%; height: 4px; background: rgba(0,0,0,0.1);">
+      <div id="update-bar" style="width: 0%; height: 100%; background: var(--primary-color);"></div>
+    </div>
   </model-viewer>
 
   <div class="controls">
     <button id="ar-button" onclick="document.querySelector('#ar-viewer').activateAR()">
-      ナカムロボをAR召喚
+      ナカムロボを召喚する
     </button>
     <div class="instruction">
-      【AR内の操作ガイド】<br>
-      ① 床を認識するまでスマホを左右に動かす<br>
-      ② 1本指で回転 / 2本指で移動・拡大
+      Android 16 の方は、起動後にスマホを<br>
+      「8の字」に動かして床をスキャンしてください。
     </div>
   </div>
 
   <script>
     const mv = document.querySelector('#ar-viewer');
-    
-    // ARセッション開始時に改めてスケーリングを有効化するスクリプト
-    mv.addEventListener('ar-status', (event) => {
-      if(event.detail.status === 'session-started'){
-        // Android 16のWebXRで操作がロックされないよう明示的に指示
-        mv.arScale = 'auto';
-      }
+    mv.addEventListener('progress', (event) => {
+      document.querySelector('#update-bar').style.width = `${event.detail.totalProgress * 100}%`;
     });
   </script>
 </body>
