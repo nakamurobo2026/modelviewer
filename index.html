@@ -9,25 +9,21 @@
     html, body { margin: 0; padding: 0; background: #000; color: #fff; font-family: sans-serif; height: 100%; overflow: hidden; }
     .wrap { position: relative; width: 100%; height: 100%; }
 
-    /* プレビュー画面を少しだけ小さくし、UIと干渉させない */
+    /* プレビュー画面：全画面 */
     model-viewer {
       width: 100%; height: 100%; background: #000;
-      /* 指の操作を100%モデルに渡す */
-      touch-action: none;
+      touch-action: none; /* ブラウザのスクロールを完全無効化 */
     }
 
-    /* 召喚エフェクト用レイヤー */
-    #effect-layer {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      pointer-events: none; z-index: 10;
-    }
-
+    /* エフェクト：z-indexを下げて操作を邪魔しない */
     .summon-ring {
       position: absolute; width: 100px; height: 100px;
       border-radius: 50%; border: 4px solid #00ffcc;
       box-shadow: 0 0 30px #00ffcc;
       transform: translate(-50%, -50%);
       animation: ring 0.6s ease-out forwards;
+      pointer-events: none; /* これが重要：タップを透過させる */
+      z-index: 50;
     }
 
     @keyframes ring {
@@ -40,21 +36,20 @@
       position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
       text-align: center; background: rgba(0,0,0,0.8); color: #00ffcc;
       padding: 15px 25px; border-radius: 30px; font-size: 14px;
-      line-height: 1.5; pointer-events: none; z-index: 20; width: 80%;
+      pointer-events: none; z-index: 60; width: 80%;
     }
 
-    /* 召喚ボタン：上部に配置 */
+    /* 召喚ボタン */
     #ar-btn {
       position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
-      background: #00ffcc; color: #000; font-weight: bold; font-size: 18px;
-      border: none; border-radius: 40px; padding: 15px 35px;
+      background: #00ffcc; color: #000; font-weight: bold; font-size: 20px;
+      border: none; border-radius: 40px; padding: 18px 40px;
       cursor: pointer; z-index: 100; box-shadow: 0 4px 15px rgba(0,255,204,0.5);
     }
   </style>
 </head>
 <body>
 <div class="wrap" id="main-wrap">
-  <div id="effect-layer"></div>
   <button id="ar-btn">ナカムロボを召喚</button>
 
   <model-viewer
@@ -64,32 +59,28 @@
     ar
     ar-modes="webxr quick-look"
     ar-placement="floor"
-    /* 【重要】向きの変更、移動、拡大をすべて許可 */
     camera-controls
     enable-pan
     ar-scale="auto"
-    interaction-prompt="none"
     scale="3 3 3"
     shadow-intensity="2"
-    environment-image="neutral">
+    environment-image="neutral"
+    interaction-prompt="none">
   </model-viewer>
 
-  <div class="ui" id="ui-text">床に影が出たら<br>2本指で回したり動かせます</div>
+  <div class="ui" id="ui-text">ボタンでAR起動<br>画面タップでエフェクト</div>
 </div>
 
 <script>
   const mv = document.getElementById('mv');
   const btn = document.getElementById('ar-btn');
   const ui = document.getElementById('ui-text');
-  const effectLayer = document.getElementById('effect-layer');
 
   // AR起動
   btn.addEventListener('click', () => mv.activateAR());
 
-  // エフェクトとタップ判定の修正
-  // model-viewerの上の透明なレイヤーでクリックを拾うとAR操作が死ぬので、
-  // ARセッション中はエフェクトを無効化する工夫をしています。
-  window.addEventListener('click', (e) => {
+  // タップ判定の改善（バブリングを利用）
+  document.body.addEventListener('click', (e) => {
     if (e.target.id === 'ar-btn') return;
     
     // エフェクト生成
@@ -97,14 +88,16 @@
     ring.className = 'summon-ring';
     ring.style.left = e.clientX + 'px';
     ring.style.top  = e.clientY + 'px';
-    effectLayer.appendChild(ring);
+    document.body.appendChild(ring);
     setTimeout(() => ring.remove(), 600);
   });
 
-  // AR状態監視：向き変更のアドバイス
+  // AR状態監視
   mv.addEventListener('ar-status', (e) => {
     if (e.detail.status === 'session-started') {
-      ui.innerHTML = '【向きの変え方】<br>2本指で画面をひねるように回してください';
+      ui.innerHTML = '影が出たら【2本指】で<br>向き・位置を変えられます';
+    } else if (e.detail.status === 'not-presenting') {
+      ui.innerHTML = 'ボタンでAR起動<br>画面タップでエフェクト';
     }
   });
 </script>
