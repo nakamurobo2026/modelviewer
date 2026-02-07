@@ -2,104 +2,66 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>ナカムロボ AR 召喚</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <title>ナカムロボ AR</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
   <style>
-    html, body { margin: 0; padding: 0; background: #000; color: #fff; font-family: sans-serif; height: 100%; overflow: hidden; }
-    .wrap { position: relative; width: 100%; height: 100%; }
-
-    /* プレビュー画面：全画面 */
+    body { margin: 0; background: #000; overflow: hidden; }
+    .container { display: flex; flex-direction: column; height: 100vh; }
+    
+    /* モデル表示エリア：指の邪魔をしないよう設定を極限までシンプルに */
     model-viewer {
-      width: 100%; height: 100%; background: #000;
-      touch-action: none; /* ブラウザのスクロールを完全無効化 */
+      width: 100%;
+      height: 70%;
+      background: #000;
+      touch-action: none;
     }
 
-    /* エフェクト：z-indexを下げて操作を邪魔しない */
-    .summon-ring {
-      position: absolute; width: 100px; height: 100px;
-      border-radius: 50%; border: 4px solid #00ffcc;
-      box-shadow: 0 0 30px #00ffcc;
-      transform: translate(-50%, -50%);
-      animation: ring 0.6s ease-out forwards;
-      pointer-events: none; /* これが重要：タップを透過させる */
-      z-index: 50;
+    /* ボタンエリア：30%確保して確実にタップさせる */
+    .controls {
+      height: 30%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #111;
     }
 
-    @keyframes ring {
-      from { transform: translate(-50%, -50%) scale(0.2); opacity: 1; }
-      to   { transform: translate(-50%, -50%) scale(2); opacity: 0; }
-    }
-
-    /* UIテキスト */
-    .ui {
-      position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-      text-align: center; background: rgba(0,0,0,0.8); color: #00ffcc;
-      padding: 15px 25px; border-radius: 30px; font-size: 14px;
-      pointer-events: none; z-index: 60; width: 80%;
-    }
-
-    /* 召喚ボタン */
     #ar-btn {
-      position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
-      background: #00ffcc; color: #000; font-weight: bold; font-size: 20px;
-      border: none; border-radius: 40px; padding: 18px 40px;
-      cursor: pointer; z-index: 100; box-shadow: 0 4px 15px rgba(0,255,204,0.5);
+      width: 80%;
+      height: 80px;
+      background: #00ffcc;
+      color: #000;
+      font-size: 22px;
+      font-weight: bold;
+      border: none;
+      border-radius: 40px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-<div class="wrap" id="main-wrap">
-  <button id="ar-btn">ナカムロボを召喚</button>
+<div class="container">
 
   <model-viewer
     id="mv"
     src="https://nakamurobo2026.github.io/modelviewer/dance.glb"
     ios-src="https://nakamurobo2026.github.io/modelviewer/dance.usdz"
     ar
+    /* WebXRで確実に起動させ、操作性を確保 */
     ar-modes="webxr quick-look"
-    ar-placement="floor"
     camera-controls
     enable-pan
     ar-scale="auto"
     scale="3 3 3"
-    shadow-intensity="2"
+    shadow-intensity="1"
     environment-image="neutral"
     interaction-prompt="none">
   </model-viewer>
 
-  <div class="ui" id="ui-text">ボタンでAR起動<br>画面タップでエフェクト</div>
+  <div class="controls">
+    <button id="ar-btn" onclick="document.getElementById('mv').activateAR()">AR召喚</button>
+  </div>
+
 </div>
-
-<script>
-  const mv = document.getElementById('mv');
-  const btn = document.getElementById('ar-btn');
-  const ui = document.getElementById('ui-text');
-
-  // AR起動
-  btn.addEventListener('click', () => mv.activateAR());
-
-  // タップ判定の改善（バブリングを利用）
-  document.body.addEventListener('click', (e) => {
-    if (e.target.id === 'ar-btn') return;
-    
-    // エフェクト生成
-    const ring = document.createElement('div');
-    ring.className = 'summon-ring';
-    ring.style.left = e.clientX + 'px';
-    ring.style.top  = e.clientY + 'px';
-    document.body.appendChild(ring);
-    setTimeout(() => ring.remove(), 600);
-  });
-
-  // AR状態監視
-  mv.addEventListener('ar-status', (e) => {
-    if (e.detail.status === 'session-started') {
-      ui.innerHTML = '影が出たら【2本指】で<br>向き・位置を変えられます';
-    } else if (e.detail.status === 'not-presenting') {
-      ui.innerHTML = 'ボタンでAR起動<br>画面タップでエフェクト';
-    }
-  });
-</script>
 </body>
 </html>
