@@ -7,48 +7,65 @@
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
   <style>
     :root { --primary-color: #4285f4; }
-    body { margin: 0; background-color: #f0f0f0; font-family: sans-serif; }
-    model-viewer { width: 100vw; height: 100vh; background-color: #eee; }
+    body { 
+      margin: 0; 
+      background-color: #ffffff; 
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      overflow: hidden; /* スクロールを防ぐ */
+    }
 
-    /* AR起動ボタンのカスタマイズ */
+    /* モデル表示エリア（画面の約70%に制限してボタンを押しやすくする） */
+    model-viewer { 
+      width: 100vw; 
+      height: 75vh; 
+      background-color: #f8f9fa;
+      --poster-color: transparent;
+    }
+
+    /* 操作エリア（下部にボタンを固定） */
+    .controls {
+      width: 100vw;
+      height: 25vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: white;
+      box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
+      z-index: 10;
+    }
+
+    /* AR起動ボタンを大きく、押しやすく */
     #ar-button {
       background-image: url(https://modelviewer.dev/assets/ic_view_in_ar_new_googblue_48dp.png);
       background-repeat: no-repeat;
-      background-size: 20px 20px;
-      background-position: 12px 50%;
-      background-color: #fff;
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      white-space: nowrap;
-      bottom: 32px;
-      padding: 0px 16px 0px 40px;
-      font-family: Roboto Regular, Helvetica Neue, sans-serif;
-      font-size: 14px;
-      color: var(--primary-color);
-      height: 36px;
-      line-height: 36px;
-      border-radius: 18px;
-      border: 1px solid #DADCE0;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      background-size: 24px 24px;
+      background-position: 20px 50%;
+      background-color: var(--primary-color); /* 目立つように青色に */
+      color: white;
+      padding: 0 24px 0 54px;
+      font-size: 18px;
+      font-weight: bold;
+      height: 60px; /* 高さを出して押しやすく */
+      line-height: 60px;
+      border-radius: 30px;
+      border: none;
+      box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
       cursor: pointer;
+      transition: transform 0.2s;
     }
-    #ar-button:active { background-color: #E8EAED; }
-    #ar-button:focus { outline: none; }
+    #ar-button:active { transform: scale(0.95); }
 
-    /* 読み込み中プログレスバー */
+    /* 読み込みプログレスバー */
     .progress-bar {
-      display: block; width: 33%; height: 10%; max-height: 2px;
-      position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.1); border-radius: 25px; box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+      display: block; width: 50%; height: 4px;
+      position: absolute; left: 50%; top: 35%; transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.1); border-radius: 2px;
     }
     .update-bar {
       background-color: var(--primary-color); width: 0%; height: 100%;
-      border-radius: 25px; transition: width 0.3s;
+      border-radius: 2px; transition: width 0.3s;
     }
-    
-    /* モデル読み込み後に隠すアニメーション用 */
-    model-viewer[ar-status="session-started"] > #ar-button { display: none; }
   </style>
 </head>
 <body>
@@ -58,37 +75,45 @@
     ar 
     ar-modes="webxr scene-viewer quick-look" 
     camera-controls 
-    poster="poster.webp" 
     shadow-intensity="1" 
     environment-image="neutral" 
     exposure="1"
     ar-placement="floor"
+    scale="0.5 0.5 0.5" 
+    camera-orbit="0deg 75deg 105%"
     touch-action="pan-y">
     
-    <button slot="ar-button" id="ar-button">
-      ARで踊らせる
-    </button>
-
     <div class="progress-bar" slot="progress-bar">
       <div class="update-bar"></div>
     </div>
-
   </model-viewer>
 
+  <div class="controls">
+    <button id="ar-button" onclick="activateAR()">
+      現実世界に召喚する
+    </button>
+    <p style="font-size: 12px; color: #666; margin-top: 12px;">
+      ↑ボタンを押すとカメラが起動します
+    </p>
+  </div>
+
   <script>
-    // 読み込み状況に合わせてバーを伸ばすスクリプト
-    const onProgress = (event) => {
-      const progressBar = event.target.querySelector('.update-bar');
-      if (progressBar) {
-        progressBar.style.width = `${event.detail.totalProgress * 100}%`;
-        if (event.detail.totalProgress === 1) {
-          setTimeout(() => {
-            event.target.querySelector('.progress-bar').style.display = 'none';
-          }, 300);
-        }
+    // AR起動を明示的にトリガーする
+    const modelViewer = document.querySelector('model-viewer');
+    function activateAR() {
+      modelViewer.activateAR();
+    }
+
+    // プログレスバー制御
+    modelViewer.addEventListener('progress', (event) => {
+      const progressBar = document.querySelector('.update-bar');
+      progressBar.style.width = `${event.detail.totalProgress * 100}%`;
+      if (event.detail.totalProgress === 1) {
+        setTimeout(() => {
+          document.querySelector('.progress-bar').style.display = 'none';
+        }, 300);
       }
-    };
-    document.querySelector('model-viewer').addEventListener('progress', onProgress);
+    });
   </script>
 </body>
 </html>
