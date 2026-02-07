@@ -9,26 +9,37 @@
 
   <style>
     html, body {
-      margin: 0; padding: 0; background: #000; color: #fff;
-      font-family: sans-serif; height: 100%; overflow: hidden;
+      margin: 0;
+      padding: 0;
+      background: #000;
+      color: #fff;
+      font-family: sans-serif;
+      height: 100%;
+      overflow: hidden;
     }
 
-    .wrap { display: flex; flex-direction: column; height: 100%; }
+    .wrap {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
 
-    /* プレビューエリア：60% */
     model-viewer {
       width: 100%;
       height: 60vh;
       background: #000;
     }
 
-    /* 下部：ボタンエリア（40%確保でスクロール不要） */
     .controls {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      height: 40vh; background: #111; border-top: 1px solid #333;
+      height: 40vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #111;
+      border-top: 1px solid #333;
     }
 
-    /* 召喚ボタン：とにかく巨大 */
     #ar-button {
       width: 85%;
       height: 90px;
@@ -38,12 +49,16 @@
       border-radius: 45px;
       background: #00ffcc;
       color: #000;
-      box-shadow: 0 4px 25px rgba(0, 255, 204, 0.4);
       cursor: pointer;
     }
-    #ar-button:active { transform: scale(0.95); }
 
-    .note { margin-top: 15px; font-size: 14px; opacity: 0.8; text-align: center; line-height: 1.6; }
+    .note {
+      margin-top: 15px;
+      font-size: 14px;
+      opacity: 0.8;
+      text-align: center;
+      line-height: 1.6;
+    }
   </style>
 </head>
 
@@ -54,24 +69,22 @@
       src="https://nakamurobo2026.github.io/modelviewer/dance.glb"
       ios-src="https://nakamurobo2026.github.io/modelviewer/dance.usdz"
       ar
-      /* Android 16で「影は出る」実績のあるWebXRを優先 */
       ar-modes="webxr scene-viewer quick-look"
-      camera-controls
-      enable-pan
-      autoplay
-      exposure="1"
-      /* 【解決策】モデルを3倍の大きさに強制設定 */
-      scale="3 3 3"
+      ar-placement="auto"
       ar-scale="auto"
-      shadow-intensity="2">
+      scale="3 3 3"
+      shadow-intensity="2"
+      interaction-prompt="when-focused">
     </model-viewer>
 
     <div class="controls">
-      <button id="ar-button" onclick="document.getElementById('mv').activateAR()">巨大ナカムロボを召喚</button>
+      <button id="ar-button" onclick="document.getElementById('mv').activateAR()">
+        巨大ナカムロボを召喚
+      </button>
       <div class="note">
-        【ARサイズを3倍に拡大済】<br>
-        カメラが起動したら、スマホを左右に振って床を認識させてください。<br>
-        2本指で移動・さらに拡大が可能です。
+        画面をタップすると<br>
+        巨大ナカムロボを移動できます。<br>
+        （ドラッグ移動はできません）
       </div>
     </div>
   </div>
