@@ -1,47 +1,83 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-  <title>ナカムロボ AR 最終調整</title>
-  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+  <meta charset="UTF-8" />
+  <title>ナカムロボ AR Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
   <style>
-    :root { --primary-color: #4285f4; }
-    body { margin: 0; background: #ffffff; font-family: sans-serif; overflow: hidden; }
-    model-viewer { width: 100vw; height: 70vh; background: #f8f9fa; touch-action: none; }
-    .controls { width: 100vw; height: 30vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #ffffff; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); }
-    #ar-button { background-image: url(https://modelviewer.dev/assets/ic_view_in_ar_new_googblue_48dp.png); background-repeat: no-repeat; background-size: 24px 24px; background-position: 20px 50%; background-color: var(--primary-color); color: white; width: 85%; height: 75px; line-height: 75px; padding: 0 20px 0 55px; font-size: 20px; font-weight: bold; border-radius: 40px; border: none; cursor: pointer; box-shadow: 0 6px 20px rgba(66, 133, 244, 0.3); }
-    #ar-button:active { transform: scale(0.96); }
-    .instruction { margin-top: 15px; color: #666; font-size: 13px; text-align: center; padding: 0 10px; line-height: 1.6; }
+    html, body {
+      margin: 0; padding: 0; background: #000; color: #fff;
+      font-family: sans-serif; height: 100%; overflow: hidden;
+    }
+    .wrap { display: flex; flex-direction: column; height: 100%; }
+
+    /* モデル表示：画面の65%に。scale設定と合わせて少し小さく表示 */
+    model-viewer {
+      width: 100%;
+      height: 65vh;
+      background: #000;
+    }
+
+    /* 下部：操作パネル。スクロール不要で巨大ボタンを配置 */
+    .controls {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 35vh; background: #111; border-top: 1px solid #333;
+    }
+
+    /* 召喚ボタン：とにかく巨大、押し間違いなし */
+    #ar-button {
+      width: 85%;
+      height: 85px;
+      font-size: 22px;
+      font-weight: bold;
+      border: none;
+      border-radius: 45px;
+      background: #00ffcc; /* index_qrと同じ色 */
+      color: #000;
+      box-shadow: 0 4px 25px rgba(0, 255, 204, 0.4);
+      cursor: pointer;
+    }
+    #ar-button:active { transform: scale(0.95); }
+
+    .note { margin-top: 15px; font-size: 13px; opacity: 0.7; text-align: center; }
   </style>
 </head>
-<body>
-  <model-viewer
-    id="ar-viewer"
-    src="dance.glb"
-    ios-src="dance.usdz"
-    ar
-    ar-modes="webxr quick-look"
-    ar-scale="auto"
-    camera-controls
-    enable-pan
-    /* 床認識を「強制」するための重要属性 */
-    ar-placement="floor"
-    interaction-prompt="auto"
-    shadow-intensity="2"
-    shadow-softness="0.5"
-    environment-image="neutral"
-    scale="0.8 0.8 0.8">
-  </model-viewer>
 
-  <div class="controls">
-    <button id="ar-button" onclick="document.querySelector('#ar-viewer').activateAR()">
-      ナカムロボをAR召喚
-    </button>
-    <div class="instruction">
-      【重要】起動後、ロボを動かそうとする前に<br>
-      スマホをゆっくり左右に30cmほど並行移動させてください。
+<body>
+  <div class="wrap">
+    <model-viewer
+      id="mv"
+      src="https://nakamurobo2026.github.io/modelviewer/dance.glb"
+      ios-src="https://nakamurobo2026.github.io/modelviewer/dance.usdz"
+      ar
+      /* 【Android最優先】Scene Viewerを先頭に配置 */
+      ar-modes="scene-viewer quick-look webxr"
+      camera-controls
+      autoplay
+      exposure="1"
+      /* モデルを少し小さく表示（0.7倍） */
+      scale="0.7 0.7 0.7">
+    </model-viewer>
+
+    <div class="controls">
+      <button id="ar-button" onclick="startAR()">ナカムロボをAR召喚</button>
+      <div class="note">
+        Scene Viewerで起動します。<br>
+        指1本で回転、2本指で移動・拡大が可能です。
+      </div>
     </div>
   </div>
+
+  <script>
+    function startAR() {
+      const mv = document.getElementById('mv');
+      if (mv) {
+        mv.activateAR();
+      }
+    }
+  </script>
 </body>
 </html>
