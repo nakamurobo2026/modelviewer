@@ -2,103 +2,70 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, user-scalable=no"
-  >
-  <title>ナカムロボ AR（WebXR）</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>ナカムロボ AR 最終調整版</title>
 
-  <!-- model-viewer -->
-  <script
-    type="module"
-    src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js">
-  </script>
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
 
   <style>
-    :root {
-      --primary-color: #4285f4;
-    }
-
-    body {
-      margin: 0;
-      background: #ffffff;
-      font-family: sans-serif;
-      overflow: hidden;
-    }
+    :root { --primary-color: #4285f4; }
+    body { margin: 0; background: #ffffff; font-family: sans-serif; overflow: hidden; }
 
     model-viewer {
       width: 100vw;
       height: 70vh;
       background: #f8f9fa;
+      /* 指の操作をブラウザに奪われないための重要設定 */
+      touch-action: none; 
     }
 
     .controls {
-      width: 100vw;
-      height: 30vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      width: 100vw; height: 30vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
       background: #ffffff;
       box-shadow: 0 -5px 15px rgba(0,0,0,0.05);
     }
 
     #ar-button {
       background-image: url(https://modelviewer.dev/assets/ic_view_in_ar_new_googblue_48dp.png);
-      background-repeat: no-repeat;
-      background-size: 24px 24px;
-      background-position: 20px 50%;
+      background-repeat: no-repeat; background-size: 24px 24px; background-position: 20px 50%;
       background-color: var(--primary-color);
-      color: white;
-      width: 85%;
-      height: 70px;
-      line-height: 70px;
-      padding: 0 20px 0 55px;
-      font-size: 18px;
-      font-weight: bold;
-      border-radius: 35px;
-      border: none;
-      cursor: pointer;
+      color: white; width: 85%; height: 70px; line-height: 70px;
+      padding: 0 20px 0 55px; font-size: 18px; font-weight: bold;
+      border-radius: 35px; border: none; cursor: pointer;
     }
 
-    .instruction {
-      margin-top: 15px;
-      color: #666;
-      font-size: 12px;
-      text-align: center;
-      padding: 0 10px;
-      line-height: 1.6;
-    }
+    .instruction { margin-top: 15px; color: #666; font-size: 12px; text-align: center; padding: 0 10px; line-height: 1.6; }
   </style>
 </head>
 
 <body>
 
-  <!-- ARビュー -->
   <model-viewer
     id="ar-viewer"
     src="dance.glb"
     ios-src="dance.usdz"
     ar
+    /* WebXRを優先しつつ、Scene Viewerは削除（戻されるバグ対策） */
     ar-modes="webxr quick-look"
     ar-scale="auto"
-    ar-placement="auto"
+    /* 1本指で回転、2本指で移動を許可する属性を追加 */
+    camera-controls
+    enable-pan
+    ar-placement="floor"
     environment-image="neutral"
     shadow-intensity="1.5"
-    interaction-prompt="when-focused">
+    interaction-prompt="auto">
   </model-viewer>
 
-  <!-- 下部UI -->
   <div class="controls">
-    <button
-      id="ar-button"
-      onclick="document.querySelector('#ar-viewer').activateAR()">
+    <button id="ar-button" onclick="document.querySelector('#ar-viewer').activateAR()">
       ARを起動する
     </button>
-
     <div class="instruction">
-      画面をタップするとモデルを移動できます。<br>
-      起動直後はスマホを動かして床を認識させてください。
+      1本指で回転、2本指で移動・拡大ができます。<br>
+      起動直後は、スマホをゆっくり動かして床を認識させてください。
     </div>
   </div>
 
