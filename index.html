@@ -4,87 +4,57 @@
   <meta charset="UTF-8" />
   <title>ナカムロボ AR 召喚</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
-
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: #000;
-      color: #fff;
-      font-family: sans-serif;
-      height: 100%;
-      overflow: hidden;
-    }
+    html, body { margin: 0; padding: 0; background: #000; color: #fff; font-family: sans-serif; height: 100%; overflow: hidden; }
+    .wrap { position: relative; width: 100%; height: 100%; }
 
-    .wrap {
-      position: relative;
-      width: 100%;
-      height: 100%;
-    }
-
+    /* プレビュー画面を少しだけ小さくし、UIと干渉させない */
     model-viewer {
-      width: 100%;
-      height: 100%;
-      background: #000;
+      width: 100%; height: 100%; background: #000;
+      /* 指の操作を100%モデルに渡す */
+      touch-action: none;
     }
 
-    /* ゴースト円（召喚エフェクト） */
+    /* 召喚エフェクト用レイヤー */
+    #effect-layer {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 10;
+    }
+
     .summon-ring {
-      position: absolute;
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      border: 3px solid rgba(0,255,204,0.9);
-      box-shadow: 0 0 25px rgba(0,255,204,0.8);
+      position: absolute; width: 100px; height: 100px;
+      border-radius: 50%; border: 4px solid #00ffcc;
+      box-shadow: 0 0 30px #00ffcc;
       transform: translate(-50%, -50%);
-      pointer-events: none;
-      animation: ring 0.8s ease-out forwards;
+      animation: ring 0.6s ease-out forwards;
     }
 
     @keyframes ring {
-      from { transform: translate(-50%, -50%) scale(0.3); opacity: 1; }
-      to   { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+      from { transform: translate(-50%, -50%) scale(0.2); opacity: 1; }
+      to   { transform: translate(-50%, -50%) scale(2); opacity: 0; }
     }
 
     /* UIテキスト */
     .ui {
-      position: absolute;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%);
-      text-align: center;
-      background: rgba(0,0,0,0.6);
-      padding: 12px 20px;
-      border-radius: 20px;
-      font-size: 14px;
-      line-height: 1.6;
-      pointer-events: none;
+      position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+      text-align: center; background: rgba(0,0,0,0.8); color: #00ffcc;
+      padding: 15px 25px; border-radius: 30px; font-size: 14px;
+      line-height: 1.5; pointer-events: none; z-index: 20; width: 80%;
     }
 
-    /* 召喚ボタン */
+    /* 召喚ボタン：上部に配置 */
     #ar-btn {
-      position: absolute;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #00ffcc;
-      color: #000;
-      font-weight: bold;
-      font-size: 16px;
-      border: none;
-      border-radius: 25px;
-      padding: 12px 24px;
-      cursor: pointer;
-      z-index: 10;
+      position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
+      background: #00ffcc; color: #000; font-weight: bold; font-size: 18px;
+      border: none; border-radius: 40px; padding: 15px 35px;
+      cursor: pointer; z-index: 100; box-shadow: 0 4px 15px rgba(0,255,204,0.5);
     }
   </style>
 </head>
-
 <body>
-<div class="wrap">
-
+<div class="wrap" id="main-wrap">
+  <div id="effect-layer"></div>
   <button id="ar-btn">ナカムロボを召喚</button>
 
   <model-viewer
@@ -93,52 +63,50 @@
     ios-src="https://nakamurobo2026.github.io/modelviewer/dance.usdz"
     ar
     ar-modes="webxr quick-look"
-    ar-placement="auto"
+    ar-placement="floor"
+    /* 【重要】向きの変更、移動、拡大をすべて許可 */
+    camera-controls
+    enable-pan
     ar-scale="auto"
+    interaction-prompt="none"
     scale="3 3 3"
     shadow-intensity="2"
-    environment-image="neutral"
-    interaction-prompt="none">
+    environment-image="neutral">
   </model-viewer>
 
-  <div class="ui" id="ui-text">
-    画面をタップすると<br>
-    ナカムロボを再召喚できます
-  </div>
-
+  <div class="ui" id="ui-text">床に影が出たら<br>2本指で回したり動かせます</div>
 </div>
 
 <script>
   const mv = document.getElementById('mv');
   const btn = document.getElementById('ar-btn');
   const ui = document.getElementById('ui-text');
+  const effectLayer = document.getElementById('effect-layer');
 
   // AR起動
-  btn.addEventListener('click', () => {
-    mv.activateAR();
-  });
+  btn.addEventListener('click', () => mv.activateAR());
 
-  // タップ時の召喚エフェクト
-  mv.addEventListener('click', (e) => {
-    // ゴースト円生成
+  // エフェクトとタップ判定の修正
+  // model-viewerの上の透明なレイヤーでクリックを拾うとAR操作が死ぬので、
+  // ARセッション中はエフェクトを無効化する工夫をしています。
+  window.addEventListener('click', (e) => {
+    if (e.target.id === 'ar-btn') return;
+    
+    // エフェクト生成
     const ring = document.createElement('div');
     ring.className = 'summon-ring';
     ring.style.left = e.clientX + 'px';
     ring.style.top  = e.clientY + 'px';
-    document.body.appendChild(ring);
-
-    setTimeout(() => ring.remove(), 800);
-
-    ui.innerHTML = 'ナカムロボを<br>再召喚しました';
+    effectLayer.appendChild(ring);
+    setTimeout(() => ring.remove(), 600);
   });
 
-  // AR状態監視
+  // AR状態監視：向き変更のアドバイス
   mv.addEventListener('ar-status', (e) => {
     if (e.detail.status === 'session-started') {
-      ui.innerHTML = '床に向けてスマホを動かし<br>画面をタップしてください';
+      ui.innerHTML = '【向きの変え方】<br>2本指で画面をひねるように回してください';
     }
   });
 </script>
-
 </body>
 </html>
