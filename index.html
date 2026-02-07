@@ -3,59 +3,84 @@
 <head>
   <meta charset="UTF-8" />
   <title>ナカムロボ AR Viewer</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
   <style>
-    :root { --primary-color: #00ffcc; }
-    body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; }
-    .wrap { display: flex; flex-direction: column; height: 100%; }
-    
-    /* モデルを大きく表示（画面の70%） */
-    model-viewer { 
-      width: 100%; height: 70vh; background: #000; 
-      /* 操作を奪われないためのおまじない */
-      touch-action: none; 
+    html, body {
+      margin: 0; padding: 0; background: #000; color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      height: 100%; overflow: hidden; /* スクロールを禁止 */
     }
 
+    .wrap {
+      display: flex; flex-direction: column; height: 100%;
+    }
+
+    /* モデル表示：画面の約65%に抑えてボタンを押しやすく */
+    model-viewer {
+      width: 100%;
+      height: 65vh;
+      background: #000;
+    }
+
+    /* 下部：ボタンエリア（35%確保してスクロール不要に） */
     .controls {
-      height: 30vh; display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      background: #111; border-top: 1px solid #333;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 35vh; background: #111; border-top: 1px solid #333;
     }
 
-    /* 押しやすい巨大ボタン */
-    button {
-      width: 85%; height: 80px; font-size: 22px; font-weight: bold;
-      border: none; border-radius: 40px; background: var(--primary-color);
-      color: #000; box-shadow: 0 4px 20px rgba(0, 255, 204, 0.4); cursor: pointer;
+    /* 召喚ボタン：とにかく巨大、片手で押せるサイズ */
+    #ar-button {
+      width: 90%;
+      height: 90px; /* 以前よりさらに大きく */
+      font-size: 22px;
+      font-weight: bold;
+      border: none;
+      border-radius: 45px;
+      background: #00ffcc;
+      color: #000;
+      box-shadow: 0 4px 25px rgba(0, 255, 204, 0.4);
+      cursor: pointer;
     }
-    button:active { transform: scale(0.96); }
-    .note { margin-top: 15px; font-size: 13px; opacity: 0.8; text-align: center; line-height: 1.5; }
+    #ar-button:active { transform: scale(0.95); }
+
+    .note { margin-top: 15px; font-size: 13px; opacity: 0.7; text-align: center; line-height: 1.5; }
   </style>
 </head>
+
 <body>
   <div class="wrap">
     <model-viewer
       id="mv"
-      /* 確実に動くパスを使用 */
       src="https://nakamurobo2026.github.io/modelviewer/dance.glb"
       ios-src="https://nakamurobo2026.github.io/modelviewer/dance.usdz"
       ar
-      /* 【重要】動かせていた時と同じ設定に戻しつつ、webxrの順番を調整 */
-      ar-modes="scene-viewer quick-look webxr"
+      ar-modes="quick-look scene-viewer webxr"
       camera-controls
       autoplay
-      shadow-intensity="1">
+      exposure="1"
+      scale="0.8 0.8 0.8">
     </model-viewer>
 
     <div class="controls">
-      <button onclick="document.getElementById('mv').activateAR()">ARで召喚する</button>
+      <button id="ar-button" onclick="startAR()">ナカムロボをAR召喚</button>
       <div class="note">
-        【操作のコツ：影が出た後】<br>
-        1. ロボットを動かそうとする前に、スマホを左右にゆっくり動かす<br>
-        2. **2本指**でロボットをつまんで動かすと反応しやすいです
+        指1本で回転、2本指で移動・拡大<br>
+        ※戻される場合はChromeの全タブを閉じてください
       </div>
     </div>
   </div>
+
+  <script>
+    // index_qr.html と同じ起動ロジック
+    function startAR() {
+      const mv = document.getElementById('mv');
+      if (mv) {
+        mv.activateAR();
+      }
+    }
+  </script>
 </body>
 </html>
