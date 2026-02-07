@@ -2,68 +2,73 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>ナカムロボ AR 復活版</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-
+  <title>ナカムロボ AR 最終調整</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
   <style>
-    html, body {
-      margin: 0; padding: 0; background: #000; color: #fff;
-      font-family: sans-serif; height: 100%; overflow: hidden;
-    }
+    :root { --primary-color: #00ffcc; }
+    body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; }
     .wrap { display: flex; flex-direction: column; height: 100%; }
-
+    
     /* モデルを大きく表示 */
-    model-viewer { width: 100%; height: 75vh; background: #000; }
+    model-viewer {
+      width: 100%;
+      height: 70vh;
+      background: #000;
+      /* ブラウザにジェスチャーを奪わせない */
+      touch-action: none; 
+    }
 
-    /* 下部固定の巨大ボタンエリア */
     .controls {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      height: 25vh; background: #111; border-top: 1px solid #333;
+      height: 30vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #111;
+      border-top: 1px solid #333;
     }
 
     button {
-      width: 85%; height: 75px; font-size: 20px; font-weight: bold;
-      border: none; border-radius: 999px; background: #00ffcc; color: #000;
+      width: 85%;
+      height: 75px;
+      font-size: 20px;
+      font-weight: bold;
+      border: none;
+      border-radius: 40px;
+      background: var(--primary-color);
+      color: #000;
       box-shadow: 0 4px 20px rgba(0, 255, 204, 0.4);
     }
-    button:active { transform: scale(0.96); }
-    .note { margin-top: 12px; font-size: 12px; opacity: 0.7; text-align: center; }
   </style>
 </head>
-
 <body>
   <div class="wrap">
     <model-viewer
       id="mv"
+      /* 絶対パスを維持 */
       src="https://nakamurobo2026.github.io/modelviewer/dance.glb"
       ios-src="https://nakamurobo2026.github.io/modelviewer/dance.usdz"
       ar
-      /* Android 16で「戻される」のを防ぐため、安定のScene Viewerに絞る */
-      ar-modes="scene-viewer quick-look"
+      /* WebXRの操作性を極限まで高める設定 */
+      ar-modes="webxr quick-look"
       camera-controls
-      autoplay
-      exposure="1"
-      ar-placement="floor">
+      enable-pan
+      ar-scale="auto"
+      interaction-prompt="auto"
+      shadow-intensity="1.5"
+      environment-image="neutral"
+      autoplay>
     </model-viewer>
 
     <div class="controls">
-      <button onclick="startAR()">ARでナカムロボ召喚</button>
-      <div class="note">
-        ※ 起動しない場合は、Chromeの全タブを閉じて<br>
-        ページを再読み込みしてください。
+      <button onclick="document.getElementById('mv').activateAR()">ARでナカムロボ召喚</button>
+      <div style="margin-top:15px; font-size:12px; opacity:0.7; text-align:center;">
+        【Android 16の方へ】<br>
+        起動後、スマホを大きく左右に振って床を認識させると、<br>
+        2本指で移動・拡大ができるようになります。
       </div>
     </div>
   </div>
-
-  <script>
-    function startAR() {
-      const mv = document.getElementById('mv');
-      if (mv) {
-        mv.activateAR();
-      }
-    }
-  </script>
 </body>
 </html>
