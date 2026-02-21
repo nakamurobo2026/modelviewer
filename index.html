@@ -3,46 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D AR Experience</title>
+    <title>3D AR Viewer</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
     <style>
-        html, body { height: 100%; margin: 0; overflow: hidden; background: radial-gradient(#ffffff, #d7d7d7); font-family: sans-serif; }
+        html, body { height: 100%; margin: 0; overflow: hidden; background: #fff; font-family: sans-serif; }
         model-viewer { width: 100%; height: 100%; }
 
-        /* ARボタン：iPhone/LINEでも絶対に出現させる設定 */
-        #ar-button {
-            position: absolute;
+        /* 💡 model-viewerの外に配置して、強制的に表示させるボタン */
+        .floating-ar-button {
+            position: fixed;
             bottom: 100px;
             left: 50%;
             transform: translateX(-50%);
-            width: 85%;
-            max-width: 320px;
-            padding: 18px 20px;
-            background: linear-gradient(135deg, #4285f4, #1a73e8);
+            width: 80%;
+            max-width: 300px;
+            padding: 18px;
+            background: #007bff;
             color: white;
             border: none;
-            border-radius: 100px;
+            border-radius: 50px;
             font-size: 16px;
             font-weight: bold;
-            z-index: 9999;
-            box-shadow: 0 10px 25px rgba(66, 133, 244, 0.4);
-            cursor: pointer;
-            /* 💡 重要：model-viewerの自動非表示を上書きして強制表示 */
-            display: block !important; 
-            visibility: visible !important;
-            opacity: 1 !important;
+            text-align: center;
+            z-index: 10000; /* 何があっても最前面 */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            text-decoration: none;
+            display: block;
         }
 
-        /* LINE用の警告色（オレンジ） */
-        #ar-button.line-warning {
-            background: linear-gradient(135deg, #ff9900, #ff6600);
-            box-shadow: 0 10px 25px rgba(255, 153, 0, 0.4);
+        /* LINEの時はオレンジにする（JSで制御） */
+        .line-mode {
+            background: linear-gradient(135deg, #ff9900, #ff6600) !important;
         }
-
-        /* 読み込みバー */
-        .progress-bar { display: block; width: 100%; height: 4px; position: absolute; top: 0; left: 0; background: rgba(0, 0, 0, 0.1); }
-        .update-bar { background: #4285f4; width: 0%; height: 100%; transition: width 0.3s; }
-        model-viewer:not(.searching) .progress-bar { display: none; }
     </style>
 </head>
 <body>
@@ -55,37 +47,44 @@
         ar-modes="quick-look scene-viewer webxr" 
         camera-controls 
         autoplay
-        shadow-intensity="1.5">
+        shadow-intensity="1">
         
-        <div slot="progress-bar" class="progress-bar">
-            <div class="update-bar"></div>
-        </div>
-
-        <button slot="ar-button" id="ar-button">
-            タップしてARを開始
-        </button>
-
+        <div slot="ar-button"></div>
     </model-viewer>
 
-    <script>
-        const arButton = document.querySelector('#ar-button');
-        const ua = navigator.userAgent;
-        
-        // iPhone かつ LINEブラウザ判定
-        const isIPhone = /iPhone|iPad|iPod/.test(ua);
-        const isLine = /Line/i.test(ua);
+    <a href="#" id="custom-ar-link" class="floating-ar-button">
+        ARで表示する
+    </a>
 
-        if (isIPhone && isLine) {
-            // LINE内の場合はボタンを「ブラウザ起動用」に作り変える
-            arButton.classList.add('line-warning');
-            arButton.innerText = "🌐 Safariで開いてARを開始";
-            
-            arButton.addEventListener('click', (e) => {
-                // 自動でSafariへ誘導するパラメータ
+    <script>
+        const btn = document.getElementById('custom-ar-link');
+        const viewer = document.getElementById('viewer');
+        const ua = navigator.userAgent;
+        const isLine = /Line/i.test(ua);
+        const isIOS = /iPhone|iPad|iPod/.test(ua);
+
+        if (isLine) {
+            // LINE内ブラウザの場合
+            btn.classList.add('line-mode');
+            btn.innerText = "🌐 Safariで開き直す";
+            btn.onclick = (e) => {
+                e.preventDefault();
                 const url = window.location.href;
-                const sep = url.includes('?') ? '&' : '?';
-                window.location.href = url + sep + "openExternalBrowser=1";
-            });
+                window.location.href = url + (url.includes('?') ? '&' : '?') + "openExternalBrowser=1";
+            };
+        } else {
+            // 通常ブラウザの場合
+            btn.onclick = (e) => {
+                e.preventDefault();
+                // model-viewerのAR起動機能を直接呼び出す
+                viewer.activateAR();
+            };
+        }
+
+        // 💡 iPhoneの「https://」チェック
+        if (isIOS && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+            btn.innerText = "❌ HTTPS接続が必要です";
+            btn.style.background = "red";
         }
     </script>
 
