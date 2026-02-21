@@ -2,38 +2,43 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>3D AR Viewer</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     <style>
-        body { margin: 0; }
+        /* 画面全体の高さを100%に固定 */
+        html, body { 
+            height: 100%; 
+            margin: 0; 
+            padding: 0;
+            overflow: hidden; 
+        }
         model-viewer {
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            height: 100%; /* vhではなく%を使う */
             background-color: #f0f0f0;
         }
 
-        /* カスタムARボタンのスタイル */
+        /* ARボタン：あえて少し「上」に配置して隠れるのを防ぐ */
         #ar-button {
-            display: block; /* 強制表示 */
             position: absolute;
-            bottom: 30px;   /* 下から少し浮かせる */
+            bottom: 80px;   /* 下から80px（かなり上に上げる） */
             left: 50%;
-            transform: translateX(-50%); /* 画面中央に配置 */
-            padding: 12px 24px;
-            background-color: #4285f4; /* Google Blue */
+            transform: translateX(-50%);
+            padding: 16px 32px;
+            background-color: #007bff;
             color: white;
             border: none;
-            border-radius: 30px;
+            border-radius: 50px;
+            font-size: 18px;
             font-weight: bold;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            z-index: 9999; /* 何があっても最前面 */
-            cursor: pointer;
+            z-index: 99999;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
         }
 
-        /* モデルがAR非対応の時はボタンを隠す（自動制御用） */
-        model-viewer:not([ar-visible]) #ar-button {
-            display: none;
+        /* ボタンが消えるのを防ぐために、あえて強制表示させる */
+        model-viewer #ar-button {
+            display: block !important;
         }
     </style>
 </head>
@@ -45,10 +50,10 @@
         ar 
         ar-modes="webxr scene-viewer quick-look" 
         camera-controls 
-        shadow-intensity="1">
+        interaction-prompt="auto">
         
         <button slot="ar-button" id="ar-button">
-            🚀 現実に飛び出す（AR）
+            タップしてARを開始
         </button>
 
     </model-viewer>
