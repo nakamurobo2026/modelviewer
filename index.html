@@ -9,7 +9,7 @@
         html, body { height: 100%; margin: 0; overflow: hidden; background: radial-gradient(#ffffff, #d7d7d7); font-family: sans-serif; }
         model-viewer { width: 100%; height: 100%; }
 
-        /* ARボタンのデザイン（高級感のある青グラデ） */
+        /* ARボタン：iPhone/LINEでも絶対に出現させる設定 */
         #ar-button {
             position: absolute;
             bottom: 100px;
@@ -27,44 +27,35 @@
             z-index: 9999;
             box-shadow: 0 10px 25px rgba(66, 133, 244, 0.4);
             cursor: pointer;
-            display: block !important;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            transition: transform 0.2s;
+            /* 💡 重要：model-viewerの自動非表示を上書きして強制表示 */
+            display: block !important; 
+            visibility: visible !important;
+            opacity: 1 !important;
         }
 
-        #ar-button:active { transform: translateX(-50%) scale(0.95); }
-
-        /* LINE内ブラウザ等で「ブラウザ起動」を促す時の色（オレンジ） */
-        #ar-button.warning {
+        /* LINE用の警告色（オレンジ） */
+        #ar-button.line-warning {
             background: linear-gradient(135deg, #ff9900, #ff6600);
             box-shadow: 0 10px 25px rgba(255, 153, 0, 0.4);
         }
 
-        /* 読み込みバー（上部に配置） */
-        .progress-bar {
-            display: block; width: 100%; height: 4px; position: absolute; top: 0; left: 0; background: rgba(0, 0, 0, 0.1);
-        }
-        .update-bar {
-            background: #4285f4; width: 0%; height: 100%; transition: width 0.3s;
-        }
-
-        /* 読み込み完了後にバーを隠す */
+        /* 読み込みバー */
+        .progress-bar { display: block; width: 100%; height: 4px; position: absolute; top: 0; left: 0; background: rgba(0, 0, 0, 0.1); }
+        .update-bar { background: #4285f4; width: 0%; height: 100%; transition: width 0.3s; }
         model-viewer:not(.searching) .progress-bar { display: none; }
     </style>
 </head>
 <body>
 
     <model-viewer 
+        id="viewer"
         src="dance.glb" 
         ios-src="dance.usdz" 
         ar 
-        ar-modes="scene-viewer webxr quick-look" 
+        ar-modes="quick-look scene-viewer webxr" 
         camera-controls 
         autoplay
-        shadow-intensity="1.5"
-        shadow-softness="1">
+        shadow-intensity="1.5">
         
         <div slot="progress-bar" class="progress-bar">
             <div class="update-bar"></div>
@@ -77,26 +68,25 @@
     </model-viewer>
 
     <script>
-        window.addEventListener('load', () => {
-            const arButton = document.querySelector('#ar-button');
+        const arButton = document.querySelector('#ar-button');
+        const ua = navigator.userAgent;
+        
+        // iPhone かつ LINEブラウザ判定
+        const isIPhone = /iPhone|iPad|iPod/.test(ua);
+        const isLine = /Line/i.test(ua);
+
+        if (isIPhone && isLine) {
+            // LINE内の場合はボタンを「ブラウザ起動用」に作り変える
+            arButton.classList.add('line-warning');
+            arButton.innerText = "🌐 Safariで開いてARを開始";
             
-            // アプリ内ブラウザ（LINE, Instagram等）の判定
-            const ua = navigator.userAgent;
-            const isInApp = /Line|FBAN|FBAV|Instagram|Twitter/i.test(ua);
-            
-            if (isInApp) {
-                // ボタンの見た目と役割を変更
-                arButton.classList.add('warning');
-                arButton.innerText = "🌐 ブラウザで開き直してAR開始";
-                
-                arButton.addEventListener('click', (e) => {
-                    // LINE等で外部ブラウザを強制するパラメータを付与してリロード
-                    const currentUrl = window.location.href;
-                    const sep = currentUrl.includes('?') ? '&' : '?';
-                    window.location.href = currentUrl + sep + "openExternalBrowser=1";
-                });
-            }
-        });
+            arButton.addEventListener('click', (e) => {
+                // 自動でSafariへ誘導するパラメータ
+                const url = window.location.href;
+                const sep = url.includes('?') ? '&' : '?';
+                window.location.href = url + sep + "openExternalBrowser=1";
+            });
+        }
     </script>
 
 </body>
