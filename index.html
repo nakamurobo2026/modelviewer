@@ -6,39 +6,52 @@
     <title>3D AR Experience</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
     <style>
-        html, body { height: 100%; margin: 0; overflow: hidden; background: radial-gradient(#ffffff, #d7d7d7); }
+        html, body { height: 100%; margin: 0; overflow: hidden; background: radial-gradient(#ffffff, #d7d7d7); font-family: sans-serif; }
         model-viewer { width: 100%; height: 100%; }
 
-        /* 💡 ARボタン：反応を最優先にする設定 */
+        /* ARボタンのデザイン（高級感のある青グラデ） */
         #ar-button {
             position: absolute;
             bottom: 100px;
             left: 50%;
             transform: translateX(-50%);
-            padding: 16px 32px;
+            width: 85%;
+            max-width: 320px;
+            padding: 18px 20px;
             background: linear-gradient(135deg, #4285f4, #1a73e8);
             color: white;
             border: none;
             border-radius: 100px;
             font-size: 16px;
-            font-weight: 600;
-            z-index: 9999; /* 重なり順を最強にする */
-            box-shadow: 0 10px 20px rgba(66, 133, 244, 0.3);
-            display: block !important; /* 強制表示 */
+            font-weight: bold;
+            z-index: 9999;
+            box-shadow: 0 10px 25px rgba(66, 133, 244, 0.4);
             cursor: pointer;
-            pointer-events: auto !important; /* クリックを確実に受け付ける */
+            display: block !important;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: transform 0.2s;
         }
 
-        /* 💡 ここが原因だった可能性が高いので削除・修正済み */
-        /* model-viewer:not(.ar-ready) #ar-button { ... } を削除しました */
+        #ar-button:active { transform: translateX(-50%) scale(0.95); }
 
-        /* 読み込みバー */
+        /* LINE内ブラウザ等で「ブラウザ起動」を促す時の色（オレンジ） */
+        #ar-button.warning {
+            background: linear-gradient(135deg, #ff9900, #ff6600);
+            box-shadow: 0 10px 25px rgba(255, 153, 0, 0.4);
+        }
+
+        /* 読み込みバー（上部に配置） */
         .progress-bar {
             display: block; width: 100%; height: 4px; position: absolute; top: 0; left: 0; background: rgba(0, 0, 0, 0.1);
         }
         .update-bar {
             background: #4285f4; width: 0%; height: 100%; transition: width 0.3s;
         }
+
+        /* 読み込み完了後にバーを隠す */
+        model-viewer:not(.searching) .progress-bar { display: none; }
     </style>
 </head>
 <body>
@@ -50,7 +63,8 @@
         ar-modes="scene-viewer webxr quick-look" 
         camera-controls 
         autoplay
-        shadow-intensity="1">
+        shadow-intensity="1.5"
+        shadow-softness="1">
         
         <div slot="progress-bar" class="progress-bar">
             <div class="update-bar"></div>
@@ -61,6 +75,29 @@
         </button>
 
     </model-viewer>
+
+    <script>
+        window.addEventListener('load', () => {
+            const arButton = document.querySelector('#ar-button');
+            
+            // アプリ内ブラウザ（LINE, Instagram等）の判定
+            const ua = navigator.userAgent;
+            const isInApp = /Line|FBAN|FBAV|Instagram|Twitter/i.test(ua);
+            
+            if (isInApp) {
+                // ボタンの見た目と役割を変更
+                arButton.classList.add('warning');
+                arButton.innerText = "🌐 ブラウザで開き直してAR開始";
+                
+                arButton.addEventListener('click', (e) => {
+                    // LINE等で外部ブラウザを強制するパラメータを付与してリロード
+                    const currentUrl = window.location.href;
+                    const sep = currentUrl.includes('?') ? '&' : '?';
+                    window.location.href = currentUrl + sep + "openExternalBrowser=1";
+                });
+            }
+        });
+    </script>
 
 </body>
 </html>
