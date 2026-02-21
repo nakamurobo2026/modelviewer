@@ -3,57 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D AR Viewer</title>
+    <title>3D Experience</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
     <style>
-        html, body { height: 100%; margin: 0; overflow: hidden; background-color: #f0f0f0; }
-        model-viewer { width: 100%; height: 100%; }
+        /* 全体の雰囲気：落ち着いたグレー */
+        html, body { height: 100%; margin: 0; overflow: hidden; background: radial-gradient(#ffffff, #d7d7d7); }
+        model-viewer { width: 100%; height: 100%; --poster-color: transparent; }
 
-        /* ARボタン */
+        /* 💡 ARボタン：モダンなグラデーションと浮遊感 */
         #ar-button {
             position: absolute;
             bottom: 100px;
             left: 50%;
             transform: translateX(-50%);
-            width: 80%;
-            max-width: 300px;
-            padding: 16px 20px;
-            background-color: #007bff;
+            padding: 16px 32px;
+            background: linear-gradient(135deg, #4285f4, #1a73e8);
             color: white;
             border: none;
-            border-radius: 50px;
+            border-radius: 100px;
             font-size: 16px;
-            font-weight: bold;
+            font-weight: 600;
+            letter-spacing: 1px;
             z-index: 999;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            display: block !important;
+            box-shadow: 0 10px 20px rgba(66, 133, 244, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
         }
 
-        /* 💡 プログレスバー（読み込みバー）のスタイル */
+        #ar-button:active {
+            transform: translateX(-50%) scale(0.95);
+            box-shadow: 0 5px 10px rgba(66, 133, 244, 0.2);
+        }
+
+        /* 💡 プログレスバー：細くて洗練されたデザイン */
         .progress-bar {
             display: block;
-            width: 33%;
-            height: 10%;
-            max-height: 4px; /* バーの太さ */
+            width: 100%;
+            height: 4px;
             position: absolute;
-            top: 0; /* 画面の一番上に配置 */
-            left: 50%;
-            transform: translateX(-50%);
-            border-radius: 0 0 4px 4px;
-            background: rgba(0, 0, 0, 0.1); /* 背景の溝の色 */
+            top: 0;
+            left: 0;
+            background: rgba(0, 0, 0, 0.05);
         }
 
         .update-bar {
-            background-color: #007bff; /* バーの色 */
+            background: linear-gradient(90deg, #4285f4, #34a853, #fbbc05, #ea4335);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite linear;
             width: 0%;
             height: 100%;
-            border-radius: 0 0 4px 4px;
-            transition: width 0.3s; /* 滑らかに動かす */
+            transition: width 0.3s;
         }
 
-        /* 読み込みが終わったらバーを隠す */
-        model-viewer:not(.searching) .progress-bar {
-            display: none;
+        @keyframes shimmer {
+            0% { background-position: 100% 0; }
+            100% { background-position: -100% 0; }
+        }
+
+        /* モデル読み込み中の「ふわふわ」待機アニメーション */
+        @keyframes floating {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        /* AR非対応時はボタンを半透明にする（完全に消すと寂しいため） */
+        model-viewer:not(.ar-ready) #ar-button {
+            opacity: 0.5;
+            filter: grayscale(1);
+            pointer-events: none;
         }
     </style>
 </head>
@@ -66,14 +88,24 @@
         ar-modes="scene-viewer webxr quick-look" 
         camera-controls 
         autoplay
-        shadow-intensity="1">
+        auto-rotate
+        rotation-pivot="0 0 0"
+        shadow-intensity="1.5"
+        shadow-softness="1"
+        environment-image="neutral"
+        exposure="1"
+        alt="AR 3D Model Experience">
         
         <div slot="progress-bar" class="progress-bar">
             <div class="update-bar"></div>
         </div>
 
         <button slot="ar-button" id="ar-button">
-            👋 ARで表示する
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                <path d="M7 19h10V5H7v14zm0-16h10c1.1 0 2 .9 2 2v14c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2V5c0-1.1.9-2 2-2z"/>
+                <path d="M0 0h24v24H0z" fill="none"/>
+            </svg>
+            ARで体験する
         </button>
 
     </model-viewer>
