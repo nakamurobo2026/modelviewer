@@ -2,48 +2,15 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
-    <title>Scene Viewer AR</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Model Viewer - Multi Device AR</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     <style>
-        /* 画面全体のスクロールを禁止して固定する */
-        html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #eee;
-        }
-
+        body { margin: 0; }
         model-viewer {
-            width: 100%;
-            height: 100%;
-        }
-
-        /* ボタンの配置設定 */
-        #ar-button {
-            display: block;
-            position: fixed;   /* 画面に対して絶対位置で固定 */
-            bottom: 120px;     /* 下からかなり余裕を持って上げる（はみ出し防止） */
-            left: 50%;
-            transform: translateX(-50%); /* 左右中央 */
-            
-            padding: 16px 32px;
-            background-color: #4285f4;
-            color: white;
-            border: none;
-            border-radius: 50px;
-            font-size: 18px;
-            font-weight: bold;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-            z-index: 9999;     /* 最前面に配置 */
-            white-space: nowrap; /* 改行禁止 */
-        }
-
-        /* ARが利用できない時は隠す */
-        model-viewer:not([ar-visible]) #ar-button {
-            display: none;
+            width: 100vw;
+            height: 100vh;
+            background-color: #eeeeee;
         }
     </style>
 </head>
@@ -53,14 +20,10 @@
         src="dance.glb" 
         ios-src="dance.usdz" 
         ar 
-        ar-modes="scene-viewer webxr quick-look" 
+        ar-modes="webxr scene-viewer quick-look" 
         camera-controls 
-        interaction-prompt="auto">
-        
-        <button slot="ar-button" id="ar-button">
-            ARで表示する
-        </button>
-
+        shadow-intensity="1" 
+        alt="A 3D model for iPhone and Android AR">
     </model-viewer>
 
 </body>
