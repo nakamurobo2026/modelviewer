@@ -3,30 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3Dモデルビューアー - AR対応</title>
+    <title>3D AR Viewer</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
     <style>
-        body { margin: 0; background-color: #f0f0f0; font-family: sans-serif; }
+        body { margin: 0; background-color: #f8f9fa; font-family: 'Helvetica Neue', Arial, sans-serif; }
+        
         model-viewer {
             width: 100vw;
             height: 100vh;
-            --poster-color: #eee;
+            display: block;
         }
-        /* AR開始ボタンのカスタムデザイン */
-        #ar-button {
-            background-color: #ffffff;
-            border-radius: 20px;
-            border: 1px solid #dadce0;
+
+        /* 自作ARボタンのスタイル */
+        #custom-ar-button {
+            background-color: #4285f4; /* Google Blue */
+            color: white;
+            border-radius: 30px;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
             position: absolute;
-            bottom: 32px;
+            bottom: 50px;
             left: 50%;
             transform: translateX(-50%);
-            padding: 10px 24px;
+            white-space: nowrap;
             display: flex;
             align-items: center;
-            gap: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             cursor: pointer;
+            z-index: 100;
+        }
+
+        #custom-ar-button:active {
+            background-color: #3367d6;
+        }
+
+        /* ARが利用できない環境ではボタンを非表示にする（model-viewerが自動制御） */
+        model-viewer:not(.ar-ready) #custom-ar-button {
+            display: none;
         }
     </style>
 </head>
@@ -36,19 +52,17 @@
         src="dance.glb" 
         ios-src="dance.usdz" 
         ar 
-    　  ar-modes="scene-viewer webxr quick-look"         
+        ar-modes="scene-viewer webxr quick-look" 
         camera-controls 
         autoplay
-        auto-rotate
         shadow-intensity="1" 
-        environment-image="neutral"
-        alt="ARで踊る3Dモデル">
+        alt="ARモデル">
         
-        <button slot="ar-button" id="ar-button">
-            ✨ 部屋に置く（AR表示）
+        <button slot="ar-button" id="custom-ar-button">
+            <span style="font-size: 20px;">📦</span>
+            目の前に表示する（AR）
         </button>
 
-        <div slot="progress-bar"></div>
     </model-viewer>
 
 </body>
