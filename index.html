@@ -3,14 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Model Viewer - Multi Device AR</title>
+    <title>3D AR Viewer</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     <style>
         body { margin: 0; }
         model-viewer {
             width: 100vw;
             height: 100vh;
-            background-color: #eeeeee;
+            background-color: #f0f0f0;
+        }
+
+        /* カスタムARボタンのスタイル */
+        #ar-button {
+            display: block; /* 強制表示 */
+            position: absolute;
+            bottom: 30px;   /* 下から少し浮かせる */
+            left: 50%;
+            transform: translateX(-50%); /* 画面中央に配置 */
+            padding: 12px 24px;
+            background-color: #4285f4; /* Google Blue */
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            z-index: 9999; /* 何があっても最前面 */
+            cursor: pointer;
+        }
+
+        /* モデルがAR非対応の時はボタンを隠す（自動制御用） */
+        model-viewer:not([ar-visible]) #ar-button {
+            display: none;
         }
     </style>
 </head>
@@ -22,8 +45,12 @@
         ar 
         ar-modes="webxr scene-viewer quick-look" 
         camera-controls 
-        shadow-intensity="1" 
-        alt="A 3D model for iPhone and Android AR">
+        shadow-intensity="1">
+        
+        <button slot="ar-button" id="ar-button">
+            🚀 現実に飛び出す（AR）
+        </button>
+
     </model-viewer>
 
 </body>
