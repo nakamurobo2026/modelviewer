@@ -4,41 +4,60 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>3D AR Viewer</title>
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
     <style>
-        /* 画面全体の高さを100%に固定 */
+        /* 1. 画面全体のレイアウト設定 */
         html, body { 
             height: 100%; 
             margin: 0; 
             padding: 0;
             overflow: hidden; 
-        }
-        model-viewer {
-            width: 100%;
-            height: 100%; /* vhではなく%を使う */
             background-color: #f0f0f0;
         }
 
-        /* ARボタン：あえて少し「上」に配置して隠れるのを防ぐ */
+        model-viewer {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 2. ARボタン：はみ出し防止と位置調整 */
         #ar-button {
             position: absolute;
-            bottom: 80px;   /* 下から80px（かなり上に上げる） */
+            bottom: 100px;  /* 下から100pxの位置（バーを避けるため高めに設定） */
             left: 50%;
             transform: translateX(-50%);
-            padding: 16px 32px;
+            
+            /* サイズ調整：画面幅の80%を超えず、かつ最大300pxまで */
+            width: 80%;
+            max-width: 300px;
+            padding: 16px 20px;
+            
             background-color: #007bff;
             color: white;
             border: none;
             border-radius: 50px;
-            font-size: 18px;
+            
+            font-size: 16px;
             font-weight: bold;
-            z-index: 99999;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            text-align: center;
+            z-index: 999;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            /* テキストがはみ出さないための処理 */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
         }
 
-        /* ボタンが消えるのを防ぐために、あえて強制表示させる */
+        /* ボタンが隠れないように強制表示 */
         model-viewer #ar-button {
             display: block !important;
+        }
+
+        /* 押した時の反応 */
+        #ar-button:active {
+            background-color: #0056b3;
         }
     </style>
 </head>
@@ -48,14 +67,18 @@
         src="dance.glb" 
         ios-src="dance.usdz" 
         ar 
-        ar-modes="scene-viewer　webxr  quick-look" 
+        ar-modes="scene-viewer webxr quick-look" 
         camera-controls 
-        interaction-prompt="auto">
+        autoplay
+        shadow-intensity="1"
+        interaction-prompt="auto"
+        alt="AR 3Dモデル">
         
         <button slot="ar-button" id="ar-button">
-            タップしてARを開始
+            👋 ARで表示する
         </button>
 
+        <div slot="ar-failure" style="display:none;"></div>
     </model-viewer>
 
 </body>
