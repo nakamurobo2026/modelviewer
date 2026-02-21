@@ -3,14 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Model Viewer - Multi Device AR</title>
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+    <title>3Dモデルビューアー - AR対応</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
     <style>
-        body { margin: 0; }
+        body { margin: 0; background-color: #f0f0f0; font-family: sans-serif; }
         model-viewer {
             width: 100vw;
             height: 100vh;
-            background-color: #eeeeee;
+            --poster-color: #eee;
+        }
+        /* AR開始ボタンのカスタムデザイン */
+        #ar-button {
+            background-color: #ffffff;
+            border-radius: 20px;
+            border: 1px solid #dadce0;
+            position: absolute;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 24px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
         }
     </style>
 </head>
@@ -22,8 +38,17 @@
         ar 
         ar-modes="webxr scene-viewer quick-look" 
         camera-controls 
+        autoplay
+        auto-rotate
         shadow-intensity="1" 
-        alt="A 3D model for iPhone and Android AR">
+        environment-image="neutral"
+        alt="ARで踊る3Dモデル">
+        
+        <button slot="ar-button" id="ar-button">
+            ✨ 部屋に置く（AR表示）
+        </button>
+
+        <div slot="progress-bar"></div>
     </model-viewer>
 
 </body>
