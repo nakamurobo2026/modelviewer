@@ -9,14 +9,14 @@
         html, body { height: 100%; margin: 0; overflow: hidden; background: #fff; font-family: sans-serif; }
         model-viewer { width: 100%; height: 100%; }
 
-        /* 💡 model-viewerの外に配置して、強制的に表示させるボタン */
+        /* 常に表示されるボタン */
         .floating-ar-button {
             position: fixed;
             bottom: 100px;
             left: 50%;
             transform: translateX(-50%);
             width: 80%;
-            max-width: 300px;
+            max-width: 320px;
             padding: 18px;
             background: #007bff;
             color: white;
@@ -25,14 +25,14 @@
             font-size: 16px;
             font-weight: bold;
             text-align: center;
-            z-index: 10000; /* 何があっても最前面 */
+            z-index: 10000;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             text-decoration: none;
             display: block;
         }
 
-        /* LINEの時はオレンジにする（JSで制御） */
-        .line-mode {
+        /* iPhoneのLINEなど、制限がある時用の色 */
+        .warning-mode {
             background: linear-gradient(135deg, #ff9900, #ff6600) !important;
         }
     </style>
@@ -44,13 +44,11 @@
         src="dance.glb" 
         ios-src="dance.usdz" 
         ar 
-        ar-modes="quick-look scene-viewer webxr" 
+        ar-modes="scene-viewer webxr quick-look" 
         camera-controls 
         autoplay
         shadow-intensity="1">
-        
-        <div slot="ar-button"></div>
-    </model-viewer>
+        <div slot="ar-button"></div> </model-viewer>
 
     <a href="#" id="custom-ar-link" class="floating-ar-button">
         ARで表示する
@@ -60,30 +58,43 @@
         const btn = document.getElementById('custom-ar-link');
         const viewer = document.getElementById('viewer');
         const ua = navigator.userAgent;
-        const isLine = /Line/i.test(ua);
-        const isIOS = /iPhone|iPad|iPod/.test(ua);
 
-        if (isLine) {
-            // LINE内ブラウザの場合
-            btn.classList.add('line-mode');
-            btn.innerText = "🌐 Safariで開き直す";
+        const isIPhone = /iPhone|iPad|iPod/.test(ua);
+        const isLine = /Line/i.test(ua);
+        const isAndroid = /Android/i.test(ua);
+
+        // --- 判定ロジック ---
+
+        if (isIPhone && isLine) {
+            // 1. iPhoneのLINE：Safari誘導が必要
+            btn.classList.add('warning-mode');
+            btn.innerText = "🌐 Safariで開き直してAR開始";
             btn.onclick = (e) => {
                 e.preventDefault();
                 const url = window.location.href;
                 window.location.href = url + (url.includes('?') ? '&' : '?') + "openExternalBrowser=1";
             };
-        } else {
-            // 通常ブラウザの場合
+        } 
+        else if (isAndroid && isLine) {
+            // 2. AndroidのLINE：Scene Viewerが動く可能性が高いので一旦試させる
+            btn.innerText = "📱 ARを開始（Android）";
             btn.onclick = (e) => {
                 e.preventDefault();
-                // model-viewerのAR起動機能を直接呼び出す
+                viewer.activateAR();
+            };
+        }
+        else {
+            // 3. 通常ブラウザ（Chrome/Safariなど）
+            btn.innerText = "👋 タップしてARを開始";
+            btn.onclick = (e) => {
+                e.preventDefault();
                 viewer.activateAR();
             };
         }
 
-        // 💡 iPhoneの「https://」チェック
-        if (isIOS && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-            btn.innerText = "❌ HTTPS接続が必要です";
+        // HTTPSチェック（iPhoneのみ必須）
+        if (isIPhone && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+            btn.innerText = "❌ HTTPS(SSL)が必要です";
             btn.style.background = "red";
         }
     </script>
