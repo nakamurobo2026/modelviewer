@@ -2,15 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Nakamurobo | Episode 9</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     
     <style>
-        body { margin: 0; background: #000; color: #0f0; font-family: 'Courier New', monospace; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        body { margin: 0; background: #000; color: #0f0; font-family: 'Courier New', monospace; display: flex; flex-direction: column; height: 100vh; overflow: hidden; -webkit-text-size-adjust: 100%; }
         
         #container { position: relative; flex-grow: 1; width: 100%; height: 100%; }
         model-viewer { width: 100%; height: 100%; background: #000; }
+
+        /* 画面全体を覆う透明なトリガー層 */
+        #click-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; }
 
         #terminal { 
             height: 200px; 
@@ -20,31 +23,30 @@
             font-size: 13px; 
             overflow-y: auto; 
             box-sizing: border-box; 
-            cursor: pointer;
-            line-height: 1.5;
             z-index: 10;
+            position: relative;
         }
         
-        /* iOS Compatible AR Button */
-        #ar-button {
-            display: none; /* 初期は非表示 */
-            position: absolute; 
-            bottom: 220px; 
+        /* 完全に独立したARボタン（iOS対策） */
+        #custom-ar-button {
+            display: none; 
+            position: fixed; /* 画面に対して固定 */
+            bottom: 230px; 
             left: 50%; 
             transform: translateX(-50%);
-            background-color: #0f0; 
+            background: #0f0; 
             color: #000; 
             border: none; 
-            padding: 15px 25px; 
+            padding: 16px 30px; 
             font-weight: bold;
-            border-radius: 4px; 
+            border-radius: 8px; 
             cursor: pointer; 
-            z-index: 9999; /* 最前面に強制 */
-            box-shadow: 0 0 20px #0f0;
+            z-index: 10000; /* 全てを飛び越えて最前面 */
+            box-shadow: 0 0 30px #0f0;
             font-family: 'Courier New', sans-serif;
             white-space: nowrap;
             font-size: 14px;
-            -webkit-appearance: none; /* iOSのデフォルトスタイルを解除 */
+            -webkit-appearance: none;
         }
 
         #output div { margin-bottom: 2px; }
@@ -56,6 +58,8 @@
 <body>
 
     <div id="container">
+        <div id="click-layer"></div>
+
         <model-viewer 
             id="viewer"
             src="nakamurobo.glb" 
@@ -64,9 +68,9 @@
             ar-modes="quick-look webxr scene-viewer" 
             camera-controls 
             shadow-intensity="1">
-            
-            <button slot="ar-button" id="ar-button">REALIZE_IN_REAL_WORLD</button>
         </model-viewer>
+
+        <button id="custom-ar-button">REALIZE_IN_REAL_WORLD</button>
     </div>
 
     <div id="terminal">
@@ -75,8 +79,9 @@
 
     <script>
         const viewer = document.querySelector('#viewer');
+        const clickLayer = document.querySelector('#click-layer');
+        const arButton = document.querySelector('#custom-ar-button');
         const terminal = document.querySelector('#terminal');
-        const arButton = document.querySelector('#ar-button');
         const output = document.querySelector('#output');
 
         const logLines = [
@@ -96,8 +101,13 @@
 
         const playGlitchSound = () => {
             const audio = new Audio('noise.mp3');
-            audio.play().catch(e => console.log("Audio block:", e));
+            audio.play().catch(e => console.log("Audio waiting"));
         };
+
+        // ボタンが押されたらARを起動
+        arButton.addEventListener('click', () => {
+            viewer.activateAR();
+        });
 
         const startAction = () => {
             if (isStarted) return;
@@ -106,11 +116,11 @@
             playGlitchSound();
             output.innerHTML = "";
             output.classList.add('glitch');
+            clickLayer.style.display = "none"; // 起動後は操作をmodel-viewerに戻す
             processLog();
         };
 
-        // iPhoneのSafariではクリックイベントがcontainerレベルで必要な場合があります
-        viewer.addEventListener('click', startAction);
+        clickLayer.addEventListener('click', startAction);
         terminal.addEventListener('click', startAction);
 
         function processLog() {
@@ -129,8 +139,8 @@
                 });
             } else {
                 output.classList.remove('glitch');
-                // 解析完了後にボタンを可視化
-                arButton.style.setProperty('display', 'block', 'important');
+                // 強制的に表示
+                arButton.style.display = "block";
             }
         }
 
