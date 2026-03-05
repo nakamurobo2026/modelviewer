@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NAKAMUROBO - Deep Noise Test</title>
+    <title>NAKAMUROBO - Japanese Fix</title>
     <style>
-        body { margin: 0; background: #050505; color: #00ff41; font-family: 'Courier New', Courier, monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        body { margin: 0; background: #050505; color: #00ff41; font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
         
-        .preview-area { position: relative; width: 300px; height: 300px; background: #111; border: 1px solid #222; display: flex; align-items: center; justify-content: center; }
+        .preview-area { position: relative; width: 300px; height: 300px; background: #111; border: 1px solid #333; display: flex; align-items: center; justify-content: center; }
 
-        /* 解析ポイント */
         .Hotspot {
             background: #cc0000; border: none; width: 20px; height: 20px;
             border-radius: 50%; cursor: pointer; position: relative;
@@ -23,45 +22,40 @@
             background: rgba(0, 15, 0, 0.95); border: 1px solid #00ff41;
             box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
             pointer-events: none;
+            line-height: 1.6;
         }
 
-        /* 1. 全体の明滅（ジジジ…感） */
+        /* 1. 明滅をゆっくりに */
         @keyframes flicker {
-            0% { opacity: 0.9; }
-            5% { opacity: 0.5; }
-            10% { opacity: 0.9; }
-            15% { opacity: 0.2; }
-            20% { opacity: 0.9; }
+            0% { opacity: 1; }
+            50% { opacity: 0.8; }
+            52% { opacity: 0.2; } /* 一瞬だけ暗く */
+            54% { opacity: 0.8; }
             100% { opacity: 1; }
         }
 
-        /* 2. 横方向の走査線ノイズ */
-        @keyframes scanline {
-            0% { clip-path: inset(0 0 99% 0); }
-            100% { clip-path: inset(0 0 0 0); }
-        }
-
-        /* 3. 文字のわずかなズレ */
-        @keyframes shift {
-            0% { transform: translateX(0); }
-            2% { transform: translateX(-3px); skewX(5deg); }
-            4% { transform: translateX(3px); skewX(-5deg); }
-            6% { transform: translateX(0); }
+        /* 2. わずかな震え */
+        @keyframes subtle-glitch {
+            0% { transform: translate(0); }
+            98% { transform: translate(0); }
+            99% { transform: translate(-2px, 1px); } /* 最後に少しだけ動く */
+            100% { transform: translate(0); }
         }
 
         .active {
             display: block !important;
-            animation: flicker 4s infinite, shift 5s infinite;
+            animation: flicker 3s infinite, subtle-glitch 4s infinite;
         }
 
-        /* 走査線エフェクトを重ねる */
-        .active::before {
+        /* 走査線（横線）をうっすら入れる */
+        .active::after {
             content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: repeating-linear-gradient(rgba(0,255,65,0.1) 0%, transparent 1px, rgba(0,255,65,0.1) 2px);
+            background: repeating-linear-gradient(transparent 0%, rgba(0,255,65,0.05) 50%, transparent 100%);
+            background-size: 100% 4px;
             pointer-events: none;
         }
 
-        .status { font-size: 10px; letter-spacing: 2px; color: #008822; }
+        .status { font-size: 10px; color: #008822; border-bottom: 1px solid #008822; margin-bottom: 8px; }
     </style>
 </head>
 <body>
@@ -69,8 +63,7 @@
     <div class="preview-area">
         <button class="Hotspot" id="testBtn">
             <div class="glitch-box" id="msg">
-                <div class="status">LOG: RECOVERING...</div>
-                <br>
+                <div class="status">DECRYPTED DATA</div>
                 <strong>Trust yourself.</strong><br>
                 自分を信じろ、ナカムロボ。
             </div>
