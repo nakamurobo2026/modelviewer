@@ -16,20 +16,25 @@
             padding: 12px; font-size: 13px; overflow-y: auto; box-sizing: border-box; z-index: 10;
         }
         
-        /* iOS標準の挙動を邪魔しないためのARボタン設定 */
+        /* iOS対策：最初から「存在」させておき、透明度だけで制御する */
         #ar-button {
-            visibility: hidden; /* 初期状態は隠す（存在はさせておく） */
             position: absolute; bottom: 220px; left: 50%; transform: translateX(-50%);
             background: #0f0; color: #000; border: none;
             padding: 15px 25px; font-weight: bold; border-radius: 4px; 
             font-family: 'Courier New', sans-serif; white-space: nowrap; font-size: 13px;
             z-index: 999; box-shadow: 0 0 20px #0f0;
+            
+            /* 初期状態：透明かつクリック不可 */
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
             -webkit-appearance: none;
         }
 
-        /* 解析完了後に表示 */
-        #ar-button.visible {
-            visibility: visible !important;
+        /* 解析完了後に「実体化」 */
+        #ar-button.active {
+            opacity: 1 !important;
+            pointer-events: auto !important;
         }
 
         .highlight { color: #fff; font-weight: bold; }
@@ -59,7 +64,6 @@
     </div>
 
     <script>
-        const viewer = document.querySelector('#viewer');
         const overlay = document.querySelector('#overlay');
         const arBtn = document.querySelector('#ar-button');
         const terminal = document.querySelector('#terminal');
@@ -78,11 +82,11 @@
 
         let isStarted = false;
 
-        // 最初のタップで音声を解禁し、解析を開始
         const start = () => {
             if (isStarted) return;
             isStarted = true;
             
+            // iPhoneでの音声再生権限を取得
             const audio = new Audio('noise.mp3');
             audio.play().catch(() => {});
             
@@ -99,7 +103,6 @@
                 const line = document.createElement('div');
                 output.appendChild(line);
                 
-                // 特定のメッセージで再度音を鳴らす
                 if (logLines[index].includes("Believe in yourself")) {
                     new Audio('noise.mp3').play().catch(() => {});
                 }
@@ -116,8 +119,8 @@
                     }
                 }, 20);
             } else {
-                // 解析完了：ボタンを可視化
-                arBtn.classList.add('visible');
+                // 解析完了：ボタンを有効化
+                arBtn.classList.add('active');
             }
         }
     </script>
