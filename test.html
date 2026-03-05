@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NAKAMUROBO - Glitch Test</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+    <style>
+        body { margin: 0; background: #111; color: #eee; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        
+        /* モデルが無い代わりのダミーエリア */
+        .preview-area {
+            position: relative; width: 300px; height: 300px;
+            background: #222; border: 1px dashed #444; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* 赤い解析ポイント */
+        .Hotspot {
+            background: #ff0000; border: none; width: 30px; height: 30px;
+            border-radius: 50%; box-shadow: 0 0 15px #f00; cursor: pointer;
+            position: relative;
+        }
+
+        /* ノイズ吹き出し本体 */
+        .glitch-box {
+            display: none; position: absolute; left: 40px; top: -40px;
+            width: 200px; padding: 10px;
+            background: rgba(0, 30, 0, 0.9); border: 1px solid #00ff41;
+            color: #00ff41; font-family: 'Courier New', monospace;
+        }
+
+        /* グリッチ・ノイズのアニメーション */
+        @keyframes glitch-anim {
+            0% { transform: translate(0); clip-path: inset(10% 0 30% 0); }
+            20% { transform: translate(-5px, 2px); }
+            40% { transform: translate(5px, -2px); clip-path: inset(40% 0 10% 0); }
+            100% { transform: translate(0); }
+        }
+
+        .active {
+            display: block !important;
+            animation: glitch-anim 0.1s infinite;
+            text-shadow: 2px 0 red, -2px 0 blue;
+        }
+
+        .hint { margin-top: 20px; color: #888; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <div class="preview-area">
+        <button class="Hotspot" id="testBtn">
+            <div class="glitch-box" id="msg">
+                <small>[DECRYPTING...]</small><br>
+                <strong>Trust yourself.</strong><br>
+                自分を信じろ、ナカムロボ。
+            </div>
+        </button>
+    </div>
+
+    <p class="hint">赤いボタンをタップしてノイズを確認</p>
+
+    <script>
+        const btn = document.getElementById('testBtn');
+        const msg = document.getElementById('msg');
+        btn.addEventListener('click', () => {
+            msg.classList.toggle('active');
+        });
+    </script>
+
+</body>
+</html>
