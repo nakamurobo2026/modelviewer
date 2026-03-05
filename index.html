@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NAKAMUROBO AR - Log Analysis</title>
+    <title>NAKAMUROBO AR - Final Log Analysis</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
     <style>
         html, body { height: 100%; margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
         model-viewer { width: 100%; height: 100%; }
 
-        /* --- AR開始ボタン（下部） --- */
+        /* AR開始ボタン */
         .floating-ar-button {
             position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
             width: 80%; max-width: 320px; padding: 18px;
@@ -18,38 +18,32 @@
             z-index: 10000; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             text-decoration: none; display: block;
         }
-        .warning-mode { background: linear-gradient(135deg, #ff9900, #ff6600) !important; }
 
-        /* --- 修正ポイント：赤いボタンを消して透明にする --- */
+        /* 解析用タップエリア（見た目は透明） */
         .Hotspot {
-            background: none; /* 赤色を消去 */
-            border: none;
-            width: 45px;      /* タップしやすいように少し広めに */
-            height: 45px;
-            cursor: pointer;
-            position: relative;
-            outline: none;
-            -webkit-tap-highlight-color: transparent; /* タップ時の青い枠を消す */
+            background: none; border: none; width: 50px; height: 50px;
+            cursor: pointer; position: relative; outline: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* 緑のノイズメッセージ */
+        /* デジタル・グリーン・メッセージ */
         .glitch-box {
-            display: none; position: absolute; bottom: 50px; left: 50%;
-            transform: translateX(-50%); width: 220px; padding: 15px;
-            background: rgba(0, 10, 0, 0.95); border: 1px solid #00ff41;
-            color: #00ff41; font-family: monospace; text-align: center;
+            display: none; position: absolute; bottom: 60px; left: 50%;
+            transform: translateX(-50%); width: 240px; padding: 20px;
+            background: rgba(0, 15, 0, 0.98); border: 1px solid #00ff41;
+            color: #00ff41; font-family: 'Courier New', monospace; text-align: center;
             pointer-events: none; z-index: 100;
-            box-shadow: 0 0 15px rgba(0, 255, 65, 0.3);
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.4);
         }
 
         .active { display: block !important; animation: jiji 4s infinite; }
         @keyframes jiji {
             0%, 90% { opacity: 1; transform: translateX(-50%) translateY(0); }
-            93% { opacity: 0.4; transform: translateX(-52%) translateY(-2px); }
-            96% { opacity: 1; transform: translateX(-48%) translateY(2px); }
+            93% { opacity: 0.4; transform: translateX(-53%) translateY(-2px); }
+            95% { opacity: 1; transform: translateX(-47%) translateY(2px); }
             100% { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
-        .status { font-size: 10px; border-bottom: 1px solid #00ff41; margin-bottom: 10px; color: #008822; text-align: left; }
+        .status { font-size: 10px; border-bottom: 1px solid #00ff41; margin-bottom: 12px; color: #008822; text-align: left; }
     </style>
 </head>
 <body>
@@ -57,73 +51,50 @@
     <model-viewer 
         id="viewer"
         src="nakamurobo.glb" 
-        ar 
-        ar-modes="scene-viewer webxr quick-look" 
-        camera-controls 
-        shadow-intensity="1"
-        style="background-color: #000;">
+        ar ar-modes="scene-viewer webxr quick-look" 
+        camera-controls shadow-intensity="1">
 
         <button class="Hotspot" id="hotspotBtn" slot="hotspot-1" 
-            data-position="0.053m 0.525m 0.125m" 
-            data-normal="0m 0.4m 0.9m">
+            data-position="0.008748914721762178m 0.05907800715616432m 0.017609966451889197m" 
+            data-normal="0.00027698842872547405m -0.0007094569774607593m 0.9999997099740616m">
             
             <div class="glitch-box" id="output">
-                <div class="status">DECRYPTING...</div>
-                <strong>"Believe in yourself."</strong><br><br>
+                <div class="status">DECRYPTING DR.NAKAMURA'S LOG...</div>
+                <strong style="font-size: 1.2em;">"Believe in yourself."</strong><br><br>
                 Nakamurobo,<br>
                 you are not an error.<br>
                 Find me.
             </div>
         </button>
 
-        <div slot="ar-button"></div>
     </model-viewer>
     
     <a href="#" id="custom-ar-link" class="floating-ar-button">タップしてARを開始</a>
 
     <script>
-        // --- ノイズ＆サウンド処理 ---
-        const hotspot = document.getElementById('hotspotBtn');
+        const btn = document.getElementById('hotspotBtn');
         const box = document.getElementById('output');
         const noiseAudio = new Audio('noise.mp3'); 
 
-        hotspot.addEventListener('click', (e) => {
+        btn.addEventListener('click', (e) => {
             e.stopPropagation();
             const isActive = box.classList.toggle('active');
             if (isActive) {
                 noiseAudio.currentTime = 0;
                 noiseAudio.play().catch(e => console.log("Audio play failed:", e));
-                if (window.navigator.vibrate) window.navigator.vibrate([15, 40]);
+                if (window.navigator.vibrate) window.navigator.vibrate([20, 50, 20]);
             } else {
                 noiseAudio.pause();
             }
         });
 
-        // --- ブラウザ判定ロジック（既存） ---
-        const btn = document.getElementById('custom-ar-link');
+        // AR起動ロジック
+        const arBtn = document.getElementById('custom-ar-link');
         const viewer = document.getElementById('viewer');
-        const ua = navigator.userAgent;
-        const isIPhone = /iPhone|iPad|iPod/.test(ua);
-        const isLine = /Line/i.test(ua);
-        const isAndroid = /Android/i.test(ua);
-
-        if (isIPhone && isLine) {
-            btn.classList.add('warning-mode');
-            btn.innerText = "🌐 Safariで開き直してAR開始";
-            btn.onclick = (e) => {
-                e.preventDefault();
-                const url = window.location.href;
-                window.location.href = url + (url.includes('?') ? '&' : '?') + "openExternalBrowser=1";
-            };
-        } 
-        else if (isAndroid && isLine) {
-            btn.innerText = "📱 ARを開始（Android）";
-            btn.onclick = (e) => { e.preventDefault(); viewer.activateAR(); };
-        }
-        else {
-            btn.innerText = "👋 タップしてARを開始";
-            btn.onclick = (e) => { e.preventDefault(); viewer.activateAR(); };
-        }
+        arBtn.onclick = (e) => {
+            e.preventDefault();
+            viewer.activateAR();
+        };
     </script>
 </body>
 </html>
