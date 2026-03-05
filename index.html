@@ -3,70 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D AR Viewer</title>
+    <title>NAKAMUROBO AR - Log Analysis</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
     <style>
-        html, body { height: 100%; margin: 0; overflow: hidden; background: #fff; font-family: sans-serif; }
+        html, body { height: 100%; margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
         model-viewer { width: 100%; height: 100%; }
 
-        /* 常に表示されるボタン */
+        /* --- 既存のARボタン用スタイル --- */
         .floating-ar-button {
-            position: fixed;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80%;
-            max-width: 320px;
-            padding: 18px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 50px;
-            font-size: 16px;
-            font-weight: bold;
-            text-align: center;
-            z-index: 10000;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            text-decoration: none;
-            display: block;
+            position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
+            width: 80%; max-width: 320px; padding: 18px;
+            background: #007bff; color: white; border: none; border-radius: 50px;
+            font-size: 16px; font-weight: bold; text-align: center;
+            z-index: 10000; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            text-decoration: none; display: block;
+        }
+        .warning-mode { background: linear-gradient(135deg, #ff9900, #ff6600) !important; }
+
+        /* --- 今回追加したノイズ演出用スタイル --- */
+        .Hotspot {
+            background: #ff0000; border: none; width: 18px; height: 18px;
+            border-radius: 50%; box-shadow: 0 0 10px #f00; cursor: pointer;
+            position: relative;
         }
 
-        /* iPhoneのLINEなど、制限がある時用の色 */
-        .warning-mode {
-            background: linear-gradient(135deg, #ff9900, #ff6600) !important;
+        .glitch-box {
+            display: none; position: absolute; bottom: 40px; left: 50%;
+            transform: translateX(-50%); width: 220px; padding: 15px;
+            background: rgba(0, 10, 0, 0.95); border: 1px solid #00ff41;
+            color: #00ff41; font-family: monospace; text-align: center;
+            pointer-events: none; z-index: 100;
         }
+
+        .active { display: block !important; animation: jiji 4s infinite; }
+        @keyframes jiji {
+            0%, 90% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            93% { opacity: 0.4; transform: translateX(-52%) translateY(-2px); }
+            96% { opacity: 1; transform: translateX(-48%) translateY(2px); }
+            100% { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        .status { font-size: 10px; border-bottom: 1px solid #00ff41; margin-bottom: 10px; color: #008822; text-align: left; }
     </style>
 </head>
 <body>
 
     <model-viewer 
         id="viewer"
-        src="dance.glb" 
-        ios-src="dance.usdz" 
+        src="nakamurobo.glb" 
         ar 
         ar-modes="scene-viewer webxr quick-look" 
         camera-controls 
-        autoplay
         shadow-intensity="1">
-        <div slot="ar-button"></div> </model-viewer>
 
-    <a href="#" id="custom-ar-link" class="floating-ar-button">
-        ARで表示する
-    </a>
+        <button class="Hotspot" id="hotspotBtn" slot="hotspot-1" data-position="0m 0.15m 0.05m" data-normal="0m 0m 1m">
+            <div class="glitch-box" id="output">
+                <div class="status">DECRYPTING...</div>
+                <strong>"Believe in yourself."</strong><br><br>
+                Nakamurobo,<br>
+                you are not an error.<br>
+                Find me.
+            </div>
+        </button>
+
+        <div slot="ar-button"></div>
+    </model-viewer>
+
+    <a href="#" id="custom-ar-link" class="floating-ar-button">タップしてARを開始</a>
 
     <script>
+        // --- ノイズ＆サウンド処理 ---
+        const hotspot = document.getElementById('hotspotBtn');
+        const box = document.getElementById('output');
+        const noiseAudio = new Audio('noise.mp3'); 
+
+        hotspot.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isActive = box.classList.toggle('active');
+            if (isActive) {
+                noiseAudio.currentTime = 0;
+                noiseAudio.play().catch(e => console.log("Audio play failed:", e));
+                if (window.navigator.vibrate) window.navigator.vibrate([15, 40]);
+            } else {
+                noiseAudio.pause();
+            }
+        });
+
+        // --- 既存のブラウザ判定ロジック ---
         const btn = document.getElementById('custom-ar-link');
         const viewer = document.getElementById('viewer');
         const ua = navigator.userAgent;
-
         const isIPhone = /iPhone|iPad|iPod/.test(ua);
         const isLine = /Line/i.test(ua);
         const isAndroid = /Android/i.test(ua);
 
-        // --- 判定ロジック ---
-
         if (isIPhone && isLine) {
-            // 1. iPhoneのLINE：Safari誘導が必要
             btn.classList.add('warning-mode');
             btn.innerText = "🌐 Safariで開き直してAR開始";
             btn.onclick = (e) => {
@@ -76,28 +106,13 @@
             };
         } 
         else if (isAndroid && isLine) {
-            // 2. AndroidのLINE：Scene Viewerが動く可能性が高いので一旦試させる
             btn.innerText = "📱 ARを開始（Android）";
-            btn.onclick = (e) => {
-                e.preventDefault();
-                viewer.activateAR();
-            };
+            btn.onclick = (e) => { e.preventDefault(); viewer.activateAR(); };
         }
         else {
-            // 3. 通常ブラウザ（Chrome/Safariなど）
             btn.innerText = "👋 タップしてARを開始";
-            btn.onclick = (e) => {
-                e.preventDefault();
-                viewer.activateAR();
-            };
-        }
-
-        // HTTPSチェック（iPhoneのみ必須）
-        if (isIPhone && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-            btn.innerText = "❌ HTTPS(SSL)が必要です";
-            btn.style.background = "red";
+            btn.onclick = (e) => { e.preventDefault(); viewer.activateAR(); };
         }
     </script>
-
 </body>
 </html>
