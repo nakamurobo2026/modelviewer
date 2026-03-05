@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NAKAMUROBO AR - Advanced Log Analysis</title>
+    <title>NAKAMUROBO AR - Universal Log Analysis</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
     <style>
         html, body { height: 100%; margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; }
         model-viewer { width: 100%; height: 100%; }
 
+        /* AR開始ボタン（既存のデザインを継承） */
         .floating-ar-button {
             position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
             width: 80%; max-width: 320px; padding: 18px;
@@ -17,45 +18,36 @@
             z-index: 10000; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             text-decoration: none; display: block;
         }
+        .warning-mode { background: linear-gradient(135deg, #ff9900, #ff6600) !important; }
 
+        /* 解析用タップエリア（透明） */
         .Hotspot {
             background: none; border: none; width: 60px; height: 60px;
             cursor: pointer; position: relative; outline: none;
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* ログボックスの強化：走査線アニメーションを追加 */
+        /* デジタル・グリーン・ログボックス */
         .glitch-box {
             display: none; position: absolute; bottom: 70px; left: 50%;
             transform: translateX(-50%); width: 260px; padding: 20px;
             background: rgba(0, 10, 0, 0.95); border: 1px solid #00ff41;
-            color: #00ff41; text-align: left;
-            pointer-events: none; z-index: 100;
-            box-shadow: 0 0 25px rgba(0, 255, 65, 0.3);
-            overflow: hidden;
-        }
-
-        .glitch-box::before {
-            content: " "; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            background-size: 100% 2px, 3px 100%; pointer-events: none;
+            color: #00ff41; text-align: left; pointer-events: none; z-index: 100;
+            box-shadow: 0 0 25px rgba(0, 255, 65, 0.3); overflow: hidden;
         }
 
         .active { display: block !important; animation: glitch-effect 0.2s infinite; }
         @keyframes glitch-effect {
             0% { transform: translateX(-50%) skew(0deg); }
-            20% { transform: translateX(-51%) skew(1deg); opacity: 0.8; }
-            40% { transform: translateX(-49%) skew(-1deg); }
+            20% { transform: translateX(-51%) skew(1.5deg); opacity: 0.8; }
+            40% { transform: translateX(-49%) skew(-1.5deg); }
             100% { transform: translateX(-50%) skew(0deg); }
         }
 
         .status-bar { font-size: 10px; color: #00ff41; margin-bottom: 5px; opacity: 0.8; }
         .progress-line { width: 100%; height: 2px; background: #004411; margin-bottom: 15px; position: relative; }
         .progress-fill { position: absolute; height: 100%; background: #00ff41; width: 0%; transition: width 2s ease-in-out; }
-        
         #typewriter { font-size: 14px; line-height: 1.6; white-space: pre-wrap; font-weight: bold; }
-        .cursor { display: inline-block; width: 8px; height: 15px; background: #00ff41; animation: blink 0.8s infinite; vertical-align: middle; }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
     </style>
 </head>
 <body>
@@ -71,66 +63,71 @@
             data-normal="0.00027698842872547405m -0.0007094569774607593m 0.9999997099740616m">
             
             <div class="glitch-box" id="output">
-                <div class="status-bar">LOG_RECOVERY: SECTOR_7F</div>
+                <div class="status-bar">RECOVERING: DR_NAKAMURA_LOG</div>
                 <div class="progress-line"><div class="progress-fill" id="fill"></div></div>
-                <div id="typewriter"></div><span class="cursor" id="cursor"></span>
+                <div id="typewriter"></div>
             </div>
         </button>
-
     </model-viewer>
     
     <a href="#" id="custom-ar-link" class="floating-ar-button">タップしてARを開始</a>
 
     <script>
-        const btn = document.getElementById('hotspotBtn');
+        const hotspot = document.getElementById('hotspotBtn');
         const box = document.getElementById('output');
         const textElement = document.getElementById('typewriter');
         const fill = document.getElementById('fill');
-        const cursor = document.getElementById('cursor');
         const noiseAudio = new Audio('noise.mp3'); 
 
         const message = "\"Believe in yourself.\"\n\nNakamurobo,\nyou are not an error.\nFind me.";
-        let isTyping = false;
 
         function typeWriter(text, i = 0) {
             if (i < text.length) {
                 textElement.textContent += text.charAt(i);
                 setTimeout(() => typeWriter(text, i + 1), 50);
-            } else {
-                cursor.style.display = 'none'; // 打ち終わったらカーソル消去
             }
         }
 
-        btn.addEventListener('click', (e) => {
+        hotspot.addEventListener('click', (e) => {
             e.stopPropagation();
-            
             if (!box.classList.contains('active')) {
-                // 開始
                 box.classList.add('active');
                 textElement.textContent = "";
-                cursor.style.display = 'inline-block';
                 fill.style.width = "100%";
-                
                 noiseAudio.currentTime = 0;
-                noiseAudio.play();
-                
-                setTimeout(() => typeWriter(message), 500); // 少し溜めてからタイプ開始
-                
-                if (window.navigator.vibrate) window.navigator.vibrate([30, 100, 30]);
+                noiseAudio.play().catch(err => console.log(err));
+                setTimeout(() => typeWriter(message), 500);
+                if (window.navigator.vibrate) window.navigator.vibrate([30, 80]);
             } else {
-                // 閉じる
                 box.classList.remove('active');
                 fill.style.width = "0%";
                 noiseAudio.pause();
             }
         });
 
-        const arBtn = document.getElementById('custom-ar-link');
+        // --- iPhone / LINE 分岐ロジックの復活 ---
+        const btn = document.getElementById('custom-ar-link');
         const viewer = document.getElementById('viewer');
-        arBtn.onclick = (e) => {
-            e.preventDefault();
-            viewer.activateAR();
-        };
+        const ua = navigator.userAgent;
+        const isIPhone = /iPhone|iPad|iPod/.test(ua);
+        const isLine = /Line/i.test(ua);
+        const isAndroid = /Android/i.test(ua);
+
+        if (isIPhone && isLine) {
+            btn.classList.add('warning-mode');
+            btn.innerText = "🌐 Safariで開き直してAR開始";
+            btn.onclick = (e) => {
+                e.preventDefault();
+                const url = window.location.href;
+                window.location.href = url + (url.includes('?') ? '&' : '?') + "openExternalBrowser=1";
+            };
+        } else {
+            btn.innerText = (isAndroid && isLine) ? "📱 ARを開始（Android）" : "👋 タップしてARを開始";
+            btn.onclick = (e) => {
+                e.preventDefault();
+                viewer.activateAR();
+            };
+        }
     </script>
 </body>
 </html>
