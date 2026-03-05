@@ -16,7 +16,7 @@
             padding: 12px; font-size: 13px; overflow-y: auto; box-sizing: border-box; z-index: 10;
         }
         
-        /* iOS対策：最初から「存在」させておき、透明度だけで制御する */
+        /* ボタン設定：初期状態は透明かつクリック不可 */
         #ar-button {
             position: absolute; bottom: 220px; left: 50%; transform: translateX(-50%);
             background: #0f0; color: #000; border: none;
@@ -24,14 +24,13 @@
             font-family: 'Courier New', sans-serif; white-space: nowrap; font-size: 13px;
             z-index: 999; box-shadow: 0 0 20px #0f0;
             
-            /* 初期状態：透明かつクリック不可 */
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.5s ease;
             -webkit-appearance: none;
         }
 
-        /* 解析完了後に「実体化」 */
+        /* 解析完了後にアクティブ化 */
         #ar-button.active {
             opacity: 1 !important;
             pointer-events: auto !important;
@@ -49,7 +48,7 @@
             src="nakamurobo.glb" 
             ios-src="nakamurobo.usdz" 
             ar 
-            ar-modes="quick-look webxr scene-viewer" 
+            ar-modes="scene-viewer quick-look webxr" 
             camera-controls 
             shadow-intensity="1">
             
@@ -86,9 +85,8 @@
             if (isStarted) return;
             isStarted = true;
             
-            // iPhoneでの音声再生権限を取得
-            const audio = new Audio('noise.mp3');
-            audio.play().catch(() => {});
+            // 初回タップで音声を解禁
+            new Audio('noise.mp3').play().catch(() => {});
             
             output.innerHTML = "";
             overlay.style.display = "none";
@@ -119,7 +117,7 @@
                     }
                 }, 20);
             } else {
-                // 解析完了：ボタンを有効化
+                // 解析完了：ボタンを表示
                 arBtn.classList.add('active');
             }
         }
