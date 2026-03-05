@@ -4,74 +4,79 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Nakamurobo | Episode 9</title>
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
-    
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
     <style>
-        body { margin: 0; background: #000; color: #0f0; font-family: 'Courier New', monospace; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        #container { position: relative; flex-grow: 1; width: 100%; }
-        model-viewer { width: 100%; height: 100%; background: #000; }
+        html, body { height: 100%; margin: 0; overflow: hidden; background: #000; color: #0f0; font-family: 'Courier New', monospace; }
+        model-viewer { width: 100%; height: 100%; }
+
+        /* バックアップ版の「動くボタン」のスタイルを継承 */
+        .custom-ar-button {
+            position: fixed;
+            bottom: 220px; /* ターミナルの上に配置 */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 320px;
+            padding: 18px;
+            background: #0f0; /* ナカムロボカラーに変更 */
+            color: black;
+            border: none;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+            z-index: 10000;
+            box-shadow: 0 0 20px rgba(0,255,0,0.5);
+            text-decoration: none;
+            display: block;
+            cursor: pointer;
+        }
+
+        /* 解析中のスタイル */
+        .decoding-mode {
+            background: #111 !important;
+            color: #0f0 !important;
+            border: 1px solid #0f0;
+            box-shadow: none;
+        }
 
         #terminal { 
-            height: 200px; background: rgba(0, 15, 0, 0.95); border-top: 2px solid #0f0; 
-            padding: 12px; font-size: 13px; overflow-y: auto; box-sizing: border-box; z-index: 10;
+            position: fixed; bottom: 0; width: 100%; height: 200px; 
+            background: rgba(0, 15, 0, 0.95); border-top: 2px solid #0f0; 
+            padding: 12px; font-size: 13px; overflow-y: auto; box-sizing: border-box; z-index: 1000;
         }
-        
-        /* ボタン設定：初期状態は透明かつクリック不可 */
-        #ar-button {
-            position: absolute; bottom: 220px; left: 50%; transform: translateX(-50%);
-            background: #0f0; color: #000; border: none;
-            padding: 15px 25px; font-weight: bold; border-radius: 4px; 
-            font-family: 'Courier New', sans-serif; white-space: nowrap; font-size: 13px;
-            z-index: 999; box-shadow: 0 0 20px #0f0;
-            
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.5s ease;
-            -webkit-appearance: none;
-        }
-
-        /* 解析完了後にアクティブ化 */
-        #ar-button.active {
-            opacity: 1 !important;
-            pointer-events: auto !important;
-        }
-
         .highlight { color: #fff; font-weight: bold; }
-        #output div { margin-bottom: 2px; }
     </style>
 </head>
 <body>
 
-    <div id="container">
-        <model-viewer 
-            id="viewer" 
-            src="nakamurobo.glb" 
-            ios-src="nakamurobo.usdz" 
-            ar 
-            ar-modes="scene-viewer quick-look webxr" 
-            camera-controls 
-            shadow-intensity="1">
-            
-            <button slot="ar-button" id="ar-button">REALIZE_IN_REAL_WORLD</button>
-            
-            <div id="overlay" style="width:100%; height:100%; position:absolute; top:0; left:0; z-index:5;"></div>
-        </model-viewer>
-    </div>
+    <model-viewer 
+        id="viewer"
+        src="nakamurobo.glb" 
+        ios-src="nakamurobo.usdz" 
+        ar 
+        ar-modes="quick-look scene-viewer webxr" 
+        camera-controls 
+        shadow-intensity="1">
+        <div slot="ar-button"></div> </model-viewer>
+
+    <a href="#" id="custom-ar-link" class="custom-ar-button">
+        TAP TO DECODE_HEART_LOG
+    </a>
 
     <div id="terminal">
-        <div id="output">> SYSTEM_IDLE: TAP TO DECODE_HEART_LOG...</div>
+        <div id="output">> SYSTEM_IDLE: AWAITING_DECODING_COMMAND...</div>
     </div>
 
     <script>
-        const overlay = document.querySelector('#overlay');
-        const arBtn = document.querySelector('#ar-button');
-        const terminal = document.querySelector('#terminal');
-        const output = document.querySelector('#output');
+        const btn = document.getElementById('custom-ar-link');
+        const viewer = document.getElementById('viewer');
+        const output = document.getElementById('output');
+        const terminal = document.getElementById('terminal');
 
         const logLines = [
             "> ACCESSING_FUKUYAMA_SECTOR_34.485_133.362...",
-            "> INJECTING_AUTH_KEY...",
-            "> [SUCCESS] IRREGULAR_DATA_DETECTED",
+            "> [SUCCESS] IRREGULAR_DATA_FOUND",
             "",
             "<span class='highlight'>\"Believe in yourself.\"</span>",
             "",
@@ -79,24 +84,27 @@
             "> READY_FOR_PHYSICAL_REALIZATION."
         ];
 
-        let isStarted = false;
+        let isDecoded = false;
 
-        const start = () => {
-            if (isStarted) return;
-            isStarted = true;
-            
-            // 初回タップで音声を解禁
-            new Audio('noise.mp3').play().catch(() => {});
-            
-            output.innerHTML = "";
-            overlay.style.display = "none";
-            process(0);
+        btn.onclick = (e) => {
+            e.preventDefault();
+
+            if (!isDecoded) {
+                // --- 解析フェーズ ---
+                isDecoded = true;
+                btn.classList.add('decoding-mode');
+                btn.innerText = "DECODING_IN_PROGRESS...";
+                
+                new Audio('noise.mp3').play().catch(() => {});
+                output.innerHTML = "";
+                processLog(0);
+            } else {
+                // --- AR起動フェーズ（解析完了後） ---
+                viewer.activateAR();
+            }
         };
 
-        overlay.addEventListener('click', start);
-        terminal.addEventListener('click', start);
-
-        function process(index) {
+        function processLog(index) {
             if (index < logLines.length) {
                 const line = document.createElement('div');
                 output.appendChild(line);
@@ -112,15 +120,18 @@
                         i++;
                     } else {
                         clearInterval(typer);
-                        setTimeout(() => process(index + 1), 150);
+                        setTimeout(() => processLog(index + 1), 150);
                         terminal.scrollTop = terminal.scrollHeight;
                     }
                 }, 20);
             } else {
-                // 解析完了：ボタンを表示
-                arBtn.classList.add('active');
+                // 解析完了：ボタンをAR起動用に切り替え
+                btn.classList.remove('decoding-mode');
+                btn.innerText = "REALIZE_IN_REAL_WORLD";
+                btn.style.animation = "pulse 1.5s infinite";
             }
         }
     </script>
+
 </body>
 </html>
