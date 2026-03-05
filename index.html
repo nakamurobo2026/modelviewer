@@ -9,15 +9,13 @@
     <style>
         body { margin: 0; background: #000; color: #0f0; font-family: 'Courier New', monospace; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        /* 3D Model Area */
         #container { position: relative; flex-grow: 1; width: 100%; }
         model-viewer { width: 100%; height: 100%; background: #000; }
 
-        /* Terminal Area - Optimized for visibility */
         #terminal { 
-            height: 220px; 
+            height: 200px; 
             background: rgba(0, 15, 0, 0.95); 
-            border-top: 1px solid #0f0; 
+            border-top: 2px solid #0f0; 
             padding: 12px; 
             font-size: 13px; 
             overflow-y: auto; 
@@ -26,12 +24,26 @@
             line-height: 1.5;
         }
         
-        /* Realize Button */
+        /* Fixed Button Layout */
         #ar-button {
-            display: none; position: absolute; bottom: 240px; left: 50%; transform: translateX(-50%);
-            background: #0f0; color: #000; border: none; padding: 15px 30px; font-weight: bold;
-            border-radius: 5px; cursor: pointer; z-index: 999; box-shadow: 0 0 20px #0f0;
+            display: none; 
+            position: absolute; 
+            bottom: 220px; 
+            left: 50%; 
+            transform: translateX(-50%);
+            background: #0f0; 
+            color: #000; 
+            border: none; 
+            padding: 12px 20px; 
+            font-weight: bold;
+            border-radius: 4px; 
+            cursor: pointer; 
+            z-index: 999; 
+            box-shadow: 0 0 20px #0f0;
             font-family: 'Courier New', sans-serif;
+            white-space: nowrap; /* テキストの折り返しを禁止 */
+            font-size: 12px; /* スマホ向けに少しサイズ調整 */
+            width: auto; /* 幅をテキストに合わせる */
         }
 
         #output div { margin-bottom: 2px; }
@@ -49,7 +61,7 @@
             ios-src="nakamurobo.usdz"
             ar ar-modes="webxr scene-viewer quick-look" 
             camera-controls shadow-intensity="1">
-            <button slot="ar-button" id="ar-button">[ REALIZE_IN_REAL_WORLD ]</button>
+            <button slot="ar-button" id="ar-button">REALIZE_IN_REAL_WORLD</button>
         </model-viewer>
     </div>
 
@@ -83,7 +95,7 @@
             isStarted = true;
 
             const audio = new Audio('noise.mp3');
-            audio.play().catch(() => console.log("Audio waiting for interaction"));
+            audio.play().catch(() => console.log("Audio waiting"));
 
             output.innerHTML = "";
             output.classList.add('glitch');
@@ -99,8 +111,7 @@
                 output.appendChild(line);
                 typeWriter(line, logLines[lineIndex], 0, () => {
                     lineIndex++;
-                    setTimeout(processLog, 200);
-                    // Force scroll to bottom to ensure last line is visible
+                    setTimeout(processLog, 150);
                     terminal.scrollTop = terminal.scrollHeight;
                 });
             } else {
@@ -110,13 +121,11 @@
         }
 
         function typeWriter(element, text, i, callback) {
-            // Handle HTML tags like <span> for highlighting
             if (text.startsWith("<span")) {
                 element.innerHTML = text;
                 callback();
                 return;
             }
-
             if (i < text.length) {
                 element.innerHTML += text.charAt(i);
                 setTimeout(() => typeWriter(element, text, i + 1, callback), 20);
