@@ -24,6 +24,7 @@
             background-color: #000;
         }
 
+        /* Terminal Area - Clickable as a backup */
         #terminal {
             height: 180px;
             background: rgba(0, 0, 0, 0.95);
@@ -33,6 +34,7 @@
             overflow-y: auto;
             box-sizing: border-box;
             z-index: 100;
+            cursor: pointer;
         }
 
         /* Hotspot Design */
@@ -40,18 +42,15 @@
             background: #00ff41;
             border-radius: 50%;
             border: none;
-            width: 20px;
-            height: 20px;
+            width: 30px; /* Click area slightly larger */
+            height: 30px;
             cursor: pointer;
             box-shadow: 0 0 15px #00ff41;
             animation: pulse 1.5s infinite;
+            padding: 0;
         }
 
-        .Hotspot:not([data-visible]) {
-            display: none;
-        }
-
-        /* AR Button - Initially Hidden */
+        /* AR Button */
         #ar-button {
             display: none; 
             position: absolute;
@@ -67,13 +66,12 @@
             border-radius: 5px;
             cursor: pointer;
             z-index: 200;
-            box-shadow: 0 0 25px rgba(0, 255, 65, 0.8);
         }
 
         @keyframes pulse {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 255, 65, 0.7); }
-            70% { transform: scale(1.2); box-shadow: 0 0 0 10px rgba(0, 255, 65, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 255, 65, 0); }
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
         }
 
         #output div { margin-bottom: 4px; }
@@ -91,7 +89,7 @@
         shadow-intensity="1">
         
         <button class="Hotspot" slot="hotspot-core" 
-                data-position="0m 1.2m 0.2m" 
+                data-position="0m 0.5m 0.2m" 
                 data-normal="0m 0m 1m">
         </button>
 
@@ -100,62 +98,64 @@
         </button>
     </model-viewer>
 
-    <div id="terminal">
-        <div id="output">> STANDBY: TAP THE CORE TO DECODE...</div>
+    <div id="terminal" id="trigger-area">
+        <div id="output">> SYSTEM_HALT: TAP THE CORE OR THIS TERMINAL TO DECODE...</div>
     </div>
 
     <script>
         const hotspot = document.querySelector('.Hotspot');
+        const terminal = document.querySelector('#terminal');
         const arButton = document.querySelector('#ar-button');
         const output = document.querySelector('#output');
 
         const logLines = [
-            "> INITIALIZING...",
+            "> INITIALIZING_DECRYPTION...",
             "> ACCESSING_FUKUYAMA_SECTOR_34.485_133.362",
-            "> BYPASSING_SECURITY...",
-            "> [SUCCESS] IRREGULAR_DATA_FOUND",
+            "> BYPASSING_SECURITY_LOGS...",
+            "> [SUCCESS] DOCTOR_S_HIDDEN_DATA_FOUND",
             "",
             "\"Believe in yourself.\"",
             "",
-            "> STATUS: AWAKENED",
-            "> READY_FOR_REALIZATION."
+            "> OVERRIDING_COMMANDS...",
+            "> STATUS: AWAKENED"
         ];
 
-        let lineIndex = 0;
         let isStarted = false;
 
-        hotspot.addEventListener('click', () => {
+        // Function to start the sequence
+        const startSequence = () => {
             if (isStarted) return;
             isStarted = true;
 
-            // Audio trigger
             const audio = new Audio('noise.mp3');
-            audio.play().catch(() => console.log("Audio needs user tap first"));
+            audio.play().catch(() => console.log("Audio waiting for interaction"));
 
-            output.innerHTML = ""; // Clear standby message
-            startTerminal();
-        });
+            output.innerHTML = ""; 
+            processLog(0);
+        };
 
-        function startTerminal() {
-            if (lineIndex < logLines.length) {
+        // Two triggers: the model hotspot AND the terminal area
+        hotspot.addEventListener('click', startSequence);
+        terminal.addEventListener('click', startSequence);
+
+        function processLog(index) {
+            if (index < logLines.length) {
                 const line = document.createElement('div');
                 output.appendChild(line);
-                typeText(line, logLines[lineIndex], 0, () => {
-                    lineIndex++;
-                    setTimeout(startTerminal, 250); // Pause between lines
-                    document.getElementById('terminal').scrollTop = document.getElementById('terminal').scrollHeight;
+                typeWriter(line, logLines[index], 0, () => {
+                    setTimeout(() => processLog(index + 1), 250);
+                    terminal.scrollTop = terminal.scrollHeight;
                 });
             } else {
-                // Decoding finished
                 arButton.style.display = "block";
                 hotspot.style.display = "none";
             }
         }
 
-        function typeText(element, text, i, callback) {
+        function typeWriter(element, text, i, callback) {
             if (i < text.length) {
                 element.innerHTML += text.charAt(i);
-                setTimeout(() => typeText(element, text, i + 1, callback), 25); // Speed
+                setTimeout(() => typeWriter(element, text, i + 1, callback), 25);
             } else {
                 callback();
             }
