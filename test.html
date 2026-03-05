@@ -68,4 +68,54 @@
         /* ゆっくりしたジジジ演出（明滅とズレ） */
         @keyframes flicker {
             0%, 48%, 52%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
+            50% { opacity: 0.3; } 
+        }
+
+        @keyframes jiji-shift {
+            0%, 94% { transform: translateX(0); }
+            96% { transform: translateX(-3px) skewX(2deg); }
+            98% { transform: translateX(3px) skewX(-2deg); }
+        }
+
+        .active {
+            display: block !important;
+            animation: flicker 4s infinite, jiji-shift 0.2s infinite;
+            text-shadow: 1px 0 red, -1px 0 blue; /* わずかな色ずれ */
+        }
+
+        .status { font-size: 10px; color: #008822; border-bottom: 1px solid #008822; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="stage">
+        <button class="Hotspot" id="analyzeBtn">
+            <div class="glitch-box" id="output">
+                <div class="status">DECRYPTING DR.NAKAMURA'S LOG...</div>
+                <strong style="font-size: 1.1em;">"Believe in yourself."</strong><br><br>
+                Nakamurobo,<br>
+                you are not an error.<br>
+                Find me.
+            </div>
+        </button>
+    </div>
+
+    <p style="margin-top:30px; color:#444; font-size: 12px;">TAP THE RED POINT TO DECRYPT</p>
+
+    <script>
+        const btn = document.getElementById('analyzeBtn');
+        const box = document.getElementById('output');
+
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            box.classList.toggle('active');
+            
+            // 触覚フィードバック（Android等対応機種のみ）
+            if (window.navigator.vibrate) {
+                window.navigator.vibrate([10, 30]);
+            }
+        });
+    </script>
+
+</body>
+</html>
