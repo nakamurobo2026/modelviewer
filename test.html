@@ -3,83 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NAKAMUROBO - AR Log Decrypt</title>
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
-    
+    <title>NAKAMUROBO - Log Analysis Test</title>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; }
-        model-viewer { width: 100vw; height: 100vh; }
+        /* 深夜の工房のような暗い背景 */
+        body { 
+            margin: 0; 
+            background: #050505; 
+            color: #00ff41; 
+            font-family: 'Courier New', Courier, monospace; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            overflow: hidden; 
+        }
+
+        /* 解析ボタンを配置するエリア（仮想のナカムロボの胸部付近） */
+        .stage {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            background: rgba(20, 20, 20, 0.5);
+            border: 1px dashed #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
         /* 小さい赤いボタン（解析ポイント） */
         .Hotspot {
-            background: #ff0000; border: none;
-            width: 15px; height: 15px; /* 小さめに設定 */
-            border-radius: 50%;
-            box-shadow: 0 0 8px rgba(255, 0, 0, 0.8);
-            cursor: pointer;
-            transition: transform 0.2s;
+            background: #ff0000; 
+            border: none; 
+            width: 16px; 
+            height: 16px; 
+            border-radius: 50%; 
+            cursor: pointer; 
+            position: relative;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.9);
+            animation: pulse 2s infinite; /* 呼吸するように点滅 */
         }
-        .Hotspot:active { transform: scale(1.5); } /* タップ時に少し大きく */
 
-        /* 英語メッセージ（ジジジ演出） */
-        .glitch-msg {
-            display: none; /* 最初は隠す */
-            position: absolute; left: 25px; top: -70px;
-            width: 220px; padding: 15px;
-            background: rgba(0, 15, 0, 0.9);
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* ジジジ…という英語メッセージボックス */
+        .glitch-box {
+            display: none; 
+            position: absolute; 
+            left: 40px; 
+            top: -60px;
+            width: 240px; 
+            padding: 15px;
+            background: rgba(0, 10, 0, 0.95); 
             border: 1px solid #00ff41;
-            color: #00ff41; font-family: 'Courier New', monospace;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.1);
             pointer-events: none;
-            box-shadow: 0 0 15px rgba(0, 255, 65, 0.1);
+            z-index: 100;
         }
 
-        /* ゆっくりジジジ…演出 */
-        @keyframes jiji {
-            0%, 90% { opacity: 1; transform: translateX(0); }
-            92% { opacity: 0.4; transform: translateX(-2px); }
-            94% { opacity: 1; transform: translateX(2px); }
-            96% { opacity: 0.2; }
-            100% { opacity: 1; }
-        }
-
-        .active {
-            display: block !important;
-            animation: jiji 3s infinite;
-            text-shadow: 2px 0 rgba(255,0,0,0.5), -2px 0 rgba(0,0,255,0.5);
-        }
-
-        .label { font-size: 9px; color: #008822; border-bottom: 1px solid #008822; margin-bottom: 8px; display: block; }
-    </style>
-</head>
-<body>
-
-    <model-viewer src="nakamurobo.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls shadow-intensity="1">
-        
-        <button class="Hotspot" slot="hotspot-1" data-position="0m 0.15m 0.05m" data-normal="0m 0m 1m">
-            <div class="glitch-msg" id="msg">
-                <span class="label">DECRYPTING DR.NAKAMURA'S LOG...</span>
-                <strong>"Believe in yourself."</strong><br><br>
-                Nakamurobo,<br>
-                you are not an error.<br>
-                Find me.
-            </div>
-        </button>
-
-    </model-viewer>
-
-    <script>
-        const btn = document.querySelector('.Hotspot');
-        const msg = document.querySelector('#msg');
-
-        // ボタンクリックでメッセージを切り替え
-        btn.addEventListener('click', () => {
-            msg.classList.toggle('active');
-            
-            // スマホなら振動させる（ジリッという感触）
-            if (window.navigator.vibrate) {
-                window.navigator.vibrate([10, 30, 10]);
-            }
-        });
-    </script>
-</body>
-</html>
+        /* ゆっくりしたジジジ演出（明滅とズレ） */
+        @keyframes flicker {
+            0%, 48%, 52%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
