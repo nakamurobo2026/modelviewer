@@ -3,159 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nakamurobo | Episode 9: Decision</title>
+    <title>Nakamurobo | Episode 9</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     
     <style>
-        body {
-            margin: 0;
-            background-color: #050505;
-            color: #00ff41;
-            font-family: 'Courier New', Courier, monospace;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-        }
+        body { margin: 0; background: #000; color: #0f0; font-family: 'Courier New', monospace; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        /* 3D Model Area */
+        #container { position: relative; flex-grow: 1; width: 100%; }
+        model-viewer { width: 100%; height: 100%; background: #000; }
 
-        model-viewer {
-            width: 100%;
-            flex-grow: 1;
-            background-color: #000;
-        }
-
-        /* Terminal Area - Clickable as a backup */
-        #terminal {
-            height: 180px;
-            background: rgba(0, 0, 0, 0.95);
-            border-top: 2px solid #00ff41;
-            padding: 15px;
-            font-size: 14px;
-            overflow-y: auto;
-            box-sizing: border-box;
-            z-index: 100;
-            cursor: pointer;
-        }
-
-        /* Hotspot Design */
-        .Hotspot {
-            background: #00ff41;
-            border-radius: 50%;
-            border: none;
-            width: 30px; /* Click area slightly larger */
-            height: 30px;
-            cursor: pointer;
-            box-shadow: 0 0 15px #00ff41;
-            animation: pulse 1.5s infinite;
-            padding: 0;
-        }
-
-        /* AR Button */
+        /* Terminal Area */
+        #terminal { height: 180px; background: rgba(0, 10, 0, 0.9); border-top: 1px solid #0f0; padding: 15px; font-size: 14px; overflow-y: auto; box-sizing: border-box; cursor: pointer; }
+        
+        /* Realize Button (Hidden initially) */
         #ar-button {
-            display: none; 
-            position: absolute;
-            bottom: 200px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #00ff41;
-            color: #000;
-            border: none;
-            padding: 15px 30px;
-            font-weight: bold;
-            font-family: 'Courier New', sans-serif;
-            border-radius: 5px;
-            cursor: pointer;
-            z-index: 200;
+            display: none; position: absolute; bottom: 200px; left: 50%; transform: translateX(-50%);
+            background: #0f0; color: #000; border: none; padding: 15px 30px; font-weight: bold;
+            border-radius: 5px; cursor: pointer; z-index: 999; box-shadow: 0 0 20px #0f0;
         }
 
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.2); opacity: 0.5; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-
-        #output div { margin-bottom: 4px; }
+        #output div { margin-bottom: 5px; }
+        .glitch { animation: glitch 0.2s infinite; }
+        @keyframes glitch { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
-    <model-viewer 
-        id="viewer"
-        src="nakamurobo.glb" 
-        ios-src="nakamurobo.usdz"
-        ar 
-        ar-modes="webxr scene-viewer quick-look" 
-        camera-controls 
-        shadow-intensity="1">
-        
-        <button class="Hotspot" slot="hotspot-core" 
-                data-position="0m 0.5m 0.2m" 
-                data-normal="0m 0m 1m">
-        </button>
+    <div id="container">
+        <model-viewer 
+            id="viewer"
+            src="nakamurobo.glb" 
+            ios-src="nakamurobo.usdz"
+            ar ar-modes="webxr scene-viewer quick-look" 
+            camera-controls shadow-intensity="1">
+            
+            <button slot="ar-button" id="ar-button">[ REALIZE_IN_REAL_WORLD ]</button>
+        </model-viewer>
+    </div>
 
-        <button slot="ar-button" id="ar-button">
-            [ REALIZE_IN_REAL_WORLD ]
-        </button>
-    </model-viewer>
-
-    <div id="terminal" id="trigger-area">
-        <div id="output">> SYSTEM_HALT: TAP THE CORE OR THIS TERMINAL TO DECODE...</div>
+    <div id="terminal">
+        <div id="output">> SYSTEM_IDLE: TAP ANYWHERE TO DECODE_HEART_LOG...</div>
     </div>
 
     <script>
-        const hotspot = document.querySelector('.Hotspot');
+        const viewer = document.querySelector('#viewer');
         const terminal = document.querySelector('#terminal');
         const arButton = document.querySelector('#ar-button');
         const output = document.querySelector('#output');
 
         const logLines = [
-            "> INITIALIZING_DECRYPTION...",
-            "> ACCESSING_FUKUYAMA_SECTOR_34.485_133.362",
-            "> BYPASSING_SECURITY_LOGS...",
-            "> [SUCCESS] DOCTOR_S_HIDDEN_DATA_FOUND",
+            "> ACCESSING_FUKUYAMA_SECTOR_34.485_133.362...",
+            "> INJECTING_DOCTOR_NAKAMURA_AUTH_KEY...",
+            "> [SUCCESS] IRREGULAR_DATA_DETECTED",
             "",
             "\"Believe in yourself.\"",
             "",
-            "> OVERRIDING_COMMANDS...",
-            "> STATUS: AWAKENED"
+            "> STATUS: AWAKENED",
+            "> READY_FOR_PHYSICAL_REALIZATION."
         ];
 
+        let lineIndex = 0;
         let isStarted = false;
 
-        // Function to start the sequence
-        const startSequence = () => {
+        // Trigger on the entire 3D viewer OR the terminal area
+        const startAction = () => {
             if (isStarted) return;
             isStarted = true;
 
             const audio = new Audio('noise.mp3');
-            audio.play().catch(() => console.log("Audio waiting for interaction"));
+            audio.play().catch(() => console.log("Audio needs interaction"));
 
-            output.innerHTML = ""; 
-            processLog(0);
+            output.innerHTML = "";
+            output.classList.add('glitch');
+            processLog();
         };
 
-        // Two triggers: the model hotspot AND the terminal area
-        hotspot.addEventListener('click', startSequence);
-        terminal.addEventListener('click', startSequence);
+        viewer.addEventListener('click', startAction);
+        terminal.addEventListener('click', startAction);
 
-        function processLog(index) {
-            if (index < logLines.length) {
+        function processLog() {
+            if (lineIndex < logLines.length) {
                 const line = document.createElement('div');
                 output.appendChild(line);
-                typeWriter(line, logLines[index], 0, () => {
-                    setTimeout(() => processLog(index + 1), 250);
+                typeWriter(line, logLines[lineIndex], 0, () => {
+                    lineIndex++;
+                    setTimeout(processLog, 300);
                     terminal.scrollTop = terminal.scrollHeight;
                 });
             } else {
+                output.classList.remove('glitch');
                 arButton.style.display = "block";
-                hotspot.style.display = "none";
             }
         }
 
         function typeWriter(element, text, i, callback) {
             if (i < text.length) {
                 element.innerHTML += text.charAt(i);
-                setTimeout(() => typeWriter(element, text, i + 1, callback), 25);
+                setTimeout(() => typeWriter(element, text, i + 1, callback), 20);
             } else {
                 callback();
             }
