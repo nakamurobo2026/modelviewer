@@ -6,17 +6,38 @@
     <title>NAKAMUROBO - Audio Decrypt Test</title>
     <style>
         body { margin: 0; background: #000; color: #00ff41; font-family: monospace; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        .Hotspot { background: #ff0000; border: none; width: 16px; height: 16px; border-radius: 50%; cursor: pointer; box-shadow: 0 0 10px #f00; }
-        .glitch-box { display: none; position: absolute; left: 40px; top: -70px; width: 250px; padding: 20px; background: rgba(0, 10, 0, 0.95); border: 1px solid #00ff41; }
+        .Hotspot { background: #ff0000; border: none; width: 16px; height: 16px; border-radius: 50%; cursor: pointer; box-shadow: 0 0 10px #f00; outline: none; }
+        
+        /* メッセージボックス（緑文字） */
+        .glitch-box { 
+            display: none; 
+            position: absolute; 
+            left: 40px; 
+            top: -70px; 
+            width: 250px; 
+            padding: 20px; 
+            background: rgba(0, 10, 0, 0.95); 
+            border: 1px solid #00ff41; 
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+        }
+
+        /* ジジジ演出アニメーション */
         .active { display: block !important; animation: jiji 4s infinite; }
-        @keyframes jiji { 0%, 90% { opacity: 1; transform: translateX(0); } 95% { opacity: 0.4; transform: translateX(-3px); } 100% { opacity: 1; } }
+        @keyframes jiji { 
+            0%, 90% { opacity: 1; transform: translateX(0); } 
+            93% { opacity: 0.4; transform: translateX(-3px); } 
+            96% { opacity: 1; transform: translateX(3px); } 
+            100% { opacity: 1; } 
+        }
+
+        .status { font-size: 10px; border-bottom: 1px solid #00ff41; margin-bottom: 10px; color: #008822; }
     </style>
 </head>
 <body>
 
     <button class="Hotspot" id="analyzeBtn">
         <div class="glitch-box" id="output">
-            <div style="font-size: 10px; border-bottom: 1px solid #00ff41; margin-bottom: 10px;">DECRYPTING...</div>
+            <div class="status">DECRYPTING...</div>
             <strong>"Believe in yourself."</strong><br><br>
             Nakamurobo,<br>
             you are not an error.<br>
@@ -27,36 +48,25 @@
     <script>
         const btn = document.getElementById('analyzeBtn');
         const box = document.getElementById('output');
-        let audioCtx;
-
-        // ノイズ音を生成する関数
-        function playNoise() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const bufferSize = audioCtx.sampleRate * 0.5; // 0.5秒のノイズ
-            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-            const data = buffer.getChannelData(0);
-            
-            for (let i = 0; i < bufferSize; i++) {
-                data[i] = Math.random() * 2 - 1; // ホワイトノイズ生成
-            }
-
-            const noise = audioCtx.createBufferSource();
-            noise.buffer = buffer;
-
-            // フィルターで「ジリジリ」した音に加工
-            const filter = audioCtx.createBiquadFilter();
-            filter.type = 'bandpass';
-            filter.frequency.value = 1000;
-
-            noise.connect(filter);
-            filter.connect(audioCtx.destination);
-            noise.start();
-        }
+        
+        // 1. mp3ファイルを読み込み
+        const noiseAudio = new Audio('noise.mp3'); 
 
         btn.addEventListener('click', () => {
-            box.classList.toggle('active');
-            if (box.classList.contains('active')) {
-                playNoise(); // 表示された瞬間に音を鳴らす
+            const isActive = box.classList.toggle('active');
+
+            if (isActive) {
+                // 表示された時に再生
+                noiseAudio.currentTime = 0; // 再生位置をリセット
+                noiseAudio.play().catch(e => console.log("Audio play failed:", e));
+
+                // iPhone/Android用のバイブレーション（任意）
+                if (window.navigator.vibrate) {
+                    window.navigator.vibrate([15, 40, 15]);
+                }
+            } else {
+                // 非表示にしたら音を止める
+                noiseAudio.pause();
             }
         });
     </script>
