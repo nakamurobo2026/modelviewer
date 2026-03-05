@@ -3,39 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NAKAMUROBO - Audio Decrypt Fixed</title>
+    <title>NAKAMUROBO - Display Fix</title>
     <style>
         body { margin: 0; background: #000; color: #00ff41; font-family: monospace; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
 
-        /* ボタンを基準位置にするための設定 */
+        /* コンテナを作って位置を固定する */
+        .container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         .Hotspot { 
-            background: #ff0000; border: none; width: 16px; height: 16px; border-radius: 50%; 
+            background: #ff0000; border: none; width: 20px; height: 20px; border-radius: 50%; 
             cursor: pointer; box-shadow: 0 0 10px #f00; outline: none;
-            position: relative; /* これが重要：中のメッセージの基準点になります */
+            z-index: 10;
         }
         
-        /* メッセージボックスの配置修正 */
+        /* メッセージボックス（ボタンの外に出しました） */
         .glitch-box { 
             display: none; 
             position: absolute; 
-            bottom: 30px; /* ボタンの30px上に配置 */
-            left: 50%;
-            transform: translateX(-50%); /* 真ん中に寄せる */
-            width: 220px; 
+            bottom: 40px; /* ボタンの40px上に表示 */
+            width: 240px; 
             padding: 15px; 
             background: rgba(0, 10, 0, 0.95); 
             border: 1px solid #00ff41; 
             box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
             z-index: 100;
             pointer-events: none;
+            text-align: center;
         }
 
-        .active { display: block !important; animation: jiji 4s infinite; }
-        @keyframes jiji { 
-            0%, 90% { opacity: 1; transform: translateX(-50%) translateY(0); } 
-            93% { opacity: 0.4; transform: translateX(-52%) translateY(-2px); } 
-            96% { opacity: 1; transform: translateX(-48%) translateY(2px); } 
-            100% { opacity: 1; transform: translateX(-50%) translateY(0); } 
+        /* ジジジ演出（文字が消えないように調整） */
+        .active { display: block !important; animation: jiji-simple 3s infinite; }
+        
+        @keyframes jiji-simple { 
+            0%, 90% { opacity: 1; transform: translateX(0); } 
+            93% { opacity: 0.5; transform: translateX(-3px); } 
+            96% { opacity: 1; transform: translateX(3px); } 
+            100% { opacity: 1; } 
         }
 
         .status { font-size: 10px; border-bottom: 1px solid #00ff41; margin-bottom: 10px; color: #008822; text-align: left; }
@@ -43,36 +51,30 @@
 </head>
 <body>
 
-    <button class="Hotspot" id="analyzeBtn">
+    <div class="container">
+        <button class="Hotspot" id="analyzeBtn"></button>
+
         <div class="glitch-box" id="output">
             <div class="status">DECRYPTING...</div>
-            <div style="text-align: center;">
-                <strong>"Believe in yourself."</strong><br><br>
-                Nakamurobo,<br>
-                you are not an error.<br>
-                Find me.
-            </div>
+            <strong>"Believe in yourself."</strong><br><br>
+            Nakamurobo,<br>
+            you are not an error.<br>
+            Find me.
         </div>
-    </button>
+    </div>
 
     <script>
         const btn = document.getElementById('analyzeBtn');
         const box = document.getElementById('output');
         const noiseAudio = new Audio('noise.mp3'); 
 
-        btn.addEventListener('click', (e) => {
-            // イベントの伝播を止めて誤動作を防ぐ
-            e.stopPropagation();
-            
+        btn.addEventListener('click', () => {
             const isActive = box.classList.toggle('active');
 
             if (isActive) {
                 noiseAudio.currentTime = 0;
-                noiseAudio.play().catch(e => console.log("Audio play failed:", e));
-
-                if (window.navigator.vibrate) {
-                    window.navigator.vibrate([15, 40, 15]);
-                }
+                noiseAudio.play().catch(e => console.log("Audio Error:", e));
+                if (window.navigator.vibrate) window.navigator.vibrate([20, 50]);
             } else {
                 noiseAudio.pause();
             }
