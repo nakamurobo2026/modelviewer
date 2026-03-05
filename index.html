@@ -8,7 +8,6 @@
     
     <style>
         body { margin: 0; background: #000; color: #0f0; font-family: 'Courier New', monospace; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        
         #container { position: relative; flex-grow: 1; width: 100%; }
         model-viewer { width: 100%; height: 100%; background: #000; }
 
@@ -24,26 +23,11 @@
             line-height: 1.5;
         }
         
-        /* Fixed Button Layout */
         #ar-button {
-            display: none; 
-            position: absolute; 
-            bottom: 220px; 
-            left: 50%; 
-            transform: translateX(-50%);
-            background: #0f0; 
-            color: #000; 
-            border: none; 
-            padding: 12px 20px; 
-            font-weight: bold;
-            border-radius: 4px; 
-            cursor: pointer; 
-            z-index: 999; 
-            box-shadow: 0 0 20px #0f0;
-            font-family: 'Courier New', sans-serif;
-            white-space: nowrap; /* テキストの折り返しを禁止 */
-            font-size: 12px; /* スマホ向けに少しサイズ調整 */
-            width: auto; /* 幅をテキストに合わせる */
+            display: none; position: absolute; bottom: 220px; left: 50%; transform: translateX(-50%);
+            background: #0f0; color: #000; border: none; padding: 12px 20px; font-weight: bold;
+            border-radius: 4px; cursor: pointer; z-index: 999; box-shadow: 0 0 20px #0f0;
+            font-family: 'Courier New', sans-serif; white-space: nowrap; font-size: 12px;
         }
 
         #output div { margin-bottom: 2px; }
@@ -90,13 +74,16 @@
         let lineIndex = 0;
         let isStarted = false;
 
+        const playGlitchSound = () => {
+            const audio = new Audio('noise.mp3');
+            audio.play().catch(e => console.log("Audio block:", e));
+        };
+
         const startAction = () => {
             if (isStarted) return;
             isStarted = true;
 
-            const audio = new Audio('noise.mp3');
-            audio.play().catch(() => console.log("Audio waiting"));
-
+            playGlitchSound(); // 最初のクリック音
             output.innerHTML = "";
             output.classList.add('glitch');
             processLog();
@@ -109,6 +96,12 @@
             if (lineIndex < logLines.length) {
                 const line = document.createElement('div');
                 output.appendChild(line);
+
+                // "Believe in yourself." の時に再度音を鳴らす
+                if (logLines[lineIndex].includes("Believe in yourself")) {
+                    playGlitchSound();
+                }
+
                 typeWriter(line, logLines[lineIndex], 0, () => {
                     lineIndex++;
                     setTimeout(processLog, 150);
