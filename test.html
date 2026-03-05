@@ -3,50 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NAKAMUROBO - Log Analysis Test</title>
+    <title>NAKAMUROBO - System Log 09</title>
     <style>
-        /* 深夜の工房のような暗い背景 */
         body { 
             margin: 0; 
-            background: #050505; 
-            color: #00ff41; 
+            background: #000; 
+            color: #00ff41; /* デジタル・グリーン */
             font-family: 'Courier New', Courier, monospace; 
             display: flex; 
-            flex-direction: column; 
             align-items: center; 
             justify-content: center; 
             height: 100vh; 
             overflow: hidden; 
         }
 
-        /* 解析ボタンを配置するエリア（仮想のナカムロボの胸部付近） */
         .stage {
             position: relative;
-            width: 300px;
-            height: 300px;
-            background: rgba(20, 20, 20, 0.5);
-            border: 1px dashed #333;
+            width: 320px;
+            height: 320px;
+            background: #050505;
+            border: 1px solid #111;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        /* 小さい赤いボタン（解析ポイント） */
+        /* 小さい赤い解析ポイント */
         .Hotspot {
             background: #ff0000; 
             border: none; 
-            width: 16px; 
-            height: 16px; 
+            width: 14px; 
+            height: 14px; 
             border-radius: 50%; 
-            cursor: pointer; 
-            position: relative;
-            box-shadow: 0 0 10px rgba(255, 0, 0, 0.9);
-            animation: pulse 2s infinite; /* 呼吸するように点滅 */
+            cursor: pointer;
+            box-shadow: 0 0 12px #f00;
+            animation: pulse 2.5s infinite;
         }
 
         @keyframes pulse {
             0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.2); opacity: 0.7; }
+            50% { transform: scale(1.3); opacity: 0.5; }
             100% { transform: scale(1); opacity: 1; }
         }
 
@@ -55,35 +51,44 @@
             display: none; 
             position: absolute; 
             left: 40px; 
-            top: -60px;
-            width: 240px; 
-            padding: 15px;
-            background: rgba(0, 10, 0, 0.95); 
+            top: -70px;
+            width: 250px; 
+            padding: 20px;
+            background: rgba(0, 10, 0, 0.98); 
             border: 1px solid #00ff41;
-            box-shadow: 0 0 20px rgba(0, 255, 65, 0.1);
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
             pointer-events: none;
-            z-index: 100;
         }
 
-        /* ゆっくりしたジジジ演出（明滅とズレ） */
-        @keyframes flicker {
-            0%, 48%, 52%, 100% { opacity: 1; }
-            50% { opacity: 0.3; } 
-        }
-
-        @keyframes jiji-shift {
-            0%, 94% { transform: translateX(0); }
-            96% { transform: translateX(-3px) skewX(2deg); }
-            98% { transform: translateX(3px) skewX(-2deg); }
+        /* ゆっくりした「ジジジ」演出：明滅・ズレ・走査線 */
+        @keyframes jiji-final {
+            0%, 45%, 55%, 95%, 100% { opacity: 1; transform: translateX(0); }
+            50% { opacity: 0.4; transform: translateX(-4px); }
+            97% { opacity: 0.2; transform: translateX(4px); }
         }
 
         .active {
             display: block !important;
-            animation: flicker 4s infinite, jiji-shift 0.2s infinite;
-            text-shadow: 1px 0 red, -1px 0 blue; /* わずかな色ずれ */
+            animation: jiji-final 4s infinite;
+            /* 色収差（わずかな赤と青のズレ）を追加して怖さを演出 */
+            text-shadow: 1px 0 rgba(255,0,0,0.7), -1px 0 rgba(0,0,255,0.7);
         }
 
-        .status { font-size: 10px; color: #008822; border-bottom: 1px solid #008822; margin-bottom: 10px; }
+        /* 走査線（古いモニターの横線） */
+        .active::after {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 65, 0.1) 0px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+        }
+
+        .status { font-size: 10px; color: #008822; border-bottom: 1px solid #008822; margin-bottom: 12px; }
     </style>
 </head>
 <body>
@@ -91,8 +96,8 @@
     <div class="stage">
         <button class="Hotspot" id="analyzeBtn">
             <div class="glitch-box" id="output">
-                <div class="status">DECRYPTING DR.NAKAMURA'S LOG...</div>
-                <strong style="font-size: 1.1em;">"Believe in yourself."</strong><br><br>
+                <div class="status">ENCRYPTED_LOG // DECRYPTING...</div>
+                <strong style="font-size: 1.2em; letter-spacing: 1px;">"Believe in yourself."</strong><br><br>
                 Nakamurobo,<br>
                 you are not an error.<br>
                 Find me.
@@ -100,19 +105,14 @@
         </button>
     </div>
 
-    <p style="margin-top:30px; color:#444; font-size: 12px;">TAP THE RED POINT TO DECRYPT</p>
-
     <script>
         const btn = document.getElementById('analyzeBtn');
         const box = document.getElementById('output');
 
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
+        btn.addEventListener('click', () => {
             box.classList.toggle('active');
-            
-            // 触覚フィードバック（Android等対応機種のみ）
             if (window.navigator.vibrate) {
-                window.navigator.vibrate([10, 30]);
+                window.navigator.vibrate([15, 50, 15]);
             }
         });
     </script>
