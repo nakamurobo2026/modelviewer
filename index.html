@@ -9,7 +9,7 @@
         html, body { height: 100%; margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
         model-viewer { width: 100%; height: 100%; }
 
-        /* --- 既存のARボタン用スタイル --- */
+        /* --- AR開始ボタン（下部） --- */
         .floating-ar-button {
             position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
             width: 80%; max-width: 320px; padding: 18px;
@@ -20,19 +20,26 @@
         }
         .warning-mode { background: linear-gradient(135deg, #ff9900, #ff6600) !important; }
 
-        /* --- 今回追加したノイズ演出用スタイル --- */
+        /* --- 修正ポイント：赤いボタンを消して透明にする --- */
         .Hotspot {
-            background: #ff0000; border: none; width: 18px; height: 18px;
-            border-radius: 50%; box-shadow: 0 0 10px #f00; cursor: pointer;
+            background: none; /* 赤色を消去 */
+            border: none;
+            width: 45px;      /* タップしやすいように少し広めに */
+            height: 45px;
+            cursor: pointer;
             position: relative;
+            outline: none;
+            -webkit-tap-highlight-color: transparent; /* タップ時の青い枠を消す */
         }
 
+        /* 緑のノイズメッセージ */
         .glitch-box {
-            display: none; position: absolute; bottom: 40px; left: 50%;
+            display: none; position: absolute; bottom: 50px; left: 50%;
             transform: translateX(-50%); width: 220px; padding: 15px;
             background: rgba(0, 10, 0, 0.95); border: 1px solid #00ff41;
             color: #00ff41; font-family: monospace; text-align: center;
             pointer-events: none; z-index: 100;
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.3);
         }
 
         .active { display: block !important; animation: jiji 4s infinite; }
@@ -47,26 +54,29 @@
 </head>
 <body>
 
-<model-viewer 
-    id="viewer"
-    src="dance.glb" 
-    ar 
-    ar-modes="scene-viewer webxr quick-look" 
-    camera-controls 
-    shadow-intensity="1"
-    style="background-color: #000;"> <button class="Hotspot" id="hotspotBtn" slot="hotspot-1" 
-        data-position="0m 0.1m 0.15m" 
-        data-normal="0m 0m 1m"
-        style="display: block !important;"> <div class="glitch-box" id="output">
-            <div class="status">DECRYPTING...</div>
-            <strong>"Believe in yourself."</strong><br><br>
-            Nakamurobo,<br>
-            you are not an error.<br>
-            Find me.
-        </div>
-    </button>
+    <model-viewer 
+        id="viewer"
+        src="nakamurobo.glb" 
+        ar 
+        ar-modes="scene-viewer webxr quick-look" 
+        camera-controls 
+        shadow-intensity="1"
+        style="background-color: #000;">
 
-    <div slot="ar-button"></div>
+        <button class="Hotspot" id="hotspotBtn" slot="hotspot-1" 
+            data-position="0.053m 0.525m 0.125m" 
+            data-normal="0m 0.4m 0.9m">
+            
+            <div class="glitch-box" id="output">
+                <div class="status">DECRYPTING...</div>
+                <strong>"Believe in yourself."</strong><br><br>
+                Nakamurobo,<br>
+                you are not an error.<br>
+                Find me.
+            </div>
+        </button>
+
+        <div slot="ar-button"></div>
     </model-viewer>
     
     <a href="#" id="custom-ar-link" class="floating-ar-button">タップしてARを開始</a>
@@ -89,7 +99,7 @@
             }
         });
 
-        // --- 既存のブラウザ判定ロジック ---
+        // --- ブラウザ判定ロジック（既存） ---
         const btn = document.getElementById('custom-ar-link');
         const viewer = document.getElementById('viewer');
         const ua = navigator.userAgent;
