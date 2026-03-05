@@ -10,7 +10,7 @@
         body {
             margin: 0;
             background-color: #050505;
-            color: #00ff41; /* Matrix Green */
+            color: #00ff41;
             font-family: 'Courier New', Courier, monospace;
             display: flex;
             flex-direction: column;
@@ -18,53 +18,42 @@
             overflow: hidden;
         }
 
-        /* 3D Model Area */
         model-viewer {
             width: 100%;
             flex-grow: 1;
             background-color: #000;
-            --poster-color: transparent;
         }
 
-        /* Terminal Area */
         #terminal {
             height: 180px;
-            background: rgba(0, 0, 0, 0.9);
-            border-top: 1px solid #00ff41;
+            background: rgba(0, 0, 0, 0.95);
+            border-top: 2px solid #00ff41;
             padding: 15px;
             font-size: 14px;
-            line-height: 1.4;
             overflow-y: auto;
             box-sizing: border-box;
+            z-index: 100;
         }
 
-        /* Hotspot (Chest Core) */
+        /* Hotspot Design */
         .Hotspot {
-            background: rgba(0, 255, 65, 0.2);
+            background: #00ff41;
             border-radius: 50%;
-            border: 2px solid #00ff41;
-            box-shadow: 0 0 10px #00ff41;
-            width: 24px;
-            height: 24px;
+            border: none;
+            width: 20px;
+            height: 20px;
             cursor: pointer;
-            animation: pulse 2s infinite;
+            box-shadow: 0 0 15px #00ff41;
+            animation: pulse 1.5s infinite;
         }
 
-        .HotspotAnnotation {
-            background: #000;
-            border: 1px solid #00ff41;
-            color: #00ff41;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 10px;
-            position: absolute;
-            transform: translate(30px, -10px);
-            white-space: nowrap;
-        }
-
-        /* Realize Button (Hidden initially) */
-        #ar-button {
+        .Hotspot:not([data-visible]) {
             display: none;
+        }
+
+        /* AR Button - Initially Hidden */
+        #ar-button {
+            display: none; 
             position: absolute;
             bottom: 200px;
             left: 50%;
@@ -72,47 +61,38 @@
             background: #00ff41;
             color: #000;
             border: none;
-            padding: 12px 24px;
+            padding: 15px 30px;
             font-weight: bold;
             font-family: 'Courier New', sans-serif;
-            border-radius: 4px;
+            border-radius: 5px;
             cursor: pointer;
-            z-index: 10;
-            box-shadow: 0 0 20px rgba(0, 255, 65, 0.6);
+            z-index: 200;
+            box-shadow: 0 0 25px rgba(0, 255, 65, 0.8);
         }
 
         @keyframes pulse {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.3); opacity: 0.5; }
-            100% { transform: scale(1); opacity: 1; }
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 255, 65, 0.7); }
+            70% { transform: scale(1.2); box-shadow: 0 0 0 10px rgba(0, 255, 65, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 255, 65, 0); }
         }
 
-        .fade-in {
-            animation: fadeIn 1s ease-in forwards;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
+        #output div { margin-bottom: 4px; }
     </style>
 </head>
 <body>
 
     <model-viewer 
-        id="nakamurobo-viewer"
+        id="viewer"
         src="nakamurobo.glb" 
         ios-src="nakamurobo.usdz"
         ar 
         ar-modes="webxr scene-viewer quick-look" 
         camera-controls 
-        shadow-intensity="1"
-        auto-rotate>
+        shadow-intensity="1">
         
-        <button class="Hotspot" slot="hotspot-1" 
+        <button class="Hotspot" slot="hotspot-core" 
                 data-position="0m 1.2m 0.2m" 
                 data-normal="0m 0m 1m">
-            <div class="HotspotAnnotation">DECODE_HEART_LOG</div>
         </button>
 
         <button slot="ar-button" id="ar-button">
@@ -121,64 +101,61 @@
     </model-viewer>
 
     <div id="terminal">
-        <div id="output">> WAITING_FOR_USER_INTERACTION...</div>
+        <div id="output">> STANDBY: TAP THE CORE TO DECODE...</div>
     </div>
 
     <script>
         const hotspot = document.querySelector('.Hotspot');
         const arButton = document.querySelector('#ar-button');
         const output = document.querySelector('#output');
-        const viewer = document.querySelector('#nakamurobo-viewer');
 
         const logLines = [
-            "> ACCESSING_FUKUYAMA_SECTOR_34.485_133.362...",
-            "> INJECTING_DOCTOR_NAKAMURA_AUTH_KEY...",
-            "> BYPASSING_CENTRAL_AI_REJECTION...",
-            "> [CRITICAL] IRREGULAR_DATA_DETECTED",
+            "> INITIALIZING...",
+            "> ACCESSING_FUKUYAMA_SECTOR_34.485_133.362",
+            "> BYPASSING_SECURITY...",
+            "> [SUCCESS] IRREGULAR_DATA_FOUND",
             "",
-            "> DECODING_MESSAGE:",
             "\"Believe in yourself.\"",
             "",
-            "> OVERRIDING_DISPOSAL_ORDER...",
             "> STATUS: AWAKENED",
-            "> READY_FOR_PHYSICAL_REALIZATION."
+            "> READY_FOR_REALIZATION."
         ];
 
-        let isDecoding = false;
+        let lineIndex = 0;
+        let isStarted = false;
 
         hotspot.addEventListener('click', () => {
-            if (isDecoding) return;
-            isDecoding = true;
+            if (isStarted) return;
+            isStarted = true;
 
-            // Play noise sound
+            // Audio trigger
             const audio = new Audio('noise.mp3');
-            audio.play().catch(e => console.log("Audio play blocked"));
+            audio.play().catch(() => console.log("Audio needs user tap first"));
 
-            // Start Terminal Effect
-            output.innerHTML = "";
-            processLines(0);
+            output.innerHTML = ""; // Clear standby message
+            startTerminal();
         });
 
-        function processLines(index) {
-            if (index < logLines.length) {
-                const lineDiv = document.createElement('div');
-                output.appendChild(lineDiv);
-                typeWriter(lineDiv, logLines[index], 0, () => {
-                    setTimeout(() => processLines(index + 1), 200);
-                    output.parentElement.scrollTop = output.parentElement.scrollHeight;
+        function startTerminal() {
+            if (lineIndex < logLines.length) {
+                const line = document.createElement('div');
+                output.appendChild(line);
+                typeText(line, logLines[lineIndex], 0, () => {
+                    lineIndex++;
+                    setTimeout(startTerminal, 250); // Pause between lines
+                    document.getElementById('terminal').scrollTop = document.getElementById('terminal').scrollHeight;
                 });
             } else {
-                // Reveal AR Button
+                // Decoding finished
                 arButton.style.display = "block";
-                arButton.classList.add('fade-in');
                 hotspot.style.display = "none";
             }
         }
 
-        function typeWriter(element, text, charIndex, callback) {
-            if (charIndex < text.length) {
-                element.innerHTML += text.charAt(charIndex);
-                setTimeout(() => typeWriter(element, text, charIndex + 1, callback), 25);
+        function typeText(element, text, i, callback) {
+            if (i < text.length) {
+                element.innerHTML += text.charAt(i);
+                setTimeout(() => typeText(element, text, i + 1, callback), 25); // Speed
             } else {
                 callback();
             }
