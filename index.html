@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Nakamurobo | Episode 9</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     
     <style>
         body { margin: 0; background: #000; color: #0f0; font-family: 'Courier New', monospace; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        #container { position: relative; flex-grow: 1; width: 100%; }
+        
+        #container { position: relative; flex-grow: 1; width: 100%; height: 100%; }
         model-viewer { width: 100%; height: 100%; background: #000; }
 
         #terminal { 
@@ -21,13 +22,29 @@
             box-sizing: border-box; 
             cursor: pointer;
             line-height: 1.5;
+            z-index: 10;
         }
         
+        /* iOS Compatible AR Button */
         #ar-button {
-            display: none; position: absolute; bottom: 220px; left: 50%; transform: translateX(-50%);
-            background: #0f0; color: #000; border: none; padding: 12px 20px; font-weight: bold;
-            border-radius: 4px; cursor: pointer; z-index: 999; box-shadow: 0 0 20px #0f0;
-            font-family: 'Courier New', sans-serif; white-space: nowrap; font-size: 12px;
+            display: none; /* 初期は非表示 */
+            position: absolute; 
+            bottom: 220px; 
+            left: 50%; 
+            transform: translateX(-50%);
+            background-color: #0f0; 
+            color: #000; 
+            border: none; 
+            padding: 15px 25px; 
+            font-weight: bold;
+            border-radius: 4px; 
+            cursor: pointer; 
+            z-index: 9999; /* 最前面に強制 */
+            box-shadow: 0 0 20px #0f0;
+            font-family: 'Courier New', sans-serif;
+            white-space: nowrap;
+            font-size: 14px;
+            -webkit-appearance: none; /* iOSのデフォルトスタイルを解除 */
         }
 
         #output div { margin-bottom: 2px; }
@@ -43,8 +60,11 @@
             id="viewer"
             src="nakamurobo.glb" 
             ios-src="nakamurobo.usdz"
-            ar ar-modes="webxr scene-viewer quick-look" 
-            camera-controls shadow-intensity="1">
+            ar 
+            ar-modes="quick-look webxr scene-viewer" 
+            camera-controls 
+            shadow-intensity="1">
+            
             <button slot="ar-button" id="ar-button">REALIZE_IN_REAL_WORLD</button>
         </model-viewer>
     </div>
@@ -83,12 +103,13 @@
             if (isStarted) return;
             isStarted = true;
 
-            playGlitchSound(); // 最初のクリック音
+            playGlitchSound();
             output.innerHTML = "";
             output.classList.add('glitch');
             processLog();
         };
 
+        // iPhoneのSafariではクリックイベントがcontainerレベルで必要な場合があります
         viewer.addEventListener('click', startAction);
         terminal.addEventListener('click', startAction);
 
@@ -97,7 +118,6 @@
                 const line = document.createElement('div');
                 output.appendChild(line);
 
-                // "Believe in yourself." の時に再度音を鳴らす
                 if (logLines[lineIndex].includes("Believe in yourself")) {
                     playGlitchSound();
                 }
@@ -109,7 +129,8 @@
                 });
             } else {
                 output.classList.remove('glitch');
-                arButton.style.display = "block";
+                // 解析完了後にボタンを可視化
+                arButton.style.setProperty('display', 'block', 'important');
             }
         }
 
