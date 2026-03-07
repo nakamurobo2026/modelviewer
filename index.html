@@ -20,13 +20,24 @@
 
         .line-warning { background: linear-gradient(135deg, #ff9900, #ff6600) !important; color: white !important; cursor: pointer !important; pointer-events: auto !important; }
 
-        /* 準備完了状態 */
+        /* 準備完了（解析前） */
         .custom-ar-button.ready {
             background: #0f0; color: black; cursor: pointer; pointer-events: auto;
             box-shadow: 0 0 25px rgba(0,255,0,0.6);
         }
 
+        /* 解析中 */
         .decoding-mode { background: #111 !important; color: #0f0 !important; border: 1px solid #0f0; box-shadow: none; pointer-events: none; }
+
+        /* 実体化ボタン（解析完了後） */
+        .realize-mode {
+            background: #fff !important; color: #000 !important;
+            box-shadow: 0 0 30px #fff !important; cursor: pointer !important; pointer-events: auto !important;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+
         #terminal { position: fixed; bottom: 0; width: 100%; height: 200px; background: rgba(0, 15, 0, 0.95); border-top: 2px solid #0f0; padding: 12px; font-size: 13px; overflow-y: auto; box-sizing: border-box; z-index: 1000; }
         .highlight { color: #fff; font-weight: bold; }
     </style>
@@ -55,16 +66,15 @@
         const terminal = document.getElementById('terminal');
         
         const isLine = /Line/i.test(navigator.userAgent);
-        const isIPhone = /iPhone|iPad|iPod/.test(navigator.userAgent);
         let isStarted = false;
+        let isDecoded = false;
         let noiseAudio = new Audio('noise.mp3');
 
-        // ボタンを有効化する共通関数
         function setReady() {
             if (!isStarted && !btn.classList.contains('ready')) {
                 btn.classList.add('ready');
                 btn.innerText = "[ START_DECODING ]";
-                output.innerHTML = "> [SUCCESS] DATA_FULLY_SYNCED. READY_TO_REALIZE.";
+                output.innerHTML = "> [SUCCESS] DATA_FULLY_SYNCED. READY_TO_DECODE.";
                 viewer.dismissPoster();
             }
         }
@@ -77,51 +87,40 @@
                 window.location.href = window.location.href + (window.location.href.includes('?') ? '&' : '?') + "openExternalBrowser=1";
             };
         } else {
-            // --- リロード・キャッシュ対策のハイブリッド監視 ---
-
-            // 1. 通常のロード完了監視
-            viewer.addEventListener('poster-dismissed', () => {
-                setTimeout(setReady, 500);
-            });
-
-            // 2. キャッシュヒット対策：すでにロード済みの場合は即座にReadyへ
-            // model-viewerの内部状態をチェック
-            const checkLoadState = setInterval(() => {
-                if (viewer.loaded || viewer.querySelector('canvas')) {
-                    setReady();
-                    clearInterval(checkLoadState);
-                }
+            // ロード監視
+            viewer.addEventListener('poster-dismissed', () => setTimeout(setReady, 500));
+            const checkLoad = setInterval(() => {
+                if (viewer.loaded) { setReady(); clearInterval(checkLoad); }
             }, 500);
-
-            // 3. 安全装置：10秒経っても何も起きない場合
-            setTimeout(() => {
-                if (!btn.classList.contains('ready')) setReady();
-                clearInterval(checkLoadState);
-            }, 10000);
 
             btn.onclick = (e) => {
                 e.preventDefault();
-                if (isStarted) return;
-                isStarted = true;
-
-                noiseAudio.play().catch(() => {
-                    const retryAudio = new Audio('noise.mp3');
-                    retryAudio.play().catch(() => {});
-                });
-
-                if (isIPhone) {
-                    viewer.activateAR();
-                    startEffect();
-                } else {
+                
+                // --- 1回目：解析開始 ---
+                if (!isDecoded && !isStarted) {
+                    isStarted = true;
+                    btn.classList.remove('ready');
                     btn.classList.add('decoding-mode');
-                    btn.innerText = "DECODING...";
-                    startEffect(() => {
-                        btn.classList.remove('decoding-mode');
-                        btn.innerText = "REALIZE_IN_REAL_WORLD";
-                        btn.style.pointerEvents = "auto";
-                        btn.onclick = () => viewer.activateAR();
-                        viewer.activateAR();
+                    btn.innerText = "DECODING_HEART_LOG...";
+                    
+                    noiseAudio.play().catch(() => {
+                        const r = new Audio('noise.mp3'); r.play();
                     });
+                    
+                    startEffect(() => {
+                        // 解析完了後の処理
+                        isDecoded = true;
+                        isStarted = false;
+                        btn.classList.remove('decoding-mode');
+                        btn.classList.add('realize-mode');
+                        btn.innerText = "[ REALIZE_IN_REAL_WORLD ]";
+                    });
+                    return;
+                }
+
+                // --- 2回目：AR起動（解析完了後） ---
+                if (isDecoded) {
+                    viewer.activateAR();
                 }
             };
         }
@@ -135,7 +134,7 @@
                 "<span class='highlight'>\"Believe in yourself.\"</span>",
                 "",
                 "> STATUS: AWAKENED",
-                "> READY."
+                "> READY_FOR_PHYSICAL_REALIZATION."
             ];
             processLog(lines, 0, callback);
         }
@@ -144,9 +143,7 @@
             if (index < lines.length) {
                 const line = document.createElement('div');
                 output.appendChild(line);
-                if (lines[index].includes("Believe in yourself")) {
-                    new Audio('noise.mp3').play().catch(() => {});
-                }
+                if (lines[index].includes("Believe in yourself")) new Audio('noise.mp3').play().catch(() => {});
                 
                 let i = 0;
                 const fullText = lines[index];
