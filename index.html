@@ -20,7 +20,7 @@
 
         .line-warning { background: linear-gradient(135deg, #ff9900, #ff6600) !important; color: white !important; cursor: pointer !important; pointer-events: auto !important; }
 
-        /* AR準備が完全に整った状態 */
+        /* 準備完了状態 */
         .custom-ar-button.ready {
             background: #0f0; color: black; cursor: pointer; pointer-events: auto;
             box-shadow: 0 0 25px rgba(0,255,0,0.6);
@@ -59,6 +59,16 @@
         let isStarted = false;
         let noiseAudio = new Audio('noise.mp3');
 
+        // ボタンを有効化する共通関数
+        function setReady() {
+            if (!isStarted && !btn.classList.contains('ready')) {
+                btn.classList.add('ready');
+                btn.innerText = "[ START_DECODING ]";
+                output.innerHTML = "> [SUCCESS] AR_DATA_VALIDATED. READY_FOR_DECODE.";
+                viewer.dismissPoster();
+            }
+        }
+
         if (isLine) {
             btn.classList.add('line-warning');
             btn.innerText = "🌐 OPEN_IN_EXTERNAL_BROWSER";
@@ -67,28 +77,26 @@
                 window.location.href = window.location.href + (window.location.href.includes('?') ? '&' : '?') + "openExternalBrowser=1";
             };
         } else {
-            // --- 究極のiOS対策：ARステータスを監視 ---
-            // 'ar-status' が 'initialized' になった時が、iOSがプレビュー準備を終えた真の合図
+            // 1. ARステータス監視
             viewer.addEventListener('ar-status', (event) => {
                 if (event.detail.status === 'initialized' || event.detail.status === 'not-presenting') {
-                    if (!isStarted && btn.innerText !== "[ START_DECODING ]") {
-                        btn.classList.add('ready');
-                        btn.innerText = "[ START_DECODING ]";
-                        output.innerHTML = "> [SUCCESS] AR_DATA_VALIDATED. READY_FOR_DECODE.";
-                        viewer.dismissPoster();
-                    }
+                    setReady();
                 }
             });
 
-            // 念のためloadイベントでもバックアップ
+            // 2. モデルのロード完了監視（バックアップ）
             viewer.addEventListener('load', () => {
-                if (!isStarted && !isIPhone) { // Androidはloadで十分
-                    btn.classList.add('ready');
-                    btn.innerText = "[ START_DECODING ]";
-                    output.innerHTML = "> [SUCCESS] LINK_ESTABLISHED.";
-                    viewer.dismissPoster();
-                }
+                // ロード完了から少し待って、iOS側の準備時間を稼ぐ
+                setTimeout(setReady, 500);
             });
+
+            // 3. 強制タイマー（最後の手段：3秒経過しても信号がなければ有効化）
+            setTimeout(() => {
+                if (!btn.classList.contains('ready')) {
+                    console.log("Forcing ready state via timer.");
+                    setReady();
+                }
+            }, 3000);
 
             btn.onclick = (e) => {
                 e.preventDefault();
@@ -97,7 +105,7 @@
 
                 noiseAudio.play().catch(() => {
                     const retryAudio = new Audio('noise.mp3');
-                    retryAudio.play();
+                    retryAudio.play().catch(() => {});
                 });
 
                 if (isIPhone) {
