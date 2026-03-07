@@ -17,20 +17,18 @@
             transition: all 0.4s ease;
         }
 
+        /* 1. ロード中/待機ボタン */
         #sync-btn { background: #222; color: #555; display: block; pointer-events: none; }
         #sync-btn.ready { background: #0f0; color: #000; cursor: pointer; pointer-events: auto; box-shadow: 0 0 20px rgba(0,255,0,0.5); }
         
-        /* 実体化ボタン */
+        /* 2. 実体化ボタン */
         #realize-btn { background: #fff; color: #000; display: none; box-shadow: 0 0 30px #fff; cursor: pointer; }
-        /* 実行中（読込中）のスタイル */
         #realize-btn.loading { background: #444; color: #888; box-shadow: none; pointer-events: none; }
 
         .line-warning { background: linear-gradient(135deg, #ff9900, #ff6600) !important; color: white !important; display: block !important; pointer-events: auto !important; }
         
         #terminal { position: fixed; bottom: 0; width: 100%; height: 200px; background: rgba(0, 15, 0, 0.95); border-top: 2px solid #0f0; padding: 12px; font-size: 13px; overflow-y: auto; box-sizing: border-box; z-index: 1000; }
         .highlight { color: #fff; font-weight: bold; }
-        
-        /* スピナー演出 */
         .dots::after { content: ''; animation: dots 1.5s infinite; }
         @keyframes dots { 0% { content: ''; } 33% { content: '.'; } 66% { content: '..'; } 100% { content: '...'; } }
     </style>
@@ -72,34 +70,35 @@
                 syncBtn.innerText = `SYNCING_STREAM: ${percent}%`;
                 
                 if (percent >= 100) {
+                    // 自動起動はさせず、ボタンをREADYにするだけ
                     setTimeout(() => {
-                        syncBtn.classList.add('ready');
-                        syncBtn.innerText = "[ START_DECODING ]";
-                        output.innerHTML = "> [SUCCESS] DATA_LINK_STABLE. READY_TO_DECODE.";
-                        viewer.dismissPoster();
+                        if (!syncBtn.classList.contains('ready')) {
+                            syncBtn.classList.add('ready');
+                            syncBtn.innerText = "[ START_DECODING ]";
+                            output.innerHTML = "> [SUCCESS] DATA_LINK_STABLE. READY_TO_DECODE.";
+                            viewer.dismissPoster();
+                        }
                     }, 500);
                 }
             });
 
-            // 1. 解析ボタン
+            // 1. 解析ボタン（ここを押すまで何も始まらない）
             syncBtn.onclick = (e) => {
                 e.preventDefault();
                 syncBtn.style.display = 'none';
                 noiseAudio.play().catch(() => { new Audio('noise.mp3').play().catch(()=>{}); });
 
-                // iPhone用：裏側で準備開始
-                if (isIPhone) { viewer.activateAR(); }
+                // iPhone用：裏側で準備開始（ただし、勝手に画面は開かないようにする）
+                // 以前の activateAR() 先行実行が自動起動の原因だったので、ここでは実行しません。
                 
                 startEffect(() => {
                     realizeBtn.style.display = 'block';
                 });
             };
 
-            // 2. 実体化ボタン
+            // 2. 実体化ボタン（ユーザーが押した時だけARを起動）
             realizeBtn.onclick = (e) => {
                 e.preventDefault();
-                
-                // --- 変更点：ボタンとターミナルで読込中を演出 ---
                 realizeBtn.classList.add('loading');
                 realizeBtn.innerHTML = "PHYSICAL_REALIZING<span class='dots'></span>";
                 
@@ -108,10 +107,8 @@
                 output.appendChild(logLine);
                 terminal.scrollTop = terminal.scrollHeight;
 
-                // iOSが実際にAR画面を出すまで時間がかかるため、ここで最終起動
-                setTimeout(() => {
-                    viewer.activateAR();
-                }, 100); 
+                // 意図的なタップからのみARを起動
+                viewer.activateAR();
             };
         }
 
