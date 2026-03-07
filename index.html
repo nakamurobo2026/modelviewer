@@ -9,29 +9,25 @@
         html, body { height: 100%; margin: 0; overflow: hidden; background: #000; color: #0f0; font-family: 'Courier New', monospace; }
         model-viewer { width: 100%; height: 100%; background: #000; }
         
-        /* 共通ボタンベース */
         .btn-base {
             position: fixed; bottom: 220px; left: 50%; transform: translateX(-50%);
             width: 80%; max-width: 320px; padding: 18px;
             border: none; border-radius: 50px; font-size: 14px; font-weight: bold;
             text-align: center; text-decoration: none; z-index: 10000;
+            transition: all 0.4s ease;
         }
 
-        /* 1. 解析ボタン（最初に見える） */
-        #decode-btn { background: #0f0; color: #000; cursor: pointer; display: none; }
-        #decode-btn.ready { display: block; box-shadow: 0 0 20px rgba(0,255,0,0.5); }
+        /* 初期：読込待ち */
+        #sync-btn { background: #222; color: #555; display: block; pointer-events: none; }
+        #sync-btn.ready { background: #0f0; color: #000; cursor: pointer; pointer-events: auto; box-shadow: 0 0 20px rgba(0,255,0,0.5); }
 
-        /* 2. AR起動ボタン（解析後に現れる） */
-        #realize-btn { 
-            background: #fff; color: #000; display: none; 
-            box-shadow: 0 0 30px #fff; cursor: pointer;
-        }
+        /* 解析後：AR起動 */
+        #realize-btn { background: #fff; color: #000; display: none; box-shadow: 0 0 30px #fff; cursor: pointer; }
 
-        /* LINE誘導用 */
-        .line-warning { background: linear-gradient(135deg, #ff9900, #ff6600) !important; color: white !important; display: block !important; }
-
-        #terminal { position: fixed; bottom: 0; width: 100%; height: 200px; background: rgba(0, 15, 0, 0.95); border-top: 2px solid #0f0; padding: 12px; font-size: 13px; overflow-y: auto; box-sizing: border-box; z-index: 1000; pointer-events: none; }
+        .line-warning { background: linear-gradient(135deg, #ff9900, #ff6600) !important; color: white !important; display: block !important; pointer-events: auto !important; }
+        #terminal { position: fixed; bottom: 0; width: 100%; height: 200px; background: rgba(0, 15, 0, 0.95); border-top: 2px solid #0f0; padding: 12px; font-size: 13px; overflow-y: auto; box-sizing: border-box; z-index: 1000; }
         .highlight { color: #fff; font-weight: bold; }
+        .progress-bar { color: #0f0; font-size: 11px; margin-top: 4px; }
     </style>
 </head>
 <body>
@@ -40,51 +36,58 @@
         <div slot="ar-button"></div>
     </model-viewer>
 
-    <a href="#" id="decode-btn" class="btn-base">SYNCING_DATA_STREAM...</a>
+    <a href="#" id="sync-btn" class="btn-base">ESTABLISHING_LINK...</a>
     <a href="#" id="realize-btn" class="btn-base">[ REALIZE_IN_REAL_WORLD ]</a>
 
     <div id="terminal"><div id="output">> INITIALIZING_FUKUYAMA_SECTOR_LINK...</div></div>
 
     <script>
-        const decodeBtn = document.getElementById('decode-btn');
+        const syncBtn = document.getElementById('sync-btn');
         const realizeBtn = document.getElementById('realize-btn');
         const viewer = document.getElementById('viewer');
         const output = document.getElementById('output');
         const terminal = document.getElementById('terminal');
         
         const isLine = /Line/i.test(navigator.userAgent);
-        let noiseAudio = new Audio('noise.mp3');
+        const noiseAudio = new Audio('noise.mp3');
 
+        // LINE判定
         if (isLine) {
-            decodeBtn.classList.add('line-warning');
-            decodeBtn.innerText = "🌐 OPEN_IN_EXTERNAL_BROWSER";
-            decodeBtn.onclick = (e) => {
+            syncBtn.classList.add('line-warning');
+            syncBtn.innerText = "🌐 OPEN_IN_EXTERNAL_BROWSER";
+            syncBtn.onclick = (e) => {
                 e.preventDefault();
                 window.location.href = window.location.href + (window.location.href.includes('?') ? '&' : '?') + "openExternalBrowser=1";
             };
         } else {
-            // ロード完了時に解析ボタンを有効化
-            viewer.addEventListener('load', () => {
-                decodeBtn.classList.add('ready');
-                decodeBtn.innerText = "[ START_DECODING ]";
-                output.innerHTML = "> [SUCCESS] LINK_ESTABLISHED. READY_TO_DECODE.";
-                viewer.dismissPoster();
+            // --- ダウンロード進捗の監視 ---
+            viewer.addEventListener('progress', (event) => {
+                const percent = Math.round(event.detail.totalProgress * 100);
+                output.innerHTML = `> RECEIVING_DATA: ${percent}%`;
+                syncBtn.innerText = `SYNCING_STREAM: ${percent}%`;
+                
+                if (percent >= 100) {
+                    setTimeout(() => {
+                        syncBtn.classList.add('ready');
+                        syncBtn.innerText = "[ START_DECODING ]";
+                        output.innerHTML = "> [SUCCESS] DATA_LINK_STABLE. READY_TO_DECODE.";
+                        viewer.dismissPoster();
+                    }, 500);
+                }
             });
 
-            // 1. 解析ボタン：演出を開始して消える
-            decodeBtn.onclick = (e) => {
+            // 1. 解析ボタン
+            syncBtn.onclick = (e) => {
                 e.preventDefault();
-                decodeBtn.style.display = 'none'; 
-                
+                syncBtn.style.display = 'none';
                 noiseAudio.play().catch(() => { new Audio('noise.mp3').play().catch(()=>{}); });
                 
                 startEffect(() => {
-                    // 解析完了後にARボタンを表示
                     realizeBtn.style.display = 'block';
                 });
             };
 
-            // 2. AR起動ボタン：タップ即AR
+            // 2. 実体化ボタン（即時AR）
             realizeBtn.onclick = (e) => {
                 e.preventDefault();
                 viewer.activateAR();
