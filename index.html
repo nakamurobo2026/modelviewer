@@ -26,17 +26,14 @@
             box-shadow: 0 0 25px rgba(0,255,0,0.6);
         }
 
-        /* 解析中 */
+        /* 解析中（クリック不能） */
         .decoding-mode { background: #111 !important; color: #0f0 !important; border: 1px solid #0f0; box-shadow: none; pointer-events: none; }
 
-        /* 実体化ボタン（解析完了後） */
+        /* 実体化ボタン（解析完了後：再度クリック可能に） */
         .realize-mode {
             background: #fff !important; color: #000 !important;
             box-shadow: 0 0 30px #fff !important; cursor: pointer !important; pointer-events: auto !important;
-            animation: pulse 1.5s infinite;
         }
-
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
 
         #terminal { position: fixed; bottom: 0; width: 100%; height: 200px; background: rgba(0, 15, 0, 0.95); border-top: 2px solid #0f0; padding: 12px; font-size: 13px; overflow-y: auto; box-sizing: border-box; z-index: 1000; }
         .highlight { color: #fff; font-weight: bold; }
@@ -71,7 +68,7 @@
         let noiseAudio = new Audio('noise.mp3');
 
         function setReady() {
-            if (!isStarted && !btn.classList.contains('ready')) {
+            if (!isStarted && !isDecoded && !btn.classList.contains('ready')) {
                 btn.classList.add('ready');
                 btn.innerText = "[ START_DECODING ]";
                 output.innerHTML = "> [SUCCESS] DATA_FULLY_SYNCED. READY_TO_DECODE.";
@@ -93,10 +90,11 @@
                 if (viewer.loaded) { setReady(); clearInterval(checkLoad); }
             }, 500);
 
+            // ボタンクリック処理
             btn.onclick = (e) => {
                 e.preventDefault();
                 
-                // --- 1回目：解析開始 ---
+                // --- ステップ1: 解析開始 ---
                 if (!isDecoded && !isStarted) {
                     isStarted = true;
                     btn.classList.remove('ready');
@@ -104,21 +102,23 @@
                     btn.innerText = "DECODING_HEART_LOG...";
                     
                     noiseAudio.play().catch(() => {
-                        const r = new Audio('noise.mp3'); r.play();
+                        const r = new Audio('noise.mp3'); r.play().catch(()=>{});
                     });
                     
                     startEffect(() => {
-                        // 解析完了後の処理
+                        // 解析完了
                         isDecoded = true;
                         isStarted = false;
                         btn.classList.remove('decoding-mode');
                         btn.classList.add('realize-mode');
                         btn.innerText = "[ REALIZE_IN_REAL_WORLD ]";
+                        // ここでボタンのイベントを「AR起動専用」に上書き
                     });
                     return;
                 }
 
-                // --- 2回目：AR起動（解析完了後） ---
+                // --- ステップ2: 実体化（AR起動） ---
+                // 解析が終わった後のタップは、即座にARを起動する
                 if (isDecoded) {
                     viewer.activateAR();
                 }
