@@ -9,27 +9,25 @@
         html, body { height: 100%; margin: 0; overflow: hidden; background: #000; color: #0f0; font-family: 'Courier New', monospace; }
         model-viewer { width: 100%; height: 100%; background: #000; }
         
-        /* 共通ボタンベース */
-        .btn-base {
+        #ar-button {
             position: fixed; bottom: 220px; left: 50%; transform: translateX(-50%);
             width: 80%; max-width: 320px; padding: 18px;
             border: none; border-radius: 50px; font-size: 14px; font-weight: bold;
             text-align: center; text-decoration: none; z-index: 10000;
+            background: #222; color: #444; cursor: default; pointer-events: none;
+            transition: all 0.4s ease; -webkit-appearance: none;
         }
 
-        /* 1. 解析ボタン（最初に見える） */
-        #decode-btn { background: #0f0; color: #000; cursor: pointer; display: none; }
-        #decode-btn.ready { display: block; box-shadow: 0 0 20px rgba(0,255,0,0.5); }
+        /* 準備完了：解析前 */
+        #ar-button.ready { background: #0f0; color: #000; cursor: pointer; pointer-events: auto; box-shadow: 0 0 20px rgba(0,255,0,0.5); }
 
-        /* 2. AR起動ボタン（解析後に現れる） */
-        #realize-btn { 
-            background: #fff; color: #000; display: none; 
-            box-shadow: 0 0 30px #fff; cursor: pointer;
-        }
+        /* 解析中：クリックは通すが、演出が終わるまでARは待機 */
+        #ar-button.decoding { background: #111; color: #0f0; border: 1px solid #0f0; box-shadow: none; }
 
-        /* LINE誘導用 */
-        .line-warning { background: linear-gradient(135deg, #ff9900, #ff6600) !important; color: white !important; display: block !important; }
+        /* 実体化OK：白く光り、タップで即カメラ */
+        #ar-button.realize { background: #fff; color: #000; box-shadow: 0 0 30px #fff; cursor: pointer; }
 
+        .line-warning { background: linear-gradient(135deg, #ff9900, #ff6600) !important; color: white !important; pointer-events: auto !important; }
         #terminal { position: fixed; bottom: 0; width: 100%; height: 200px; background: rgba(0, 15, 0, 0.95); border-top: 2px solid #0f0; padding: 12px; font-size: 13px; overflow-y: auto; box-sizing: border-box; z-index: 1000; pointer-events: none; }
         .highlight { color: #fff; font-weight: bold; }
     </style>
@@ -40,55 +38,66 @@
         <div slot="ar-button"></div>
     </model-viewer>
 
-    <a href="#" id="decode-btn" class="btn-base">SYNCING_DATA_STREAM...</a>
-    <a href="#" id="realize-btn" class="btn-base">[ REALIZE_IN_REAL_WORLD ]</a>
+    <button id="ar-button">SYNCING_DATA_STREAM...</button>
 
     <div id="terminal"><div id="output">> INITIALIZING_FUKUYAMA_SECTOR_LINK...</div></div>
 
     <script>
-        const decodeBtn = document.getElementById('decode-btn');
-        const realizeBtn = document.getElementById('realize-btn');
+        const btn = document.getElementById('ar-button');
         const viewer = document.getElementById('viewer');
         const output = document.getElementById('output');
         const terminal = document.getElementById('terminal');
         
         const isLine = /Line/i.test(navigator.userAgent);
+        let isDecoding = false;
+        let isReadyToAR = false;
         let noiseAudio = new Audio('noise.mp3');
 
-        // LINE判定
+        // LINE対策：外部ブラウザ誘導
         if (isLine) {
-            decodeBtn.classList.add('line-warning');
-            decodeBtn.innerText = "🌐 OPEN_IN_EXTERNAL_BROWSER";
-            decodeBtn.onclick = (e) => {
-                e.preventDefault();
+            btn.classList.add('line-warning');
+            btn.innerText = "🌐 OPEN_IN_EXTERNAL_BROWSER";
+            btn.style.display = "block";
+            btn.onclick = () => {
                 window.location.href = window.location.href + (window.location.href.includes('?') ? '&' : '?') + "openExternalBrowser=1";
             };
         } else {
-            // ロード完了時に解析ボタンを有効化
+            // ロード完了時にボタンを有効化
             viewer.addEventListener('load', () => {
-                decodeBtn.classList.add('ready');
-                decodeBtn.innerText = "[ START_DECODING ]";
-                output.innerHTML = "> [SUCCESS] LINK_ESTABLISHED. READY_TO_DECODE.";
-                viewer.dismissPoster();
+                if (!isDecoding && !isReadyToAR) {
+                    btn.classList.add('ready');
+                    btn.innerText = "[ START_DECODING ]";
+                    output.innerHTML = "> [SUCCESS] LINK_ESTABLISHED.";
+                    viewer.dismissPoster();
+                }
             });
 
-            // 1. 解析ボタンの処理
-            decodeBtn.onclick = (e) => {
+            btn.onclick = (e) => {
                 e.preventDefault();
-                decodeBtn.style.display = 'none'; // 自分を消す
-                
-                noiseAudio.play().catch(() => { new Audio('noise.mp3').play().catch(()=>{}); });
-                
-                startEffect(() => {
-                    // 解析完了後にAR起動ボタンを表示
-                    realizeBtn.style.display = 'block';
-                });
-            };
 
-            // 2. AR起動ボタンの処理（これならiOSも文句を言わない）
-            realizeBtn.onclick = (e) => {
-                e.preventDefault();
-                viewer.activateAR();
+                // フェーズ1：解析開始
+                if (!isDecoding && !isReadyToAR) {
+                    isDecoding = true;
+                    btn.classList.remove('ready');
+                    btn.classList.add('decoding');
+                    btn.innerText = "DECODING_HEART_LOG...";
+                    
+                    noiseAudio.play().catch(() => { new Audio('noise.mp3').play().catch(()=>{}); });
+                    
+                    startEffect(() => {
+                        isDecoding = false;
+                        isReadyToAR = true;
+                        btn.classList.remove('decoding');
+                        btn.classList.add('realize');
+                        btn.innerText = "[ REALIZE_IN_REAL_WORLD ]";
+                    });
+                    return;
+                }
+
+                // フェーズ2：解析が終わった後に再度タップされたら、即座にAR起動
+                if (isReadyToAR) {
+                    viewer.activateAR();
+                }
             };
         }
 
