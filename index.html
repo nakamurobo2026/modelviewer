@@ -20,7 +20,7 @@
 
         .line-warning { background: linear-gradient(135deg, #ff9900, #ff6600) !important; color: white !important; cursor: pointer !important; pointer-events: auto !important; }
 
-        /* 完全に準備が整った（ダウンロード完了＋解析可能） */
+        /* 準備完了状態 */
         .custom-ar-button.ready {
             background: #0f0; color: black; cursor: pointer; pointer-events: auto;
             box-shadow: 0 0 25px rgba(0,255,0,0.6);
@@ -59,7 +59,7 @@
         let isStarted = false;
         let noiseAudio = new Audio('noise.mp3');
 
-        // ボタンを有効化する関数
+        // ボタンを有効化する共通関数
         function setReady() {
             if (!isStarted && !btn.classList.contains('ready')) {
                 btn.classList.add('ready');
@@ -77,26 +77,27 @@
                 window.location.href = window.location.href + (window.location.href.includes('?') ? '&' : '?') + "openExternalBrowser=1";
             };
         } else {
-            // --- iOSにおける「データなし」を防ぐための三重監視 ---
-            
-            // 1. モデルの読み込み完了（ポスターが消せる状態＝データが手元にある）
+            // --- リロード・キャッシュ対策のハイブリッド監視 ---
+
+            // 1. 通常のロード完了監視
             viewer.addEventListener('poster-dismissed', () => {
-                setTimeout(setReady, 800); // 念のため800ms余裕を持たせる
+                setTimeout(setReady, 500);
             });
 
-            // 2. ロード完了イベント
-            viewer.addEventListener('load', () => {
-                if (!isIPhone) setReady(); // Androidはこれで十分
-            });
-
-            // 3. 安全装置：30秒経っても何も起きない場合（通信エラー等）
-            setTimeout(() => {
-                if (!btn.classList.contains('ready')) {
-                    btn.innerText = "RETRY_CONNECTION";
-                    btn.style.pointerEvents = "auto";
-                    btn.onclick = () => location.reload();
+            // 2. キャッシュヒット対策：すでにロード済みの場合は即座にReadyへ
+            // model-viewerの内部状態をチェック
+            const checkLoadState = setInterval(() => {
+                if (viewer.loaded || viewer.querySelector('canvas')) {
+                    setReady();
+                    clearInterval(checkLoadState);
                 }
-            }, 30000);
+            }, 500);
+
+            // 3. 安全装置：10秒経っても何も起きない場合
+            setTimeout(() => {
+                if (!btn.classList.contains('ready')) setReady();
+                clearInterval(checkLoadState);
+            }, 10000);
 
             btn.onclick = (e) => {
                 e.preventDefault();
@@ -109,7 +110,6 @@
                 });
 
                 if (isIPhone) {
-                    // ここで確実にデータが読み込まれている
                     viewer.activateAR();
                     startEffect();
                 } else {
@@ -163,4 +163,13 @@
                     } else {
                         clearInterval(typer);
                         setTimeout(() => processLog(lines, index + 1, callback), 100);
-                        terminal.scrollTop = terminal.
+                        terminal.scrollTop = terminal.scrollHeight;
+                    }
+                }, 15);
+            } else if (callback) {
+                callback();
+            }
+        }
+    </script>
+</body>
+</html>
