@@ -18,7 +18,13 @@
             pointer-events: none; transition: all 0.3s ease;
         }
 
-        /* 読み込み完了後のスタイル */
+        /* LINE等での外部ブラウザ誘導用 */
+        .line-warning {
+            background: linear-gradient(135deg, #ff9900, #ff6600) !important;
+            color: white !important; cursor: pointer !important; pointer-events: auto !important;
+        }
+
+        /* 準備完了（Safari/Chrome） */
         .custom-ar-button.ready {
             background: #0f0; color: black; cursor: pointer; pointer-events: auto;
             box-shadow: 0 0 20px rgba(0,255,0,0.5);
@@ -40,7 +46,7 @@
         <div slot="ar-button"></div>
     </model-viewer>
 
-    <a href="#" id="custom-ar-link" class="custom-ar-button">CONNECTING_TO_SECTOR...</a>
+    <a href="#" id="custom-ar-link" class="custom-ar-button">CONNECTING...</a>
     <div id="terminal"><div id="output">> SYSTEM_BOOTING...</div></div>
 
     <script>
@@ -48,39 +54,56 @@
         const viewer = document.getElementById('viewer');
         const output = document.getElementById('output');
         const terminal = document.getElementById('terminal');
-        const isIPhone = /iPhone|iPad|iPod/.test(navigator.userAgent);
+        
+        const ua = navigator.userAgent;
+        const isLine = /Line/i.test(ua);
+        const isIPhone = /iPhone|iPad|iPod/.test(ua);
         let isStarted = false;
 
-        // --- 重要：モデルの読み込み完了を監視 ---
-        viewer.addEventListener('load', () => {
-            btn.classList.add('ready');
-            btn.innerText = "[ START_DECODING ]";
-            output.innerHTML = "> [SUCCESS] LINK_ESTABLISHED. READY_TO_DECODE.";
-        });
+        // --- 1. アプリ判定（LINE脱出） ---
+        if (isLine) {
+            btn.classList.add('line-warning');
+            btn.innerText = "🌐 OPEN_IN_EXTERNAL_BROWSER";
+            output.innerHTML = "> [WARNING] IN-APP_BROWSER_DETECTED. PLEASE_SWITCH_TO_SAFARI_OR_CHROME.";
+            
+            btn.onclick = (e) => {
+                e.preventDefault();
+                const url = window.location.href;
+                window.location.href = url + (url.includes('?') ? '&' : '?') + "openExternalBrowser=1";
+            };
+        } else {
+            // --- 2. 通常ブラウザ：ロード監視 ---
+            viewer.addEventListener('load', () => {
+                if (!isStarted) {
+                    btn.classList.add('ready');
+                    btn.innerText = "[ START_DECODING ]";
+                    output.innerHTML = "> [SUCCESS] LINK_ESTABLISHED. READY_TO_DECODE.";
+                }
+            });
 
-        btn.onclick = (e) => {
-            e.preventDefault();
-            if (isStarted) return;
-            isStarted = true;
+            btn.onclick = (e) => {
+                e.preventDefault();
+                if (isStarted) return;
+                isStarted = true;
 
-            new Audio('noise.mp3').play().catch(() => {});
+                new Audio('noise.mp3').play().catch(() => {});
 
-            if (isIPhone) {
-                // iPhone: 既にロード済みなのですぐにARを起動しても「データ」で止まらない
-                viewer.activateAR();
-                startEffect();
-            } else {
-                btn.classList.add('decoding-mode');
-                btn.innerText = "DECODING...";
-                startEffect(() => {
-                    btn.classList.remove('decoding-mode');
-                    btn.innerText = "START_AR_CAMERA";
-                    btn.style.pointerEvents = "auto";
-                    btn.onclick = () => viewer.activateAR();
+                if (isIPhone) {
                     viewer.activateAR();
-                });
-            }
-        };
+                    startEffect();
+                } else {
+                    btn.classList.add('decoding-mode');
+                    btn.innerText = "DECODING...";
+                    startEffect(() => {
+                        btn.classList.remove('decoding-mode');
+                        btn.innerText = "REALIZE_IN_REAL_WORLD";
+                        btn.style.pointerEvents = "auto";
+                        btn.onclick = () => viewer.activateAR();
+                        viewer.activateAR();
+                    });
+                }
+            };
+        }
 
         function startEffect(callback) {
             output.innerHTML = "";
@@ -103,9 +126,16 @@
                 if (lines[index].includes("Believe in yourself")) new Audio('noise.mp3').play().catch(() => {});
                 
                 let i = 0;
+                const text = lines[index].replace(/<[^>]*>/g, '');
+                const isHTML = lines[index].includes('<span');
+
                 const typer = setInterval(() => {
-                    if (i < lines[index].length) {
-                        line.innerHTML = lines[index].substring(0, i + 1);
+                    if (i < text.length) {
+                        if (isHTML && i === text.length - 1) {
+                            line.innerHTML = lines[index];
+                        } else {
+                            line.innerHTML = text.substring(0, i + 1);
+                        }
                         i++;
                     } else {
                         clearInterval(typer);
