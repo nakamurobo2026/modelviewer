@@ -14,20 +14,18 @@
             width: 80%; max-width: 320px; padding: 18px;
             border: none; border-radius: 50px; font-size: 14px; font-weight: bold;
             text-align: center; text-decoration: none; z-index: 10000;
-            transition: all 0.4s ease;
         }
 
-        /* 初期：読込待ち */
+        /* SYNC中・OS準備中 */
         #sync-btn { background: #222; color: #555; display: block; pointer-events: none; }
         #sync-btn.ready { background: #0f0; color: #000; cursor: pointer; pointer-events: auto; box-shadow: 0 0 20px rgba(0,255,0,0.5); }
 
-        /* 解析後：AR起動 */
+        /* 実体化ボタン */
         #realize-btn { background: #fff; color: #000; display: none; box-shadow: 0 0 30px #fff; cursor: pointer; }
 
-        .line-warning { background: linear-gradient(135deg, #ff9900, #ff6600) !important; color: white !important; display: block !important; pointer-events: auto !important; }
+        .line-warning { background: linear-gradient(135deg, #ff9900, #ff6600) !important; color: white !important; display: block !important; }
         #terminal { position: fixed; bottom: 0; width: 100%; height: 200px; background: rgba(0, 15, 0, 0.95); border-top: 2px solid #0f0; padding: 12px; font-size: 13px; overflow-y: auto; box-sizing: border-box; z-index: 1000; }
         .highlight { color: #fff; font-weight: bold; }
-        .progress-bar { color: #0f0; font-size: 11px; margin-top: 4px; }
     </style>
 </head>
 <body>
@@ -36,7 +34,7 @@
         <div slot="ar-button"></div>
     </model-viewer>
 
-    <a href="#" id="sync-btn" class="btn-base">ESTABLISHING_LINK...</a>
+    <a href="#" id="sync-btn" class="btn-base">SYNCING_DATA_STREAM...</a>
     <a href="#" id="realize-btn" class="btn-base">[ REALIZE_IN_REAL_WORLD ]</a>
 
     <div id="terminal"><div id="output">> INITIALIZING_FUKUYAMA_SECTOR_LINK...</div></div>
@@ -46,48 +44,54 @@
         const realizeBtn = document.getElementById('realize-btn');
         const viewer = document.getElementById('viewer');
         const output = document.getElementById('output');
-        const terminal = document.getElementById('terminal');
         
-        const isLine = /Line/i.test(navigator.userAgent);
-        const noiseAudio = new Audio('noise.mp3');
+        let isLine = /Line/i.test(navigator.userAgent);
+        let dataLoaded = false;
+        let osReady = false;
 
-        // LINE判定
+        function updateStatus() {
+            if (dataLoaded && osReady) {
+                syncBtn.classList.add('ready');
+                syncBtn.innerText = "[ START_DECODING ]";
+                output.innerHTML += "<div>> [SUCCESS] ALL_SYSTEMS_READY.</div>";
+                viewer.dismissPoster();
+            }
+        }
+
         if (isLine) {
             syncBtn.classList.add('line-warning');
             syncBtn.innerText = "🌐 OPEN_IN_EXTERNAL_BROWSER";
-            syncBtn.onclick = (e) => {
-                e.preventDefault();
+            syncBtn.onclick = () => {
                 window.location.href = window.location.href + (window.location.href.includes('?') ? '&' : '?') + "openExternalBrowser=1";
             };
         } else {
-            // --- ダウンロード進捗の監視 ---
-            viewer.addEventListener('progress', (event) => {
-                const percent = Math.round(event.detail.totalProgress * 100);
-                output.innerHTML = `> RECEIVING_DATA: ${percent}%`;
-                syncBtn.innerText = `SYNCING_STREAM: ${percent}%`;
-                
-                if (percent >= 100) {
-                    setTimeout(() => {
-                        syncBtn.classList.add('ready');
-                        syncBtn.innerText = "[ START_DECODING ]";
-                        output.innerHTML = "> [SUCCESS] DATA_LINK_STABLE. READY_TO_DECODE.";
-                        viewer.dismissPoster();
-                    }, 500);
+            // 1. ファイル読込監視
+            viewer.addEventListener('progress', (e) => {
+                const p = Math.round(e.detail.totalProgress * 100);
+                syncBtn.innerText = `SYNCING: ${p}%`;
+                if (p >= 100) { dataLoaded = true; updateStatus(); }
+            });
+
+            // 2. iOS/OS側のAR準備完了監視 (最重要)
+            viewer.addEventListener('ar-status', (e) => {
+                // 'not-presenting' は「AR表示可能だが、まだ表示していない」状態
+                if (e.detail.status === 'not-presenting' || e.detail.status === 'initialized') {
+                    osReady = true;
+                    updateStatus();
                 }
             });
 
-            // 1. 解析ボタン
+            // 3. 解析ボタン
             syncBtn.onclick = (e) => {
                 e.preventDefault();
                 syncBtn.style.display = 'none';
-                noiseAudio.play().catch(() => { new Audio('noise.mp3').play().catch(()=>{}); });
-                
+                new Audio('noise.mp3').play().catch(()=>{});
                 startEffect(() => {
                     realizeBtn.style.display = 'block';
                 });
             };
 
-            // 2. 実体化ボタン（即時AR）
+            // 4. 実体化ボタン（OSがReadyと言っているので即起動するはず）
             realizeBtn.onclick = (e) => {
                 e.preventDefault();
                 viewer.activateAR();
@@ -97,13 +101,13 @@
         function startEffect(callback) {
             output.innerHTML = "";
             const lines = [
-                "> ACCESSING_FUKUYAMA_SECTOR_34.485_133.362...",
+                "> ACCESSING_FUKUYAMA_SECTOR...",
                 "> [SUCCESS] IRREGULAR_DATA_FOUND",
                 "",
                 "<span class='highlight'>\"Believe in yourself.\"</span>",
                 "",
                 "> STATUS: AWAKENED",
-                "> READY_FOR_PHYSICAL_REALIZATION."
+                "> READY."
             ];
             processLog(lines, 0, callback);
         }
@@ -113,28 +117,18 @@
                 const line = document.createElement('div');
                 output.appendChild(line);
                 if (lines[index].includes("Believe in yourself")) new Audio('noise.mp3').play().catch(() => {});
-                
                 let i = 0;
                 const fullText = lines[index];
                 const typer = setInterval(() => {
                     if (i < fullText.length) {
-                        if (fullText.charAt(i) === '<') {
-                            const endTag = fullText.indexOf('>', i);
-                            line.innerHTML = fullText.substring(0, endTag + 1);
-                            i = endTag + 1;
-                        } else {
-                            line.innerHTML = fullText.substring(0, i + 1);
-                            i++;
-                        }
+                        line.innerHTML = fullText.substring(0, i + 1); i++;
                     } else {
                         clearInterval(typer);
                         setTimeout(() => processLog(lines, index + 1, callback), 100);
-                        terminal.scrollTop = terminal.scrollHeight;
+                        document.getElementById('terminal').scrollTop = 9999;
                     }
                 }, 15);
-            } else if (callback) {
-                callback();
-            }
+            } else if (callback) { callback(); }
         }
     </script>
 </body>
