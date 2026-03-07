@@ -18,10 +18,9 @@
             cursor: default; pointer-events: none; transition: all 0.4s ease;
         }
 
-        /* LINE誘導用 */
         .line-warning { background: linear-gradient(135deg, #ff9900, #ff6600) !important; color: white !important; cursor: pointer !important; pointer-events: auto !important; }
 
-        /* 完全に準備が整った（ダウンロード完了） */
+        /* ロード完了後の準備OK状態 */
         .custom-ar-button.ready {
             background: #0f0; color: black; cursor: pointer; pointer-events: auto;
             box-shadow: 0 0 25px rgba(0,255,0,0.6);
@@ -58,8 +57,10 @@
         const isLine = /Line/i.test(navigator.userAgent);
         const isIPhone = /iPhone|iPad|iPod/.test(navigator.userAgent);
         let isStarted = false;
+        
+        // 音声ファイルを事前に定義
+        let noiseAudio = new Audio('noise.mp3');
 
-        // --- 1. LINE判定（最優先） ---
         if (isLine) {
             btn.classList.add('line-warning');
             btn.innerText = "🌐 OPEN_IN_EXTERNAL_BROWSER";
@@ -69,14 +70,13 @@
                 window.location.href = window.location.href + (window.location.href.includes('?') ? '&' : '?') + "openExternalBrowser=1";
             };
         } else {
-            // --- 2. ブラウザロード監視（iOSバグ対策） ---
-            // 'poster-dismissed' はモデルのロードが完了し、表示準備が整った合図
+            // モデルのロード完了監視
             viewer.addEventListener('load', () => {
                 if (!isStarted) {
                     btn.classList.add('ready');
                     btn.innerText = "[ START_DECODING ]";
                     output.innerHTML = "> [SUCCESS] DATA_LINK_STABLE. READY_TO_DECODE.";
-                    viewer.dismissPoster(); // モデルを表示
+                    viewer.dismissPoster();
                 }
             });
 
@@ -85,10 +85,14 @@
                 if (isStarted) return;
                 isStarted = true;
 
-                new Audio('noise.mp3').play().catch(() => {});
+                // --- 重要：ここで音声を再生し、ブラウザのロックを解除 ---
+                noiseAudio.play().catch(() => {
+                    // 失敗した場合は再度インスタンスを作って叩く（iOS対策）
+                    const retryAudio = new Audio('noise.mp3');
+                    retryAudio.play();
+                });
 
                 if (isIPhone) {
-                    // ロード完了を確認してからAR起動するので「データなし」を防げる
                     viewer.activateAR();
                     startEffect();
                 } else {
@@ -123,13 +127,17 @@
             if (index < lines.length) {
                 const line = document.createElement('div');
                 output.appendChild(line);
-                if (lines[index].includes("Believe in yourself")) new Audio('noise.mp3').play().catch(() => {});
+                
+                // 特定のメッセージで再度ノイズを鳴らす
+                if (lines[index].includes("Believe in yourself")) {
+                    const secondNoise = new Audio('noise.mp3');
+                    secondNoise.play().catch(() => {});
+                }
                 
                 let i = 0;
                 const fullText = lines[index];
                 const typer = setInterval(() => {
                     if (i < fullText.length) {
-                        // HTMLタグ（<span>）が含まれる場合の簡易処理
                         if (fullText.charAt(i) === '<') {
                             const endTag = fullText.indexOf('>', i);
                             line.innerHTML = fullText.substring(0, endTag + 1);
