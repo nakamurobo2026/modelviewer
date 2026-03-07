@@ -17,7 +17,6 @@
             text-decoration: none; display: block; cursor: pointer;
         }
         .decoding-mode { background: #111 !important; color: #0f0 !important; border: 1px solid #0f0; box-shadow: none; pointer-events: none; }
-        .line-warning { background: linear-gradient(135deg, #ff9900, #ff6600) !important; color: white !important; }
         #terminal { 
             position: fixed; bottom: 0; width: 100%; height: 200px; 
             background: rgba(0, 15, 0, 0.95); border-top: 2px solid #0f0; 
@@ -28,11 +27,20 @@
 </head>
 <body>
 
-    <model-viewer id="viewer" src="./nakamurobo.glb" ios-src="./nakamurobo.usdz" ar ar-modes="scene-viewer quick-look" camera-controls shadow-intensity="1">
+    <model-viewer 
+        id="viewer" 
+        src="./nakamurobo.glb" 
+        ios-src="./nakamurobo.usdz" 
+        ar 
+        ar-modes="scene-viewer quick-look" 
+        camera-controls 
+        loading="eager"
+        reveal="auto"
+        shadow-intensity="1">
         <div slot="ar-button"></div>
     </model-viewer>
 
-    <a href="#" id="custom-ar-link" class="custom-ar-button">DECODE_SYSTEM...</a>
+    <a href="#" id="custom-ar-link" class="custom-ar-button">[ START_DECODING ]</a>
     <div id="terminal"><div id="output">> SYSTEM_IDLE: AWAITING_COMMAND...</div></div>
 
     <script>
@@ -41,55 +49,42 @@
         const output = document.getElementById('output');
         const terminal = document.getElementById('terminal');
 
-        const isLine = /Line/i.test(navigator.userAgent);
         const isIPhone = /iPhone|iPad|iPod/.test(navigator.userAgent);
         let isStarted = false;
-
-        // 音声ファイルのプリロード
         const noiseAudio = new Audio('noise.mp3');
-        noiseAudio.load();
 
-        if (isLine) {
-            btn.classList.add('line-warning');
-            btn.innerText = "🌐 OPEN_IN_EXTERNAL_BROWSER";
-            btn.onclick = (e) => {
-                e.preventDefault();
-                window.location.href = window.location.href + (window.location.href.includes('?') ? '&' : '?') + "openExternalBrowser=1";
-            };
-        } else {
-            btn.innerText = "[ START_DECODING ]";
-            btn.onclick = (e) => {
-                e.preventDefault();
-                if (isStarted) return;
-                isStarted = true;
-
-                // 最初のタップで音声を再生（権限取得）
-                noiseAudio.play().then(() => {
-                    console.log("Audio started");
-                }).catch(err => {
-                    console.log("Audio block:", err);
-                });
-
-                if (isIPhone) {
-                    // iPhone: 制限回避のため即座にAR起動しつつ演出
-                    viewer.activateAR();
-                    startEffect();
-                } else {
-                    // Android: 演出後に再度ボタンを押させてARへ
-                    btn.classList.add('decoding-mode');
-                    btn.innerText = "DECODING...";
-                    startEffect(() => {
-                        btn.classList.remove('decoding-mode');
-                        btn.innerText = "REALIZE_IN_REAL_WORLD";
-                        btn.style.pointerEvents = "auto";
-                        btn.onclick = (e) => {
-                            e.preventDefault();
-                            viewer.activateAR();
-                        };
-                    });
-                }
-            };
+        // キャッシュ対策：iPhoneの場合、URLにランダムな文字列を付けて強制再読み込みさせる
+        if (isIPhone) {
+            const version = new Date().getTime();
+            viewer.iosSrc = `./nakamurobo.usdz?v=${version}`;
         }
+
+        btn.onclick = (e) => {
+            e.preventDefault();
+            if (isStarted) return;
+            isStarted = true;
+
+            noiseAudio.play().catch(() => {});
+
+            if (isIPhone) {
+                // iPhone: 制限回避のため即座にAR起動
+                viewer.activateAR();
+                startEffect();
+            } else {
+                // Android: 演出後に再度ボタンを押させてARへ
+                btn.classList.add('decoding-mode');
+                btn.innerText = "DECODING...";
+                startEffect(() => {
+                    btn.classList.remove('decoding-mode');
+                    btn.innerText = "REALIZE_IN_REAL_WORLD";
+                    btn.style.pointerEvents = "auto";
+                    btn.onclick = (e) => {
+                        e.preventDefault();
+                        viewer.activateAR();
+                    };
+                });
+            }
+        };
 
         function startEffect(callback) {
             output.innerHTML = "";
@@ -109,17 +104,21 @@
             if (index < lines.length) {
                 const line = document.createElement('div');
                 output.appendChild(line);
-                
-                // 特定のメッセージで再度ノイズを鳴らす
                 if (lines[index].includes("Believe in yourself")) {
-                    const secondNoise = new Audio('noise.mp3');
-                    secondNoise.play().catch(() => {});
+                    new Audio('noise.mp3').play().catch(() => {});
                 }
 
                 let i = 0;
+                const text = lines[index].replace(/<[^>]*>/g, '');
+                const isHTML = lines[index].includes('<span');
+
                 const typer = setInterval(() => {
-                    if (i < logLines(lines, index).length) {
-                        line.innerHTML = lines[index].substring(0, i + 1);
+                    if (i < text.length) {
+                        if (isHTML && i === text.length - 1) {
+                            line.innerHTML = lines[index];
+                        } else {
+                            line.innerHTML = text.substring(0, i + 1);
+                        }
                         i++;
                     } else {
                         clearInterval(typer);
@@ -130,10 +129,6 @@
             } else if (callback) {
                 callback();
             }
-        }
-
-        function logLines(lines, index) {
-            return lines[index];
         }
     </script>
 </body>
