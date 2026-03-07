@@ -7,7 +7,7 @@
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
     <style>
         html, body { height: 100%; margin: 0; overflow: hidden; background: #000; color: #0f0; font-family: 'Courier New', monospace; }
-        model-viewer { width: 100%; height: 100%; }
+        model-viewer { width: 100%; height: 100%; background: #000; }
 
         .custom-ar-button {
             position: fixed; bottom: 220px; left: 50%; transform: translateX(-50%);
@@ -17,6 +17,13 @@
             z-index: 10000; box-shadow: 0 0 20px rgba(0,255,0,0.5);
             text-decoration: none; display: block; cursor: pointer;
         }
+
+        /* LINE用の警告色（オレンジ） */
+        .line-warning {
+            background: linear-gradient(135deg, #ff9900, #ff6600) !important;
+            color: white !important;
+        }
+
         .decoding-mode { background: #111 !important; color: #0f0 !important; border: 1px solid #0f0; box-shadow: none; pointer-events: none; }
 
         #terminal { 
@@ -40,9 +47,9 @@
         <div slot="ar-button"></div>
     </model-viewer>
 
-    <a href="#" id="custom-ar-link" class="custom-ar-button">[ REALIZE_IN_REAL_WORLD ]</a>
+    <a href="#" id="custom-ar-link" class="custom-ar-button">LOADING_SYSTEM...</a>
 
-    <div id="terminal"><div id="output">> SYSTEM_IDLE...</div></div>
+    <div id="terminal"><div id="output">> INITIALIZING_FUKUYAMA_SECTOR_LINK...</div></div>
 
     <script>
         const btn = document.getElementById('custom-ar-link');
@@ -50,27 +57,42 @@
         const output = document.getElementById('output');
         const terminal = document.getElementById('terminal');
 
-        const isIPhone = /iPhone|iPad|iPod/.test(navigator.userAgent);
-        let isStarted = false;
+        const ua = navigator.userAgent;
+        const isLine = /Line/i.test(ua);
+        const isIPhone = /iPhone|iPad|iPod/.test(ua);
 
-        btn.onclick = (e) => {
-            e.preventDefault();
-            if (isStarted) return;
-            isStarted = true;
+        // --- 初期判定ロジック ---
+        if (isLine) {
+            // LINE内ブラウザの場合：外部ブラウザ起動を促す
+            btn.classList.add('line-warning');
+            btn.innerText = "🌐 OPEN_IN_EXTERNAL_BROWSER";
+            btn.onclick = (e) => {
+                e.preventDefault();
+                const url = window.location.href;
+                // LINEに対して「Safari/Chromeで開け」という命令を付与
+                window.location.href = url + (url.includes('?') ? '&' : '?') + "openExternalBrowser=1";
+            };
+        } else {
+            // 通常ブラウザ（Safari/Chrome）の場合：ナカムロボ解析開始
+            btn.innerText = "[ REALIZE_IN_REAL_WORLD ]";
+            let isStarted = false;
+            btn.onclick = (e) => {
+                e.preventDefault();
+                if (isStarted) return;
+                isStarted = true;
 
-            if (isIPhone) {
-                // iPhone: 即時起動。パスを再明示
-                viewer.activateAR();
-                startEffect();
-            } else {
-                // Android等: 演出後に起動
-                btn.classList.add('decoding-mode');
-                btn.innerText = "DECODING_IN_PROGRESS...";
-                startEffect(() => {
-                    viewer.activateAR(); 
-                });
-            }
-        };
+                if (isIPhone) {
+                    // iPhoneは即座にARを叩く（セキュリティ制限回避）
+                    viewer.activateAR();
+                    startEffect();
+                } else {
+                    // Android等は演出後にARを叩く
+                    btn.classList.add('decoding-mode');
+                    btn.innerText = "DECODING_IN_PROGRESS...";
+                    startEffect(() => { viewer.activateAR(); });
+                }
+            };
+        }
 
         function startEffect(callback) {
             new Audio('noise.mp3').play().catch(() => {});
