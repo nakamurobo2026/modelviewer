@@ -17,7 +17,6 @@
             z-index: 10000; box-shadow: 0 0 20px rgba(0,255,0,0.5);
             text-decoration: none; display: block; cursor: pointer;
         }
-
         .decoding-mode { background: #111 !important; color: #0f0 !important; border: 1px solid #0f0; box-shadow: none; pointer-events: none; }
 
         #terminal { 
@@ -30,7 +29,14 @@
 </head>
 <body>
 
-    <model-viewer id="viewer" src="nakamurobo.glb" ios-src="nakamurobo.usdz" ar ar-modes="scene-viewer quick-look" camera-controls shadow-intensity="1">
+    <model-viewer 
+        id="viewer" 
+        src="./nakamurobo.glb" 
+        ios-src="./nakamurobo.usdz" 
+        ar 
+        ar-modes="scene-viewer quick-look" 
+        camera-controls 
+        shadow-intensity="1">
         <div slot="ar-button"></div>
     </model-viewer>
 
@@ -53,18 +59,14 @@
             isStarted = true;
 
             if (isIPhone) {
-                // iPhone: 制限が強いため「即時起動」しつつ裏でログ
+                // iPhone: 即時起動。パスを再明示
                 viewer.activateAR();
                 startEffect();
             } else {
-                // Android等: 制限が緩いため「ログ終了後に起動」
+                // Android等: 演出後に起動
                 btn.classList.add('decoding-mode');
                 btn.innerText = "DECODING_IN_PROGRESS...";
                 startEffect(() => {
-                    btn.classList.remove('decoding-mode');
-                    btn.innerText = "START_AR_CAMERA";
-                    btn.onclick = () => viewer.activateAR();
-                    // 自動で起動させたい場合はここを viewer.activateAR() に
                     viewer.activateAR(); 
                 });
             }
