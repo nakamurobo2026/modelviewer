@@ -12,22 +12,19 @@
         .custom-ar-button {
             position: fixed; bottom: 220px; left: 50%; transform: translateX(-50%);
             width: 80%; max-width: 320px; padding: 18px;
-            background: #333; color: #666; border: none; border-radius: 50px;
+            background: #222; color: #444; border: none; border-radius: 50px;
             font-size: 14px; font-weight: bold; text-align: center;
-            z-index: 10000; text-decoration: none; display: block; cursor: default;
-            pointer-events: none; transition: all 0.3s ease;
+            z-index: 10000; text-decoration: none; display: block; 
+            cursor: default; pointer-events: none; transition: all 0.4s ease;
         }
 
-        /* LINE等での外部ブラウザ誘導用 */
-        .line-warning {
-            background: linear-gradient(135deg, #ff9900, #ff6600) !important;
-            color: white !important; cursor: pointer !important; pointer-events: auto !important;
-        }
+        /* LINE誘導用 */
+        .line-warning { background: linear-gradient(135deg, #ff9900, #ff6600) !important; color: white !important; cursor: pointer !important; pointer-events: auto !important; }
 
-        /* 準備完了（Safari/Chrome） */
+        /* 完全に準備が整った（ダウンロード完了） */
         .custom-ar-button.ready {
             background: #0f0; color: black; cursor: pointer; pointer-events: auto;
-            box-shadow: 0 0 20px rgba(0,255,0,0.5);
+            box-shadow: 0 0 25px rgba(0,255,0,0.6);
         }
 
         .decoding-mode { background: #111 !important; color: #0f0 !important; border: 1px solid #0f0; box-shadow: none; pointer-events: none; }
@@ -42,12 +39,15 @@
         src="./nakamurobo.glb" 
         ios-src="./nakamurobo.usdz" 
         ar ar-modes="quick-look scene-viewer" 
-        camera-controls loading="eager" reveal="auto">
+        camera-controls 
+        loading="eager"
+        reveal="manual"
+        shadow-intensity="1">
         <div slot="ar-button"></div>
     </model-viewer>
 
-    <a href="#" id="custom-ar-link" class="custom-ar-button">CONNECTING...</a>
-    <div id="terminal"><div id="output">> SYSTEM_BOOTING...</div></div>
+    <a href="#" id="custom-ar-link" class="custom-ar-button">CONNECTING_TO_SECTOR...</a>
+    <div id="terminal"><div id="output">> INITIALIZING_FUKUYAMA_SECTOR_LINK...</div></div>
 
     <script>
         const btn = document.getElementById('custom-ar-link');
@@ -55,29 +55,28 @@
         const output = document.getElementById('output');
         const terminal = document.getElementById('terminal');
         
-        const ua = navigator.userAgent;
-        const isLine = /Line/i.test(ua);
-        const isIPhone = /iPhone|iPad|iPod/.test(ua);
+        const isLine = /Line/i.test(navigator.userAgent);
+        const isIPhone = /iPhone|iPad|iPod/.test(navigator.userAgent);
         let isStarted = false;
 
-        // --- 1. アプリ判定（LINE脱出） ---
+        // --- 1. LINE判定（最優先） ---
         if (isLine) {
             btn.classList.add('line-warning');
             btn.innerText = "🌐 OPEN_IN_EXTERNAL_BROWSER";
             output.innerHTML = "> [WARNING] IN-APP_BROWSER_DETECTED. PLEASE_SWITCH_TO_SAFARI_OR_CHROME.";
-            
             btn.onclick = (e) => {
                 e.preventDefault();
-                const url = window.location.href;
-                window.location.href = url + (url.includes('?') ? '&' : '?') + "openExternalBrowser=1";
+                window.location.href = window.location.href + (window.location.href.includes('?') ? '&' : '?') + "openExternalBrowser=1";
             };
         } else {
-            // --- 2. 通常ブラウザ：ロード監視 ---
+            // --- 2. ブラウザロード監視（iOSバグ対策） ---
+            // 'poster-dismissed' はモデルのロードが完了し、表示準備が整った合図
             viewer.addEventListener('load', () => {
                 if (!isStarted) {
                     btn.classList.add('ready');
                     btn.innerText = "[ START_DECODING ]";
-                    output.innerHTML = "> [SUCCESS] LINK_ESTABLISHED. READY_TO_DECODE.";
+                    output.innerHTML = "> [SUCCESS] DATA_LINK_STABLE. READY_TO_DECODE.";
+                    viewer.dismissPoster(); // モデルを表示
                 }
             });
 
@@ -89,6 +88,7 @@
                 new Audio('noise.mp3').play().catch(() => {});
 
                 if (isIPhone) {
+                    // ロード完了を確認してからAR起動するので「データなし」を防げる
                     viewer.activateAR();
                     startEffect();
                 } else {
@@ -126,17 +126,18 @@
                 if (lines[index].includes("Believe in yourself")) new Audio('noise.mp3').play().catch(() => {});
                 
                 let i = 0;
-                const text = lines[index].replace(/<[^>]*>/g, '');
-                const isHTML = lines[index].includes('<span');
-
+                const fullText = lines[index];
                 const typer = setInterval(() => {
-                    if (i < text.length) {
-                        if (isHTML && i === text.length - 1) {
-                            line.innerHTML = lines[index];
+                    if (i < fullText.length) {
+                        // HTMLタグ（<span>）が含まれる場合の簡易処理
+                        if (fullText.charAt(i) === '<') {
+                            const endTag = fullText.indexOf('>', i);
+                            line.innerHTML = fullText.substring(0, endTag + 1);
+                            i = endTag + 1;
                         } else {
-                            line.innerHTML = text.substring(0, i + 1);
+                            line.innerHTML = fullText.substring(0, i + 1);
+                            i++;
                         }
-                        i++;
                     } else {
                         clearInterval(typer);
                         setTimeout(() => processLog(lines, index + 1, callback), 100);
