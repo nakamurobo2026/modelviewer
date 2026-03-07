@@ -32,8 +32,8 @@
         <div slot="ar-button"></div>
     </model-viewer>
 
-    <a href="#" id="custom-ar-link" class="custom-ar-button">LOADING...</a>
-    <div id="terminal"><div id="output">> SYSTEM_IDLE...</div></div>
+    <a href="#" id="custom-ar-link" class="custom-ar-button">DECODE_SYSTEM...</a>
+    <div id="terminal"><div id="output">> SYSTEM_IDLE: AWAITING_COMMAND...</div></div>
 
     <script>
         const btn = document.getElementById('custom-ar-link');
@@ -44,9 +44,11 @@
         const isLine = /Line/i.test(navigator.userAgent);
         const isIPhone = /iPhone|iPad|iPod/.test(navigator.userAgent);
         let isStarted = false;
-        let noiseAudio = new Audio('noise.mp3');
 
-        // 初期化
+        // 音声ファイルのプリロード
+        const noiseAudio = new Audio('noise.mp3');
+        noiseAudio.load();
+
         if (isLine) {
             btn.classList.add('line-warning');
             btn.innerText = "🌐 OPEN_IN_EXTERNAL_BROWSER";
@@ -55,29 +57,31 @@
                 window.location.href = window.location.href + (window.location.href.includes('?') ? '&' : '?') + "openExternalBrowser=1";
             };
         } else {
-            btn.innerText = "[ REALIZE_IN_REAL_WORLD ]";
+            btn.innerText = "[ START_DECODING ]";
             btn.onclick = (e) => {
                 e.preventDefault();
                 if (isStarted) return;
                 isStarted = true;
 
-                // 音声の再生（iPhone/Android共通のトリガー）
-                noiseAudio.play().catch(err => console.log("Audio play blocked"));
+                // 最初のタップで音声を再生（権限取得）
+                noiseAudio.play().then(() => {
+                    console.log("Audio started");
+                }).catch(err => {
+                    console.log("Audio block:", err);
+                });
 
                 if (isIPhone) {
-                    // iPhoneは即時起動しないとブロックされるため、このまま飛ばす
+                    // iPhone: 制限回避のため即座にAR起動しつつ演出
                     viewer.activateAR();
                     startEffect();
                 } else {
-                    // Android/Chrome: 解析演出を優先
+                    // Android: 演出後に再度ボタンを押させてARへ
                     btn.classList.add('decoding-mode');
-                    btn.innerText = "DECODING_IN_PROGRESS...";
+                    btn.innerText = "DECODING...";
                     startEffect(() => {
-                        // 演出終了後にボタンをAR起動用に切り替え
                         btn.classList.remove('decoding-mode');
-                        btn.innerText = "START_AR_CAMERA";
+                        btn.innerText = "REALIZE_IN_REAL_WORLD";
                         btn.style.pointerEvents = "auto";
-                        // ここで勝手に遷移させないよう、ユーザーに再度押させる（または1秒待って遷移）
                         btn.onclick = (e) => {
                             e.preventDefault();
                             viewer.activateAR();
@@ -114,7 +118,7 @@
 
                 let i = 0;
                 const typer = setInterval(() => {
-                    if (i < lines[index].length) {
+                    if (i < logLines(lines, index).length) {
                         line.innerHTML = lines[index].substring(0, i + 1);
                         i++;
                     } else {
@@ -126,6 +130,10 @@
             } else if (callback) {
                 callback();
             }
+        }
+
+        function logLines(lines, index) {
+            return lines[index];
         }
     </script>
 </body>
