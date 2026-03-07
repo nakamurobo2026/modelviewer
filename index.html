@@ -20,7 +20,7 @@
 
         .line-warning { background: linear-gradient(135deg, #ff9900, #ff6600) !important; color: white !important; cursor: pointer !important; pointer-events: auto !important; }
 
-        /* ロード完了後の準備OK状態 */
+        /* AR準備が完全に整った状態 */
         .custom-ar-button.ready {
             background: #0f0; color: black; cursor: pointer; pointer-events: auto;
             box-shadow: 0 0 25px rgba(0,255,0,0.6);
@@ -45,7 +45,7 @@
         <div slot="ar-button"></div>
     </model-viewer>
 
-    <a href="#" id="custom-ar-link" class="custom-ar-button">CONNECTING_TO_SECTOR...</a>
+    <a href="#" id="custom-ar-link" class="custom-ar-button">PREPARING_AR_DATA...</a>
     <div id="terminal"><div id="output">> INITIALIZING_FUKUYAMA_SECTOR_LINK...</div></div>
 
     <script>
@@ -57,25 +57,35 @@
         const isLine = /Line/i.test(navigator.userAgent);
         const isIPhone = /iPhone|iPad|iPod/.test(navigator.userAgent);
         let isStarted = false;
-        
-        // 音声ファイルを事前に定義
         let noiseAudio = new Audio('noise.mp3');
 
         if (isLine) {
             btn.classList.add('line-warning');
             btn.innerText = "🌐 OPEN_IN_EXTERNAL_BROWSER";
-            output.innerHTML = "> [WARNING] IN-APP_BROWSER_DETECTED. PLEASE_SWITCH_TO_SAFARI_OR_CHROME.";
             btn.onclick = (e) => {
                 e.preventDefault();
                 window.location.href = window.location.href + (window.location.href.includes('?') ? '&' : '?') + "openExternalBrowser=1";
             };
         } else {
-            // モデルのロード完了監視
+            // --- 究極のiOS対策：ARステータスを監視 ---
+            // 'ar-status' が 'initialized' になった時が、iOSがプレビュー準備を終えた真の合図
+            viewer.addEventListener('ar-status', (event) => {
+                if (event.detail.status === 'initialized' || event.detail.status === 'not-presenting') {
+                    if (!isStarted && btn.innerText !== "[ START_DECODING ]") {
+                        btn.classList.add('ready');
+                        btn.innerText = "[ START_DECODING ]";
+                        output.innerHTML = "> [SUCCESS] AR_DATA_VALIDATED. READY_FOR_DECODE.";
+                        viewer.dismissPoster();
+                    }
+                }
+            });
+
+            // 念のためloadイベントでもバックアップ
             viewer.addEventListener('load', () => {
-                if (!isStarted) {
+                if (!isStarted && !isIPhone) { // Androidはloadで十分
                     btn.classList.add('ready');
                     btn.innerText = "[ START_DECODING ]";
-                    output.innerHTML = "> [SUCCESS] DATA_LINK_STABLE. READY_TO_DECODE.";
+                    output.innerHTML = "> [SUCCESS] LINK_ESTABLISHED.";
                     viewer.dismissPoster();
                 }
             });
@@ -85,9 +95,7 @@
                 if (isStarted) return;
                 isStarted = true;
 
-                // --- 重要：ここで音声を再生し、ブラウザのロックを解除 ---
                 noiseAudio.play().catch(() => {
-                    // 失敗した場合は再度インスタンスを作って叩く（iOS対策）
                     const retryAudio = new Audio('noise.mp3');
                     retryAudio.play();
                 });
@@ -127,11 +135,8 @@
             if (index < lines.length) {
                 const line = document.createElement('div');
                 output.appendChild(line);
-                
-                // 特定のメッセージで再度ノイズを鳴らす
                 if (lines[index].includes("Believe in yourself")) {
-                    const secondNoise = new Audio('noise.mp3');
-                    secondNoise.play().catch(() => {});
+                    new Audio('noise.mp3').play().catch(() => {});
                 }
                 
                 let i = 0;
