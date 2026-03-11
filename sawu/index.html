@@ -6,11 +6,9 @@
     <title>sawu | The Woodcraft Fairy</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
     <style>
-        /* Warm Cream & Wood Brown Theme */
+        /* Warm Theme */
         html, body { height: 100%; margin: 0; overflow: hidden; background: #fdf5e6; color: #5d4037; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        
         model-viewer { width: 100%; height: 100%; background: radial-gradient(#fff9f0, #f3e5ab); }
-
         .btn-base {
             position: fixed; bottom: 180px; left: 50%; transform: translateX(-50%);
             width: 85%; max-width: 300px; padding: 20px;
@@ -19,19 +17,11 @@
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             box-shadow: 0 4px 15px rgba(93, 64, 55, 0.2);
         }
-
-        /* 1. Sync/Ready Button */
         #sync-btn { background: #d7ccc8; color: #8d6e63; display: block; pointer-events: none; }
         #sync-btn.ready { background: #8bc34a; color: #fff; cursor: pointer; pointer-events: auto; }
-        #sync-btn.ready:active { transform: translateX(-50%) scale(0.95); }
-        
-        /* 2. AR Button */
         #realize-btn { background: #ff9800; color: #fff; display: none; cursor: pointer; }
         #realize-btn.loading { background: #ffccbc; color: #fff; pointer-events: none; }
-
-        .line-warning { background: #06c755 !important; color: white !important; display: block !important; pointer-events: auto !important; }
-        
-        /* Message Area */
+        .line-warning { background: #06c755 !important; color: white !important; display: block !important; }
         #terminal { 
             position: fixed; bottom: 0; width: 100%; height: 160px; 
             background: rgba(255, 255, 255, 0.95); border-top: 4px solid #8d6e63; 
@@ -45,16 +35,7 @@
 </head>
 <body>
 
-    <model-viewer id="viewer" 
-        src="./sawu.glb" 
-        ios-src="./sawu.usdz" 
-        ar ar-modes="quick-look scene-viewer" 
-        camera-controls 
-        auto-rotate
-        loading="eager" 
-        reveal="manual" 
-        shadow-intensity="1"
-        environment-image="neutral">
+    <model-viewer id="viewer" src="./sawu.glb" ios-src="./sawu.usdz" ar ar-modes="quick-look scene-viewer" camera-controls auto-rotate loading="eager" reveal="manual" shadow-intensity="1">
         <div slot="ar-button"></div>
     </model-viewer>
 
@@ -70,6 +51,8 @@
         const output = document.getElementById('output');
         const terminal = document.getElementById('terminal');
         
+        // --- Audio Setup ---
+        const noiseAudio = new Audio('noise.mp3');
         const isLine = /Line/i.test(navigator.userAgent);
 
         if (isLine) {
@@ -80,12 +63,10 @@
                 window.location.href = window.location.href + (window.location.href.includes('?') ? '&' : '?') + "openExternalBrowser=1";
             };
         } else {
-            // Progress monitoring
             viewer.addEventListener('progress', (event) => {
                 const percent = Math.round(event.detail.totalProgress * 100);
                 output.innerHTML = `Walking from the forest: ${percent}%`;
                 syncBtn.innerText = `On the way... ${percent}%`;
-                
                 if (percent >= 100) {
                     setTimeout(() => {
                         if (!syncBtn.classList.contains('ready')) {
@@ -98,18 +79,20 @@
                 }
             });
 
-            // 1. Open Door Button
             syncBtn.onclick = (e) => {
                 e.preventDefault();
                 syncBtn.style.display = 'none';
+                // Play audio on first interaction (Required by browsers)
+                noiseAudio.play().catch(() => {}); 
                 startStory(() => {
                     realizeBtn.style.display = 'block';
                 });
             };
 
-            // 2. Realize Button
             realizeBtn.onclick = (e) => {
                 e.preventDefault();
+                // Play magic sound again when realizing
+                new Audio('noise.mp3').play().catch(() => {});
                 realizeBtn.classList.add('loading');
                 realizeBtn.innerHTML = "CASTING MAGIC<span class='dots'></span>";
                 viewer.activateAR();
@@ -135,6 +118,11 @@
                 const line = document.createElement('div');
                 output.appendChild(line);
                 
+                // Play a soft sound for the highlight text
+                if (lines[index].includes("* Tap, tap, tap... *")) {
+                    new Audio('noise.mp3').play().catch(() => {});
+                }
+
                 let i = 0;
                 const fullText = lines[index];
                 const typer = setInterval(() => {
