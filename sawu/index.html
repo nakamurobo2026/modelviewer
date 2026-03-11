@@ -1,1 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>sawu | The Woodcraft Fairy</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+    <style>
+        /* Warm Cream & Wood Brown Theme */
+        html, body { height: 100%; margin: 0; overflow: hidden; background: #fdf5e6; color: #5d4037; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        model-viewer { width: 100%; height: 100%; background: radial-gradient(#fff9f0, #f3e5ab); }
 
+        .btn-base {
+            position: fixed; bottom: 180px; left: 50%; transform: translateX(-50%);
+            width: 85%; max-width: 300px; padding: 20px;
+            border: none; border-radius: 40px; font-size: 16px; font-weight: bold;
+            text-align: center; text-decoration: none; z-index: 10000;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 4px 15px rgba(93, 64, 55, 0.2);
+        }
+
+        /* 1. Sync/Ready Button */
+        #sync-btn { background: #d7ccc8; color: #8d6e63; display: block; pointer-events: none; }
+        #sync-btn.ready { background: #8bc34a; color: #fff; cursor: pointer; pointer-events: auto; }
+        #sync-btn.ready:active { transform: translateX(-50%) scale(0.95); }
+        
+        /* 2. AR Button */
+        #realize-btn { background: #ff9800; color: #fff; display: none; cursor: pointer; }
+        #realize-btn.loading { background: #ffccbc; color: #fff; pointer-events: none; }
+
+        .line-warning { background: #06c755 !important; color: white !important; display: block !important; pointer-events: auto !important; }
+        
+        /* Message Area */
+        #terminal { 
+            position: fixed; bottom: 0; width: 100%; height: 160px; 
+            background: rgba(255, 255, 255, 0.95); border-top: 4px solid #8d6e63; 
+            padding: 20px; font-size: 15px; overflow-y: auto; box-sizing: border-box; z-index: 1000;
+            text-align: center; line-height: 1.5;
+        }
+        .highlight { color: #e67e22; font-weight: bold; font-style: italic; }
+        .dots::after { content: ''; animation: dots 1.5s infinite; }
+        @keyframes dots { 0% { content: ''; } 33% { content: '.'; } 66% { content: '..'; } 100% { content: '...'; } }
+    </style>
+</head>
+<body>
+
+    <model-viewer id="viewer" 
+        src="./sawu.glb" 
+        ios-src="./sawu.usdz" 
+        ar ar-modes="quick-look scene-viewer" 
+        camera-controls 
+        auto-rotate
+        loading="eager" 
+        reveal="manual" 
+        shadow-intensity="1"
+        environment-image="neutral">
+        <div slot="ar-button"></div>
+    </model-viewer>
+
+    <a href="#" id="sync-btn" class="btn-base">Calling sawu...</a>
+    <a href="#" id="realize-btn" class="btn-base">✨ BRING SAWU HERE ✨</a>
+
+    <div id="terminal"><div id="output">Connecting to the tiny workshop...</div></div>
+
+    <script>
+        const syncBtn = document.getElementById('sync-btn');
+        const realizeBtn = document.getElementById('realize-btn');
+        const viewer = document.getElementById('viewer');
+        const output = document.getElementById('output');
+        const terminal = document.getElementById('terminal');
+        
+        const isLine = /Line/i.test(navigator.userAgent);
+
+        if (isLine) {
+            syncBtn.classList.add('line-warning');
+            syncBtn.innerText = "OPEN IN BROWSER";
+            syncBtn.onclick = (e) => {
+                e.preventDefault();
+                window.location.href = window.location.href + (window.location.href.includes('?') ? '&' : '?') + "openExternalBrowser=1";
+            };
+        } else {
+            // Progress monitoring
+            viewer.addEventListener('progress', (event) => {
+                const percent = Math.round(event.detail.totalProgress * 100);
+                output.innerHTML = `Walking from the forest: ${percent}%`;
+                syncBtn.innerText = `On the way... ${percent}%`;
+                
+                if (percent >= 100) {
+                    setTimeout(() => {
+                        if (!syncBtn.classList.contains('ready')) {
+                            syncBtn.classList.add('ready');
+                            syncBtn.innerText = "OPEN THE DOOR";
+                            output.innerHTML = "sawu is waiting behind the door.";
+                            viewer.dismissPoster();
+                        }
+                    }, 800);
+                }
+            });
+
+            // 1. Open Door Button
+            syncBtn.onclick = (e) => {
+                e.preventDefault();
+                syncBtn.style.display = 'none';
+                startStory(() => {
+                    realizeBtn.style.display = 'block';
+                });
+            };
+
+            // 2. Realize Button
+            realizeBtn.onclick = (e) => {
+                e.preventDefault();
+                realizeBtn.classList.add('loading');
+                realizeBtn.innerHTML = "CASTING MAGIC<span class='dots'></span>";
+                viewer.activateAR();
+            };
+        }
+
+        function startStory(callback) {
+            output.innerHTML = "";
+            const lines = [
+                "\"Hi there! I'm sawu, the fairy of wood.\"",
+                "\"I love the smell of cedar and handmade crafts.\"",
+                "\"Can I come and visit your room?\"",
+                "",
+                "<span class='highlight'>* Tap, tap, tap... *</span>",
+                "",
+                "Everything is ready!"
+            ];
+            processLog(lines, 0, callback);
+        }
+
+        function processLog(lines, index, callback) {
+            if (index < lines.length) {
+                const line = document.createElement('div');
+                output.appendChild(line);
+                
+                let i = 0;
+                const fullText = lines[index];
+                const typer = setInterval(() => {
+                    if (i < fullText.length) {
+                        if (fullText.charAt(i) === '<') {
+                            const endTag = fullText.indexOf('>', i);
+                            line.innerHTML = fullText.substring(0, endTag + 1);
+                            i = endTag + 1;
+                        } else {
+                            line.innerHTML = fullText.substring(0, i + 1);
+                            i++;
+                        }
+                    } else {
+                        clearInterval(typer);
+                        setTimeout(() => processLog(lines, index + 1, callback), 400);
+                        terminal.scrollTop = terminal.scrollHeight;
+                    }
+                }, 30);
+            } else if (callback) {
+                callback();
+            }
+        }
+    </script>
+</body>
+</html>
