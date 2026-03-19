@@ -1,61 +1,113 @@
-<div id="terminal">
-    <div id="output">
-        <div class="highlight">> [CRITICAL] SYSTEM_LOCKED</div>
-        <div>> ENTER_ACTIVATION_KEY:</div>
-        <div style="display: flex; gap: 10px; margin-top: 10px;">
-            <span>></span>
-            <input type="text" id="pass-input" autofocus 
-                   style="background:transparent; border:none; color:#0f0; outline:none; font-family:inherit; width:100%;">
-        </div>
-    </div>
-</div>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GATE_ACCESS_TERMINAL</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+    <style>
+        :root { --gate-cyan: #00f2ff; --dark-void: #000505; }
+        html, body { height: 100%; margin: 0; overflow: hidden; background: var(--dark-void); color: var(--gate-cyan); font-family: 'Courier New', monospace; }
+        
+        /* ゲート（ARモデル） */
+        model-viewer { width: 100%; height: 100%; display: none; }
 
-<script>
-    const passInput = document.getElementById('pass-input');
-    const SECRET_KEY = "NAKAMUROBO"; // ここに好きなキーワードを設定
-
-    passInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            const val = passInput.value.toUpperCase();
-            if (val === SECRET_KEY) {
-                startAnalysis(); // 正解なら解析開始
-            } else {
-                const error = document.createElement('div');
-                error.style.color = 'red';
-                error.innerText = "> [ERROR] INVALID_KEY_ACCESS_DENIED.";
-                output.appendChild(error);
-                passInput.value = "";
-            }
+        /* 入力エリア */
+        #access-panel {
+            position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%);
+            width: 80%; text-align: center; z-index: 2000;
         }
-    });
+        input {
+            background: rgba(0, 242, 255, 0.1); border: 1px solid var(--gate-cyan);
+            color: #fff; padding: 15px; width: 100%; font-size: 18px; text-align: center;
+            outline: none; box-shadow: 0 0 15px rgba(0, 242, 255, 0.2);
+        }
 
-    function startAnalysis() {
-        // 入力フォームを消して、解析シーケンスへ
-        passInput.parentElement.style.display = 'none';
-        
-        const lines = [
-            "> [SUCCESS] AUTHENTICATION_COMPLETED.",
-            "> UNLOCKING_FUKUYAMA_SECTOR_DATA...",
-            "> DECODING_MORPHOLOGY...",
-            "<span class='highlight'>\"Nakamurobo Construction Confirmed.\"</span>",
-            "> STATUS: READY_TO_MANIFEST"
-        ];
-        
-        // ここから先は前のコードの printLine 処理へ繋げる...
-        let lineIdx = 0;
-        const printLine = () => {
-            if (lineIdx < lines.length) {
-                const div = document.createElement('div');
-                div.innerHTML = lines[lineIdx];
-                output.appendChild(div);
-                terminal.scrollTop = terminal.scrollHeight;
-                lineIdx++;
-                setTimeout(printLine, 800);
-            } else {
-                viewer.style.display = 'block';
-                realizeBtn.style.display = 'block';
+        /* 起動ボタン（最初は隠しておく） */
+        #activate-btn {
+            position: fixed; bottom: 250px; left: 50%; transform: translateX(-50%);
+            width: 80%; padding: 20px; background: var(--gate-cyan); color: #000;
+            font-weight: bold; border: none; display: none; z-index: 10000;
+            box-shadow: 0 0 30px var(--gate-cyan); cursor: pointer;
+        }
+
+        /* ログターミナル */
+        #terminal {
+            position: fixed; bottom: 0; width: 100%; height: 220px;
+            background: rgba(0, 5, 5, 0.9); border-top: 2px solid var(--gate-cyan);
+            padding: 15px; font-size: 12px; overflow-y: auto; box-sizing: border-box;
+        }
+        .warning { color: #ff3300; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <model-viewer id="viewer" src="./gate.glb" ios-src="./gate.usdz" ar ar-modes="scene-viewer quick-look" camera-controls>
+        <button slot="ar-button" style="display:none;"></button>
+    </model-viewer>
+
+    <div id="access-panel">
+        <div style="margin-bottom: 10px;">> ENTER_GATE_COMMAND:</div>
+        <input type="text" id="pass-input" placeholder="********" autocomplete="off">
+    </div>
+
+    <button id="activate-btn">[ OPEN_DIMENSIONAL_GATE ]</button>
+
+    <div id="terminal"><div id="output">> WAITING_FOR_OPERATOR_COMMAND...</div></div>
+
+    <script>
+        const passInput = document.getElementById('pass-input');
+        const output = document.getElementById('output');
+        const activateBtn = document.getElementById('activate-btn');
+        const viewer = document.getElementById('viewer');
+        const panel = document.getElementById('access-panel');
+
+        const GATE_KEY = "OPEN_SESAME"; // ここに物語上のキーワードを設定
+
+        passInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                if (passInput.value.toUpperCase() === GATE_KEY) {
+                    startSequence();
+                } else {
+                    addLog("<span class='warning'>> [DENIED] INVALID_GATE_KEY.</span>");
+                    passInput.value = "";
+                }
             }
+        });
+
+        function addLog(text) {
+            const div = document.createElement('div');
+            div.innerHTML = text;
+            output.appendChild(div);
+            document.getElementById('terminal').scrollTop = output.scrollHeight;
+        }
+
+        async function startSequence() {
+            panel.style.display = 'none'; // 入力欄を消す
+            
+            const logs = [
+                "> [SUCCESS] COMMAND_ACCEPTED.",
+                "> LINKING_TO_FUKUYAMA_STATION_GEOMETRY...",
+                "> CALCULATING_SPACIAL_COORDINATES...",
+                "> STABILIZING_QUANTUM_FIELD (80%)...",
+                "> STABILIZING_QUANTUM_FIELD (100%)...",
+                "> <span class='gate-cyan'>DIMENSIONAL_GATE_READY.</span>",
+                "> CAUTION: DO_NOT_STEP_BACK_DURING_MANIFESTATION."
+            ];
+
+            for (const log of logs) {
+                addLog(log);
+                await new Promise(r => setTimeout(r, 700)); // ログの間隔
+            }
+
+            viewer.style.display = 'block';
+            activateBtn.style.display = 'block';
+        }
+
+        activateBtn.onclick = () => {
+            addLog("> OPENING_GATE...");
+            viewer.activateAR();
         };
-        printLine();
-    }
-</script>
+    </script>
+</body>
+</html>
