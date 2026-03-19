@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GATE_SYSTEM_NAKAMUROBO</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+    <style>
+        :root { --gate-cyan: #00f2ff; --dark-void: #000808; }
+        html, body { height: 100%; margin: 0; overflow: hidden; background: var(--dark-void); color: var(--gate-cyan); font-family: 'Courier New', monospace; }
+        
+        /* 3Dビューアー（解析完了まで隠す） */
+        model-viewer { width: 100%; height: 100%; display: none; background: #000; }
+
+        /* 入力インターフェース */
+        #access-panel {
+            position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%);
+            width: 85%; max-width: 400px; text-align: center; z-index: 2000;
+        }
+        .label { margin-bottom: 15px; font-size: 14px; letter-spacing: 2px; text-shadow: 0 0 8px var(--gate-cyan); }
+        input {
+            background: rgba(0, 242, 255, 0.05); border: 1px solid var(--gate-cyan);
+            color: #fff; padding: 18px; width: 100%; font-size: 20px; text-align: center;
+            outline: none; box-shadow: 0 0 20px rgba(0, 242, 255, 0.1); border-radius: 4px;
+        }
+
+        /* AR起動ボタン */
+        #activate-btn {
+            position: fixed; bottom: 240px; left: 50%; transform: translateX(-50%);
+            width: 80%; max-width: 320px; padding: 22px; 
+            background: var(--gate-cyan); color: #000; font-weight: bold; border: none;
+            display: none; z-index: 10000; cursor: pointer;
+            box-shadow: 0 0 40px var(--gate-cyan); font-size: 16px;
+        }
+
+        /* ログターミナル */
+        #terminal {
+            position: fixed; bottom: 0; width: 100%; height: 210px;
+            background: rgba(0, 8, 8, 0.95); border-top: 1px solid var(--gate-cyan);
+            padding: 15px; font-size: 12px; overflow-y: auto; box-sizing: border-box; line-height: 1.6;
+        }
+        .highlight { color: #fff; font-weight: bold; }
+        .error { color: #ff3300; }
+    </style>
+</head>
+<body>
+
+    <model-viewer id="viewer" 
+        src="./gate.glb" 
+        ios-src="./gate.usdz" 
+        ar ar-modes="scene-viewer quick-look" 
+        camera-controls
+        shadow-intensity="1"
+        environment-image="neutral"
+        animation-name="OpenGate" 
+        autoplay>
+        <button slot="ar-button" style="display:none;"></button>
+    </model-viewer>
+
+    <div id="access-panel">
+        <div class="label">> ENTER_DIMENSIONAL_CODE:</div>
+        <input type="text" id="pass-input" placeholder="____" autocomplete="off" autofocus>
+    </div>
+
+    <button id="activate-btn">[ MANIFEST_GATE ]</button>
+
+    <div id="terminal"><div id="output">> SYSTEM_IDLE. AWAITING_AUTHORIZATION...</div></div>
+
+    <script>
+        const passInput = document.getElementById('pass-input');
+        const output = document.getElementById('output');
+        const activateBtn = document.getElementById('activate-btn');
+        const viewer = document.getElementById('viewer');
+        const panel = document.getElementById('access-panel');
+        const terminal = document.getElementById('terminal');
+
+        // ★ 物語のキーワードを設定
+        const GATE_KEY = "NAKAMUROBO"; 
+
+        passInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const val = passInput.value.toUpperCase();
+                if (val === GATE_KEY) {
+                    startSequence();
+                } else {
+                    addLog("<span class='error'>> [AUTH_FAILED] ACCESS_DENIED.</span>");
+                    passInput.value = "";
+                }
+            }
+        });
+
+        function addLog(text) {
+            const div = document.createElement('div');
+            div.innerHTML = text;
+            output.appendChild(div);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        async function startSequence() {
+            panel.style.display = 'none';
+            
+            const sequence = [
+                "> [SUCCESS] AUTHENTICATION_KEY_VALID.",
+                "> INITIALIZING_QUANTUM_TUNNEL...",
+                "> SYNCING_REALITY_ANCHOR: FUKUYAMA_SECTOR",
+                "> <span class='highlight'>LOADING_GEOMETRY_DATA...</span>",
+                "> STABILIZING_GATE_STRUCTURE (45%)",
+                "> STABILIZING_GATE_STRUCTURE (100%)",
+                "> GATE_STATE: <span class='highlight'>READY_FOR_MANIFESTATION</span>",
+                "> WARNING: ENSURE_CLEAR_PHYSICAL_SPACE."
+            ];
+
+            for (const line of sequence) {
+                addLog(line);
+                await new Promise(r => setTimeout(r, 600));
+            }
+
+            // 準備完了：モデルとボタンを表示
+            viewer.style.display = 'block';
+            activateBtn.style.display = 'block';
+        }
+
+        // AR起動時の処理
+        activateBtn.onclick = () => {
+            addLog("> INITIATING_DIMENSIONAL_SHIFT...");
+            viewer.activateAR();
+        };
+
+        // AR配置成功イベント（地面に置いた瞬間にアニメーションを最初から再生）
+        viewer.addEventListener('ar-status', (event) => {
+            if (event.detail.status === 'object-placed') {
+                addLog("> [SUCCESS] OBJECT_PLACED_IN_REAL_WORLD.");
+                // アニメーションを最初（0秒）に戻して再生開始
+                viewer.currentTime = 0;
+                viewer.play();
+            }
+        });
+    </script>
+</body>
+</html>
