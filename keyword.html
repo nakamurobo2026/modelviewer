@@ -1,0 +1,61 @@
+<div id="terminal">
+    <div id="output">
+        <div class="highlight">> [CRITICAL] SYSTEM_LOCKED</div>
+        <div>> ENTER_ACTIVATION_KEY:</div>
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <span>></span>
+            <input type="text" id="pass-input" autofocus 
+                   style="background:transparent; border:none; color:#0f0; outline:none; font-family:inherit; width:100%;">
+        </div>
+    </div>
+</div>
+
+<script>
+    const passInput = document.getElementById('pass-input');
+    const SECRET_KEY = "NAKAMUROBO"; // ここに好きなキーワードを設定
+
+    passInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            const val = passInput.value.toUpperCase();
+            if (val === SECRET_KEY) {
+                startAnalysis(); // 正解なら解析開始
+            } else {
+                const error = document.createElement('div');
+                error.style.color = 'red';
+                error.innerText = "> [ERROR] INVALID_KEY_ACCESS_DENIED.";
+                output.appendChild(error);
+                passInput.value = "";
+            }
+        }
+    });
+
+    function startAnalysis() {
+        // 入力フォームを消して、解析シーケンスへ
+        passInput.parentElement.style.display = 'none';
+        
+        const lines = [
+            "> [SUCCESS] AUTHENTICATION_COMPLETED.",
+            "> UNLOCKING_FUKUYAMA_SECTOR_DATA...",
+            "> DECODING_MORPHOLOGY...",
+            "<span class='highlight'>\"Nakamurobo Construction Confirmed.\"</span>",
+            "> STATUS: READY_TO_MANIFEST"
+        ];
+        
+        // ここから先は前のコードの printLine 処理へ繋げる...
+        let lineIdx = 0;
+        const printLine = () => {
+            if (lineIdx < lines.length) {
+                const div = document.createElement('div');
+                div.innerHTML = lines[lineIdx];
+                output.appendChild(div);
+                terminal.scrollTop = terminal.scrollHeight;
+                lineIdx++;
+                setTimeout(printLine, 800);
+            } else {
+                viewer.style.display = 'block';
+                realizeBtn.style.display = 'block';
+            }
+        };
+        printLine();
+    }
+</script>
