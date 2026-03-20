@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -9,25 +9,31 @@
         html, body { height: 100%; margin: 0; overflow: hidden; background: #000; color: #0f0; font-family: 'Courier New', monospace; }
         model-viewer { width: 100%; height: 100%; background: #000; }
         
+        /* ボタン基本スタイル */
         .btn-base {
             position: fixed; bottom: 220px; left: 50%; transform: translateX(-50%);
             width: 80%; max-width: 320px; padding: 18px;
             border: none; border-radius: 50px; font-size: 14px; font-weight: bold;
             text-align: center; text-decoration: none; z-index: 10000;
             transition: all 0.4s ease;
-            display: none; /* 初期は非表示 */
+            display: none;
         }
 
+        /* 通常の状態 */
         #sync-btn { background: #222; color: #555; display: block; pointer-events: none; }
         #sync-btn.ready { background: #0f0; color: #000; cursor: pointer; pointer-events: auto; box-shadow: 0 0 20px rgba(0,255,0,0.5); }
+        
+        /* 実体化ボタン */
         #realize-btn { background: #fff; color: #000; box-shadow: 0 0 30px #fff; cursor: pointer; }
         #realize-btn.loading { background: #444; color: #888; box-shadow: none; pointer-events: none; }
 
-        /* インスタ用警告カラー */
-        .line-warning { background: linear-gradient(135deg, #ff9900, #ff6600) !important; color: white !important; display: block !important; pointer-events: auto !important; }
+        /* アプリ内ブラウザ警告（オレンジ） */
+        .warning-mode { background: linear-gradient(135deg, #ff9900, #ff4400) !important; color: white !important; display: block !important; pointer-events: auto !important; box-shadow: 0 0 20px rgba(255,100,0,0.6); }
         
-        #terminal { position: fixed; bottom: 0; width: 100%; height: 200px; background: rgba(0, 15, 0, 0.95); border-top: 2px solid #0f0; padding: 12px; font-size: 13px; overflow-y: auto; box-sizing: border-box; z-index: 1000; }
+        /* ターミナル */
+        #terminal { position: fixed; bottom: 0; width: 100%; height: 200px; background: rgba(0, 15, 0, 0.95); border-top: 2px solid #0f0; padding: 12px; font-size: 12px; line-height: 1.5; overflow-y: auto; box-sizing: border-box; z-index: 1000; }
         .highlight { color: #fff; font-weight: bold; }
+        .error { color: #ff4400; font-weight: bold; }
         .dots::after { content: ''; animation: dots 1.5s infinite; }
         @keyframes dots { 0% { content: ''; } 33% { content: '.'; } 66% { content: '..'; } 100% { content: '...'; } }
     </style>
@@ -41,7 +47,7 @@
     <a href="#" id="sync-btn" class="btn-base">ESTABLISHING_LINK...</a>
     <a href="#" id="realize-btn" class="btn-base">[ REALIZE_IN_REAL_WORLD ]</a>
 
-    <div id="terminal"><div id="output">> INITIALIZING_SYSTEM...</div></div>
+    <div id="terminal"><div id="output">> INITIALIZING_FUKUYAMA_SECTOR...</div></div>
 
     <script>
         const syncBtn = document.getElementById('sync-btn');
@@ -50,21 +56,33 @@
         const output = document.getElementById('output');
         const terminal = document.getElementById('terminal');
         
-        const isInApp = /Instagram|Line|FBAN|FBAV/i.test(navigator.userAgent);
+        // アプリ内ブラウザ（Instagram/LINE/Facebook）の検知
+        const isRestricted = /Instagram|Line|FBAN|FBAV/i.test(navigator.userAgent);
         const noiseAudio = new Audio('noise.mp3');
 
-        if (isInApp) {
-            // インスタ・LINE用
-            syncBtn.classList.add('line-warning');
-            syncBtn.innerText = "🌐 外部ブラウザで開く";
-            output.innerHTML = "> [ERROR] IN-APP BROWSER RESTRICTION.\n> PLEASE OPEN IN SAFARI/CHROME TO ENABLE AR.";
+        if (isRestricted) {
+            // --- 制限環境（インスタ等）での表示 ---
+            syncBtn.classList.add('warning-mode');
+            syncBtn.innerText = "🌐 RELINK_TO_EXTERNAL_BROWSER";
+            
+            output.innerHTML = `
+                <div class="error">> [CRITICAL_ERROR] AR_STABILIZATION_FAILED.</div>
+                <div>> IN-APP_BROWSER_RESTRICTION_DETECTED.</div>
+                <div>> --------------------------------------</div>
+                <div class="highlight">> 【重要】物理実体化プロセスが遮断されました。</div>
+                <div class="highlight">> 右上の「...」メニューから</div>
+                <div class="highlight">> 「ブラウザで開く」を選択してください。</div>
+                <div>> --------------------------------------</div>
+                <div>> AWAITING_EXTERNAL_LINK...</div>
+            `;
             
             syncBtn.onclick = (e) => {
                 e.preventDefault();
-                alert("インスタ内ではARが起動しません。\n右上の「...」メニューから「ブラウザで開く」を選択してください。");
+                alert("【SYSTEM MESSAGE】\nAR機能を起動するには、画面右上の「...」をタップして「ブラウザで開く」を選択してください。");
             };
+
         } else {
-            // 通常ブラウザ用
+            // --- 標準環境（Safari/Chrome）での表示 ---
             viewer.addEventListener('progress', (event) => {
                 const percent = Math.round(event.detail.totalProgress * 100);
                 output.innerHTML = `> RECEIVING_DATA: ${percent}%`;
@@ -95,6 +113,13 @@
                 e.preventDefault();
                 realizeBtn.classList.add('loading');
                 realizeBtn.innerHTML = "PHYSICAL_REALIZING<span class='dots'></span>";
+                
+                const logLine = document.createElement('div');
+                logLine.innerHTML = "> ATTEMPTING_PHYSICAL_REALIZATION... PLEASE_WAIT.";
+                output.appendChild(logLine);
+                terminal.scrollTop = terminal.scrollHeight;
+
+                // ユーザーのタップによりARを起動
                 viewer.activateAR();
             };
         }
@@ -102,7 +127,7 @@
         function startEffect(callback) {
             output.innerHTML = "";
             const lines = [
-                "> ACCESSING_FUKUYAMA_SECTOR...",
+                "> ACCESSING_FUKUYAMA_SECTOR_34.485_133.362...",
                 "> [SUCCESS] IRREGULAR_DATA_FOUND",
                 "",
                 "<span class='highlight'>\"Believe in yourself.\"</span>",
@@ -117,6 +142,8 @@
             if (index < lines.length) {
                 const line = document.createElement('div');
                 output.appendChild(line);
+                if (lines[index].includes("Believe in yourself")) new Audio('noise.mp3').play().catch(() => {});
+                
                 let i = 0;
                 const fullText = lines[index];
                 const typer = setInterval(() => {
