@@ -1,112 +1,144 @@
-<script>
-    const syncBtn = document.getElementById('sync-btn');
-    const realizeBtn = document.getElementById('realize-btn');
-    const viewer = document.getElementById('viewer');
-    const output = document.getElementById('output');
-    const terminal = document.getElementById('terminal');
-    
-    // インスタ、LINE、FBなどのアプリ内ブラウザ判定
-    const isInAppBrowser = /Instagram|Line|FBAN|FBAV/i.test(navigator.userAgent);
-    const noiseAudio = new Audio('noise.mp3');
-
-    // アプリ内ブラウザ（インスタ等）の場合の処理
-    if (isInAppBrowser) {
-        syncBtn.classList.add('line-warning');
-        syncBtn.style.display = 'block';
-        syncBtn.innerText = "🌐 外部ブラウザで開く";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nakamurobo | Episode 9</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+    <style>
+        html, body { height: 100%; margin: 0; overflow: hidden; background: #000; color: #0f0; font-family: 'Courier New', monospace; }
+        model-viewer { width: 100%; height: 100%; background: #000; }
         
-        syncBtn.onclick = (e) => {
-            e.preventDefault();
-            // ユーザーに操作を促す（インスタの仕様上、自動でSafariは開けないため）
-            alert("【重要】AR機能を起動するには、\n右上の「...」ボタンをタップして\n「ブラウザで開く」を選択してください。");
-        };
-        
-        output.innerHTML = "> [WARNING] IN-APP_BROWSER_DETECTED.\n> PLEASE_OPEN_IN_EXTERNAL_BROWSER_TO_REALIZE.";
-
-    } else {
-        // 通常ブラウザ（Safari/Chrome）の場合の処理
-        viewer.addEventListener('progress', (event) => {
-            const percent = Math.round(event.detail.totalProgress * 100);
-            output.innerHTML = `> RECEIVING_DATA: ${percent}%`;
-            syncBtn.innerText = `SYNCING_STREAM: ${percent}%`;
-            
-            if (percent >= 100) {
-                setTimeout(() => {
-                    if (!syncBtn.classList.contains('ready')) {
-                        syncBtn.classList.add('ready');
-                        syncBtn.innerText = "[ START_DECODING ]";
-                        output.innerHTML = "> [SUCCESS] DATA_LINK_STABLE. READY_TO_DECODE.";
-                        viewer.dismissPoster();
-                    }
-                }, 500);
-            }
-        });
-
-        syncBtn.onclick = (e) => {
-            e.preventDefault();
-            syncBtn.style.display = 'none';
-            noiseAudio.play().catch(() => {});
-            
-            startEffect(() => {
-                realizeBtn.style.display = 'block';
-            });
-        };
-
-        realizeBtn.onclick = (e) => {
-            e.preventDefault();
-            realizeBtn.classList.add('loading');
-            realizeBtn.innerHTML = "PHYSICAL_REALIZING<span class='dots'></span>";
-            
-            const logLine = document.createElement('div');
-            logLine.innerHTML = "> ATTEMPTING_PHYSICAL_REALIZATION... PLEASE_WAIT.";
-            output.appendChild(logLine);
-            terminal.scrollTop = terminal.scrollHeight;
-
-            // ユーザーのタップによりARを起動（iOS/Android共通）
-            viewer.activateAR();
-        };
-    }
-
-    function startEffect(callback) {
-        output.innerHTML = "";
-        const lines = [
-            "> ACCESSING_FUKUYAMA_SECTOR_34.485_133.362...",
-            "> [SUCCESS] IRREGULAR_DATA_FOUND",
-            "",
-            "<span class='highlight'>\"Believe in yourself.\"</span>",
-            "",
-            "> STATUS: AWAKENED",
-            "> READY_FOR_PHYSICAL_REALIZATION."
-        ];
-        processLog(lines, 0, callback);
-    }
-
-    function processLog(lines, index, callback) {
-        if (index < lines.length) {
-            const line = document.createElement('div');
-            output.appendChild(line);
-            if (lines[index].includes("Believe in yourself")) new Audio('noise.mp3').play().catch(() => {});
-            
-            let i = 0;
-            const fullText = lines[index];
-            const typer = setInterval(() => {
-                if (i < fullText.length) {
-                    if (fullText.charAt(i) === '<') {
-                        const endTag = fullText.indexOf('>', i);
-                        line.innerHTML = fullText.substring(0, endTag + 1);
-                        i = endTag + 1;
-                    } else {
-                        line.innerHTML = fullText.substring(0, i + 1);
-                        i++;
-                    }
-                } else {
-                    clearInterval(typer);
-                    setTimeout(() => processLog(lines, index + 1, callback), 100);
-                    terminal.scrollTop = terminal.scrollHeight;
-                }
-            }, 15);
-        } else if (callback) {
-            callback();
+        .btn-base {
+            position: fixed; bottom: 220px; left: 50%; transform: translateX(-50%);
+            width: 80%; max-width: 320px; padding: 18px;
+            border: none; border-radius: 50px; font-size: 14px; font-weight: bold;
+            text-align: center; text-decoration: none; z-index: 10000;
+            transition: all 0.4s ease;
+            display: none; /* 初期は非表示 */
         }
-    }
-</script>
+
+        #sync-btn { background: #222; color: #555; display: block; pointer-events: none; }
+        #sync-btn.ready { background: #0f0; color: #000; cursor: pointer; pointer-events: auto; box-shadow: 0 0 20px rgba(0,255,0,0.5); }
+        #realize-btn { background: #fff; color: #000; box-shadow: 0 0 30px #fff; cursor: pointer; }
+        #realize-btn.loading { background: #444; color: #888; box-shadow: none; pointer-events: none; }
+
+        /* インスタ用警告カラー */
+        .line-warning { background: linear-gradient(135deg, #ff9900, #ff6600) !important; color: white !important; display: block !important; pointer-events: auto !important; }
+        
+        #terminal { position: fixed; bottom: 0; width: 100%; height: 200px; background: rgba(0, 15, 0, 0.95); border-top: 2px solid #0f0; padding: 12px; font-size: 13px; overflow-y: auto; box-sizing: border-box; z-index: 1000; }
+        .highlight { color: #fff; font-weight: bold; }
+        .dots::after { content: ''; animation: dots 1.5s infinite; }
+        @keyframes dots { 0% { content: ''; } 33% { content: '.'; } 66% { content: '..'; } 100% { content: '...'; } }
+    </style>
+</head>
+<body>
+
+    <model-viewer id="viewer" src="./nakamurobo.glb" ios-src="./nakamurobo.usdz" ar ar-modes="quick-look scene-viewer" camera-controls loading="eager" reveal="manual" shadow-intensity="1">
+        <div slot="ar-button"></div>
+    </model-viewer>
+
+    <a href="#" id="sync-btn" class="btn-base">ESTABLISHING_LINK...</a>
+    <a href="#" id="realize-btn" class="btn-base">[ REALIZE_IN_REAL_WORLD ]</a>
+
+    <div id="terminal"><div id="output">> INITIALIZING_SYSTEM...</div></div>
+
+    <script>
+        const syncBtn = document.getElementById('sync-btn');
+        const realizeBtn = document.getElementById('realize-btn');
+        const viewer = document.getElementById('viewer');
+        const output = document.getElementById('output');
+        const terminal = document.getElementById('terminal');
+        
+        const isInApp = /Instagram|Line|FBAN|FBAV/i.test(navigator.userAgent);
+        const noiseAudio = new Audio('noise.mp3');
+
+        if (isInApp) {
+            // インスタ・LINE用
+            syncBtn.classList.add('line-warning');
+            syncBtn.innerText = "🌐 外部ブラウザで開く";
+            output.innerHTML = "> [ERROR] IN-APP BROWSER RESTRICTION.\n> PLEASE OPEN IN SAFARI/CHROME TO ENABLE AR.";
+            
+            syncBtn.onclick = (e) => {
+                e.preventDefault();
+                alert("インスタ内ではARが起動しません。\n右上の「...」メニューから「ブラウザで開く」を選択してください。");
+            };
+        } else {
+            // 通常ブラウザ用
+            viewer.addEventListener('progress', (event) => {
+                const percent = Math.round(event.detail.totalProgress * 100);
+                output.innerHTML = `> RECEIVING_DATA: ${percent}%`;
+                syncBtn.innerText = `SYNCING_STREAM: ${percent}%`;
+                
+                if (percent >= 100) {
+                    setTimeout(() => {
+                        if (!syncBtn.classList.contains('ready')) {
+                            syncBtn.classList.add('ready');
+                            syncBtn.innerText = "[ START_DECODING ]";
+                            output.innerHTML = "> [SUCCESS] DATA_LINK_STABLE. READY_TO_DECODE.";
+                            viewer.dismissPoster();
+                        }
+                    }, 500);
+                }
+            });
+
+            syncBtn.onclick = (e) => {
+                e.preventDefault();
+                syncBtn.style.display = 'none';
+                noiseAudio.play().catch(() => {});
+                startEffect(() => {
+                    realizeBtn.style.display = 'block';
+                });
+            };
+
+            realizeBtn.onclick = (e) => {
+                e.preventDefault();
+                realizeBtn.classList.add('loading');
+                realizeBtn.innerHTML = "PHYSICAL_REALIZING<span class='dots'></span>";
+                viewer.activateAR();
+            };
+        }
+
+        function startEffect(callback) {
+            output.innerHTML = "";
+            const lines = [
+                "> ACCESSING_FUKUYAMA_SECTOR...",
+                "> [SUCCESS] IRREGULAR_DATA_FOUND",
+                "",
+                "<span class='highlight'>\"Believe in yourself.\"</span>",
+                "",
+                "> STATUS: AWAKENED",
+                "> READY_FOR_PHYSICAL_REALIZATION."
+            ];
+            processLog(lines, 0, callback);
+        }
+
+        function processLog(lines, index, callback) {
+            if (index < lines.length) {
+                const line = document.createElement('div');
+                output.appendChild(line);
+                let i = 0;
+                const fullText = lines[index];
+                const typer = setInterval(() => {
+                    if (i < fullText.length) {
+                        if (fullText.charAt(i) === '<') {
+                            const endTag = fullText.indexOf('>', i);
+                            line.innerHTML = fullText.substring(0, endTag + 1);
+                            i = endTag + 1;
+                        } else {
+                            line.innerHTML = fullText.substring(0, i + 1);
+                            i++;
+                        }
+                    } else {
+                        clearInterval(typer);
+                        setTimeout(() => processLog(lines, index + 1, callback), 100);
+                        terminal.scrollTop = terminal.scrollHeight;
+                    }
+                }, 15);
+            } else if (callback) {
+                callback();
+            }
+        }
+    </script>
+</body>
+</html>
