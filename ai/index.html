@@ -5,42 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NAKAMUROBO AI</title>
 <style>
-:root{
-  --bg:#050505; --panel:#111; --line:#2a2a2a; --text:#f2f2f2;
-  --sub:#9a9a9a; --accent:#ffd54a; --accent2:#7fd1ff;
-}
+:root{ --bg:#050505; --panel:#111; --line:#2a2a2a; --text:#f2f2f2; --sub:#9a9a9a; --accent:#ffd54a; --accent2:#7fd1ff; }
 *{box-sizing:border-box;}
-html,body{
-  margin:0; padding:0; background:radial-gradient(circle at top, #111 0%, #050505 55%, #000 100%);
-  color:var(--text); font-family:sans-serif; min-height:100%; display:flex; align-items:center; justify-content:center;
-}
-.app{
-  width:100%; max-width:560px; background:rgba(15,15,15,0.88); border:1px solid var(--line);
-  border-radius:24px; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,0.45); backdrop-filter:blur(10px);
-}
+html,body{ margin:0; padding:0; background:radial-gradient(circle at top, #111 0%, #050505 55%, #000 100%); color:var(--text); font-family:sans-serif; min-height:100%; display:flex; align-items:center; justify-content:center; }
+.app{ width:100%; max-width:560px; background:rgba(15,15,15,0.88); border:1px solid var(--line); border-radius:24px; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,0.45); backdrop-filter:blur(10px); }
 .top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
 .badge{ font-size:12px; color:#0d0d0d; background:var(--accent); padding:6px 10px; border-radius:999px; font-weight:700; }
 .robot-id{ font-size:12px; color:var(--sub); }
 .avatar-wrap{ display:flex; flex-direction:column; align-items:center; padding:10px 0 20px; }
-.core{
-  width:120px; height:120px; border-radius:50%; border:1px solid #333;
-  background: radial-gradient(circle, rgba(255,213,74,0.2) 0%, #050505 100%);
-  display:flex; align-items:center; justify-content:center;
-}
-.heart{
-  width:32px; height:32px; background:var(--accent); transform:rotate(45deg); position:relative;
-  animation:pulse 2.4s infinite ease-in-out;
-}
+.core{ width:120px; height:120px; border-radius:50%; border:1px solid #333; background: radial-gradient(circle, rgba(255,213,74,0.2) 0%, #050505 100%); display:flex; align-items:center; justify-content:center; }
+.heart{ width:32px; height:32px; background:var(--accent); transform:rotate(45deg); position:relative; animation:pulse 2.4s infinite ease-in-out; }
 .heart:before, .heart:after{ content:""; width:32px; height:32px; background:var(--accent); border-radius:50%; position:absolute; }
 .heart:before{ left:-16px; } .heart:after{ top:-16px; }
 @keyframes pulse{ 0%,100%{ transform:rotate(45deg) scale(1); } 50%{ transform:rotate(45deg) scale(1.1); } }
 .robot-name{ margin-top:14px; font-size:24px; font-weight:800; letter-spacing:0.1em; }
 .status{ margin-top:8px; color:var(--sub); font-size:13px; min-height:20px; }
-.response{
-  margin-top:18px; padding:20px; border-radius:18px; border:1px solid var(--line);
-  background:rgba(255,255,255,0.03); min-height:100px; display:flex; align-items:center;
-  justify-content:center; text-align:center; font-size:19px; line-height:1.6; white-space:pre-wrap;
-}
+.response{ margin-top:18px; padding:20px; border-radius:18px; border:1px solid var(--line); background:rgba(255,255,255,0.03); min-height:100px; display:flex; align-items:center; justify-content:center; text-align:center; font-size:18px; line-height:1.6; white-space:pre-wrap; }
 .heard{ margin-top:12px; padding:12px; border-radius:14px; background:#0b0b0b; border:1px solid var(--line); color:var(--sub); font-size:13px; }
 .controls{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; }
 button{ border:none; border-radius:16px; padding:16px; font-size:16px; font-weight:700; cursor:pointer; }
@@ -85,13 +65,15 @@ async function unlock(){
 async function playAudio(base64){
   try{
     if(!base64) return;
-    if(lastAudio){ lastAudio.pause(); }
-    const bin = atob(base64);
-    const buf = new Uint8Array(bin.length);
-    for(let i=0; i<bin.length; i++) buf[i] = bin.charCodeAt(i);
-    const url = URL.createObjectURL(new Blob([buf], {type:"audio/mpeg"}));
+    if(lastAudio){ lastAudio.pause(); lastAudio.src = ""; }
+    
+    // データURL方式ではなくBlob方式でメモリを安定化
+    const response = await fetch(`data:audio/mpeg;base64,${base64}`);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    
     lastAudio = new Audio(url);
-    lastAudio.playbackRate = 0.95; 
+    lastAudio.playbackRate = 0.94; 
     lastAudio.onplay = () => document.getElementById("statusText").textContent = "再生中";
     lastAudio.onended = () => { document.getElementById("statusText").textContent = "待機中"; URL.revokeObjectURL(url); };
     await lastAudio.play();
@@ -105,7 +87,7 @@ async function chat(txt){
   try{
     const r = await fetch(config.endpoint, {
       method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ robotId:config.id, robotName:config.name, userText:txt, voice:config.voice, history:[] })
+      body: JSON.stringify({ robotId:config.id, robotName:config.name, userText:txt, voice:config.voice })
     });
     const d = await r.json();
     document.getElementById("responseText").textContent = d.reply;
@@ -120,7 +102,7 @@ if(SR){
   document.getElementById("micBtn").onclick = async () => { await unlock(); rec.start(); };
 }
 document.getElementById("sendBtn").onclick = async () => { await unlock(); const i = document.getElementById("textInput"); chat(i.value); i.value=""; };
-document.getElementById("stopBtn").onclick = () => { if(lastAudio) lastAudio.pause(); };
+document.getElementById("stopBtn").onclick = () => { if(lastAudio) { lastAudio.pause(); lastAudio.src = ""; } };
 </script>
 </body>
 </html>
