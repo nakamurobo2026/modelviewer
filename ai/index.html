@@ -133,7 +133,7 @@ body{
   align-items:center;
   justify-content:center;
   text-align:center;
-  font-size:22px;
+  font-size:20px;
   line-height:1.6;
   letter-spacing:0.02em;
   white-space:pre-wrap;
@@ -162,7 +162,9 @@ button{
   font-size:16px;
   font-weight:700;
   cursor:pointer;
+  transition: opacity 0.2s;
 }
+button:active{ opacity: 0.7; }
 .mic-btn{
   background:linear-gradient(180deg, #1b1b1b, #0d0d0d);
   color:var(--text);
@@ -237,7 +239,7 @@ input[type="text"]{
     </div>
 
     <div class="sub-controls">
-      <button class="secondary" id="playAgainBtn">もう一度話す</button>
+      <button class="secondary" id="playAgainBtn">もう一度再生</button>
       <button class="secondary" id="clearMemoryBtn">初期化</button>
     </div>
 
@@ -247,7 +249,7 @@ input[type="text"]{
     </div>
 
     <div class="footer">
-      OpenAI TTS 再生版
+      Nakamurobo AI System v2.0
     </div>
   </main>
 
@@ -270,7 +272,6 @@ const robotName = document.getElementById("robotName");
 const statusText = document.getElementById("statusText");
 const responseText = document.getElementById("responseText");
 const heardText = document.getElementById("heardText");
-
 const micBtn = document.getElementById("micBtn");
 const stopBtn = document.getElementById("stopBtn");
 const playAgainBtn = document.getElementById("playAgainBtn");
@@ -283,13 +284,11 @@ robotName.textContent = config.name;
 
 const memoryKey = `nakamurobo_memory_${config.id}`;
 const shortHistoryKey = `nakamurobo_history_${config.id}`;
-let lastReply = "…";
 let lastAudioUrl = "";
 let lastAudioElement = null;
 let audioUnlocked = false;
-let listening = false;
 
-// ===== Memory =====
+// --- Memory Functions ---
 function loadMemory(){
   if (!config.memory) return [];
   try { return JSON.parse(localStorage.getItem(memoryKey) || "[]"); }
@@ -300,7 +299,7 @@ function saveMemory(mem){
   localStorage.setItem(memoryKey, JSON.stringify(mem.slice(-5)));
 }
 function addMemoryItem(item){
-  if (!config.memory || !item) return;
+  if (!config.memory || !item || item === "none") return;
   const mem = loadMemory();
   if (!mem.includes(item)) mem.push(item);
   saveMemory(mem);
@@ -314,192 +313,65 @@ function loadShortHistory(){
   catch { return []; }
 }
 function saveShortHistory(history){
-  localStorage.setItem(shortHistoryKey, JSON.stringify(history.slice(-6)));
+  localStorage.setItem(shortHistoryKey, JSON.stringify(history.slice(-10)));
 }
 
-// ===== Audio unlock =====
+// --- Audio Controls ---
 async function unlockAudio() {
   if (audioUnlocked) return;
   try {
     const a = new Audio();
-    a.playsInline = true;
     a.muted = true;
-    a.src = "data:audio/mp3;base64,//uQxAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAFAAAGhgAAGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoa";
-    await a.play().catch(() => {});
-    a.pause();
-    a.currentTime = 0;
+    a.src = "data:audio/wav;base64,UklGRigAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
+    await a.play();
     audioUnlocked = true;
-  } catch (e) {
-    console.log("unlockAudio failed", e);
-  }
+  } catch (e) { console.warn("Audio unlock failed", e); }
 }
 
-function base64ToBlob(base64, mimeType) {
-  const byteChars = atob(base64);
-  const byteNumbers = new Array(byteChars.length);
-  for (let i = 0; i < byteChars.length; i++) {
-    byteNumbers[i] = byteChars.charCodeAt(i);
-  }
-  return new Blob([new Uint8Array(byteNumbers)], { type: mimeType });
-}
-
-async function playRobotAudio(base64, mimeType = "audio/mpeg") {
+async function playRobotAudio(base64) {
   try {
-    if (lastAudioElement) {
-      try {
-        lastAudioElement.pause();
-        lastAudioElement.src = "";
-      } catch {}
-      lastAudioElement = null;
-    }
+    if (!base64) return;
+    if (lastAudioElement) { lastAudioElement.pause(); lastAudioElement.src = ""; }
+    if (lastAudioUrl) URL.revokeObjectURL(lastAudioUrl);
 
-    if (lastAudioUrl) {
-      URL.revokeObjectURL(lastAudioUrl);
-      lastAudioUrl = "";
-    }
-
-    const blob = base64ToBlob(base64, mimeType);
+    const blob = await fetch(`data:audio/mpeg;base64,${base64}`).then(r => r.blob());
     const url = URL.createObjectURL(blob);
     lastAudioUrl = url;
 
-    const audio = new Audio();
-    audio.src = url;
-    audio.preload = "auto";
-    audio.playsInline = true;
-    audio.volume = 1.0;
-
-    statusText.textContent = "応答中";
-
-    audio.onended = () => {
-      statusText.textContent = "待機中";
-    };
-
-    audio.onerror = (e) => {
-      console.log("audio error", e);
-      statusText.textContent = "音声再生エラー";
+    const audio = new Audio(url);
+    
+    // ★ロボット感を出すためのピッチ調整 (0.85 〜 0.9 程度がおすすめ)
+    audio.playbackRate = 0.92; 
+    
+    audio.onplay = () => statusText.textContent = "音声出力中";
+    audio.onended = () => statusText.textContent = "待機中";
+    audio.onerror = () => {
+      console.error("Audio Playback Error");
+      statusText.textContent = "再生エラー";
     };
 
     lastAudioElement = audio;
-
     await audio.play();
   } catch (e) {
-    console.log("audio play failed", e);
-    statusText.textContent = "音声再生エラー";
+    console.error("Audio System Error", e);
+    statusText.textContent = "音声エラー";
   }
 }
 
-// ===== Speech Recognition =====
+// --- Speech Recognition ---
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
-
 if (SR) {
   recognition = new SR();
   recognition.lang = config.lang;
-  recognition.interimResults = false;
-  recognition.continuous = false;
-
-  recognition.onstart = () => {
-    listening = true;
-    statusText.textContent = "聞き取り中";
-    heardText.textContent = "…";
-  };
-
-  recognition.onresult = async (event) => {
-    const transcript = Array.from(event.results)
-      .map(result => result[0].transcript)
-      .join("")
-      .trim();
-
-    listening = false;
-    heardText.textContent = `入力: ${transcript || "(空)"}`;
-    if (transcript) {
-      await handleUserMessage(transcript);
-    } else {
-      statusText.textContent = "聞き取れなかった";
-    }
-  };
-
-  recognition.onerror = (e) => {
-    listening = false;
-    statusText.textContent = `音声入力エラー: ${e.error}`;
-  };
-
-  recognition.onend = () => {
-    listening = false;
-  };
-} else {
-  statusText.textContent = "音声入力非対応";
+  recognition.onstart = () => { statusText.textContent = "聞き取り中"; heardText.textContent = "…"; };
+  recognition.onresult = (e) => handleUserMessage(e.results[0][0].transcript);
+  recognition.onerror = (e) => statusText.textContent = `エラー: ${e.error}`;
 }
 
-function startListening() {
-  if (!recognition) {
-    statusText.textContent = "この端末は音声入力に未対応";
-    return;
-  }
-  try {
-    if (lastAudioElement) {
-      lastAudioElement.pause();
-      lastAudioElement.currentTime = 0;
-    }
-    recognition.start();
-  } catch {
-    statusText.textContent = "音声入力を開始できない";
-  }
-}
-
-// ===== API =====
-async function askAI(userText) {
-  const payload = {
-    robotId: config.id,
-    mode: config.mode,
-    robotName: config.name,
-    userText,
-    memory: loadMemory(),
-    history: loadShortHistory(),
-    voice: config.voice
-  };
-
-  if (!config.endpoint) {
-    return {
-      reply: "…接続を確認。応答可能",
-      memoryCandidate: "none",
-      audioBase64: "",
-      mimeType: "audio/mpeg"
-    };
-  }
-
-  const res = await fetch(config.endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-
-  if (!res.ok) {
-    throw new Error(`API ${res.status}`);
-  }
-
-  return await res.json();
-}
-
-// ===== Helpers =====
-function setResponse(text) {
-  lastReply = text;
-  responseText.textContent = text;
-}
-
-function greetingByMemory(mem) {
-  if (!mem.length) return "…認識した。ここにいる";
-  const messages = [
-    "…接続を確認。状態は安定",
-    "…認識した。ここにいる",
-    "…受信した。応答可能",
-    "…接続は維持されている"
-  ];
-  return messages[Math.floor(Math.random() * messages.length)];
-}
-
-// ===== Main =====
+// --- API Communication ---
 async function handleUserMessage(userText) {
+  if (!userText.trim()) return;
   statusText.textContent = "思考中";
   heardText.textContent = `入力: ${userText}`;
 
@@ -507,101 +379,79 @@ async function handleUserMessage(userText) {
   history.push({ role: "user", text: userText });
 
   try {
-    const result = await askAI(userText);
-    const reply = result.reply || "…";
-    const memoryCandidate = result.memoryCandidate || "none";
+    const res = await fetch(config.endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        robotId: config.id,
+        mode: config.mode,
+        robotName: config.name,
+        userText,
+        memory: loadMemory(),
+        history,
+        voice: config.voice
+      })
+    });
 
-    console.log("reply", reply);
-    console.log("has audioBase64", !!result.audioBase64);
-    console.log("audio length", result.audioBase64 ? result.audioBase64.length : 0);
+    if (!res.ok) throw new Error(`API Status: ${res.status}`);
+    const result = await res.json();
 
-    history.push({ role: "assistant", text: reply });
+    responseText.textContent = result.reply;
+    addMemoryItem(result.memoryCandidate);
+    
+    history.push({ role: "assistant", text: result.reply });
     saveShortHistory(history);
 
-    if (memoryCandidate && memoryCandidate !== "none") {
-      addMemoryItem(memoryCandidate);
-    }
-
-    setResponse(reply);
-
     if (result.audioBase64) {
-      setTimeout(async () => {
-        await playRobotAudio(result.audioBase64, result.mimeType || "audio/mpeg");
-      }, 250);
+      await playRobotAudio(result.audioBase64);
     } else {
-      statusText.textContent = "音声なし";
+      statusText.textContent = "待機中";
     }
-
   } catch (err) {
     console.error(err);
-    setResponse("…接続が乱れている。少し待機する");
+    responseText.textContent = "…接続が、途切れた。再試行を、推奨。";
     statusText.textContent = "通信エラー";
   }
 }
 
-// ===== Events =====
+// --- Events ---
 micBtn.addEventListener("click", async () => {
   await unlockAudio();
-  startListening();
+  if (recognition) recognition.start();
 });
 
 stopBtn.addEventListener("click", () => {
-  try {
-    if (lastAudioElement) {
-      lastAudioElement.pause();
-      lastAudioElement.currentTime = 0;
-    }
-  } catch {}
-  try {
-    if (recognition && listening) recognition.stop();
-  } catch {}
+  if (lastAudioElement) lastAudioElement.pause();
+  if (recognition) recognition.stop();
   statusText.textContent = "停止";
 });
 
 playAgainBtn.addEventListener("click", async () => {
-  try {
-    await unlockAudio();
-    if (lastAudioElement) {
-      lastAudioElement.currentTime = 0;
-      await lastAudioElement.play();
-    }
-  } catch (e) {
-    console.log(e);
+  if (lastAudioElement) {
+    lastAudioElement.currentTime = 0;
+    lastAudioElement.play();
   }
 });
 
 clearMemoryBtn.addEventListener("click", () => {
   clearMemory();
-  statusText.textContent = "初期化完了";
-  heardText.textContent = "記憶は空";
-  setResponse("…初期状態に戻った");
+  responseText.textContent = "…初期状態に、戻った。";
+  heardText.textContent = "記憶を消去";
 });
 
 sendBtn.addEventListener("click", async () => {
   await unlockAudio();
   const text = textInput.value.trim();
-  if (!text) return;
-  textInput.value = "";
-  await handleUserMessage(text);
+  if (text) { textInput.value = ""; handleUserMessage(text); }
 });
 
-textInput.addEventListener("keydown", async (e) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    sendBtn.click();
-  }
-});
+textInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendBtn.click(); });
 
-// ===== Init =====
-(async function init() {
+// --- Init ---
+window.addEventListener("DOMContentLoaded", () => {
   statusText.textContent = "接続完了";
-  setResponse(greetingByMemory(loadMemory()));
-
-  if (config.autostart) {
-    await unlockAudio();
-    setTimeout(() => startListening(), 600);
-  }
-})();
+  responseText.textContent = "…認識した。いつでも、話せ。";
+});
 </script>
 </body>
 </html>
