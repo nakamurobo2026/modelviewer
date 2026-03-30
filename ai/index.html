@@ -53,13 +53,16 @@ const config = {
 document.getElementById("robotMeta").textContent = `ID: ${config.id}`;
 document.getElementById("robotName").textContent = config.name;
 
-let currentAudio = null;
 let audioUnlocked = false;
+let currentAudio = null;
 
+// 音声再生エンジンの初期化
 async function unlock(){
   if(audioUnlocked) return;
-  const a = new Audio(); a.src = "data:audio/wav;base64,UklGRigAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
-  await a.play().catch(()=>{}); audioUnlocked = true;
+  try {
+    const a = new Audio(); a.src = "data:audio/wav;base64,UklGRigAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
+    await a.play(); audioUnlocked = true;
+  } catch(e) { console.error("Audio unlock failed", e); }
 }
 
 async function chat(txt){
@@ -75,27 +78,32 @@ async function chat(txt){
 
     if(!r.ok) throw new Error("Server Error");
 
+    // テキストを表示
     const reply = decodeURIComponent(r.headers.get("X-Reply") || "…");
     document.getElementById("responseText").textContent = reply;
 
+    // バイナリを受け取り再生
     const blob = await r.blob();
     const url = URL.createObjectURL(blob);
-    
-    // 前の音声を完全に消去してメモリ解放
+
     if(currentAudio){
       currentAudio.pause();
       currentAudio.src = "";
       currentAudio.load();
     }
 
-    currentAudio = new Audio();
-    currentAudio.src = url;
+    currentAudio = new Audio(url);
     currentAudio.playbackRate = 0.95;
     
     currentAudio.onplay = () => document.getElementById("statusText").textContent = "再生中";
     currentAudio.onended = () => {
       document.getElementById("statusText").textContent = "待機中";
       URL.revokeObjectURL(url);
+    };
+    
+    currentAudio.onerror = (e) => {
+      console.error("Audio internal error:", e);
+      document.getElementById("statusText").textContent = "再生失敗(デコード)";
     };
 
     await currentAudio.play();
@@ -113,7 +121,7 @@ if(SR){
   document.getElementById("micBtn").onclick = async () => { await unlock(); rec.start(); };
 }
 document.getElementById("sendBtn").onclick = async () => { await unlock(); const i = document.getElementById("textInput"); chat(i.value); i.value=""; };
-document.getElementById("stopBtn").onclick = () => { if(currentAudio) { currentAudio.pause(); currentAudio.src = ""; } };
+document.getElementById("stopBtn").onclick = () => { if(currentAudio) currentAudio.pause(); };
 </script>
 </body>
 </html>
