@@ -65,7 +65,7 @@ async function unlock(){
 }
 
 async function chat(txt){
-  if(!txt.trim()) return;
+  if(!txt || !txt.trim()) return;
   const status = document.getElementById("statusText");
   status.textContent = "通信中...";
   document.getElementById("heardText").textContent = `入力: ${txt}`;
@@ -90,17 +90,35 @@ async function chat(txt){
       await currentAudio.play();
     }
   } catch(e){ 
-    console.error(e);
-    status.textContent = "エラー発生"; 
+    console.error("Error Detail:", e);
+    status.textContent = "エラー発生: " + e.message; 
   }
 }
 
+// 音声認識の設定
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 if(SR){
-  const rec = new SR(); rec.lang = "ja-JP";
-  rec.onresult = (e) => chat(e.results[0][0].transcript);
-  document.getElementById("micBtn").onclick = async () => { await unlock(); rec.start(); };
+  const rec = new SR();
+  rec.lang = "ja-JP";
+  rec.interimResults = false;
+  rec.continuous = false;
+
+  rec.onstart = () => { document.getElementById("statusText").textContent = "聞き取り中..."; };
+  rec.onresult = (e) => {
+    const transcript = e.results[0][0].transcript;
+    chat(transcript);
+  };
+  rec.onerror = (e) => { document.getElementById("statusText").textContent = "認識エラー: " + e.error; };
+  rec.onend = () => { if(document.getElementById("statusText").textContent === "聞き取り中...") document.getElementById("statusText").textContent = "READY"; };
+
+  document.getElementById("micBtn").onclick = async () => {
+    await unlock();
+    try { rec.start(); } catch(e) { console.warn(e); }
+  };
+} else {
+  document.getElementById("micBtn").style.display = "none";
 }
+
 document.getElementById("sendBtn").onclick = async () => { await unlock(); const i = document.getElementById("textInput"); chat(i.value); i.value=""; };
 document.getElementById("stopBtn").onclick = () => { if(currentAudio) currentAudio.pause(); };
 </script>
