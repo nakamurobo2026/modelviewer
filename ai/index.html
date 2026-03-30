@@ -53,7 +53,7 @@ const config = {
 document.getElementById("robotMeta").textContent = `ID: ${config.id}`;
 document.getElementById("robotName").textContent = config.name;
 
-let lastAudio = null;
+let currentAudio = null;
 let audioUnlocked = false;
 
 async function unlock(){
@@ -79,17 +79,26 @@ async function chat(txt){
     document.getElementById("responseText").textContent = reply;
 
     const blob = await r.blob();
-    if(lastAudio){ lastAudio.pause(); lastAudio.src = ""; }
     const url = URL.createObjectURL(blob);
     
-    // ブラウザの負荷分散のため、わずかに遅延させてから再生
-    setTimeout(async () => {
-      lastAudio = new Audio(url);
-      lastAudio.playbackRate = 0.95;
-      lastAudio.onplay = () => document.getElementById("statusText").textContent = "再生中";
-      lastAudio.onended = () => { document.getElementById("statusText").textContent = "待機中"; URL.revokeObjectURL(url); };
-      await lastAudio.play();
-    }, 50);
+    // 前の音声を完全に消去してメモリ解放
+    if(currentAudio){
+      currentAudio.pause();
+      currentAudio.src = "";
+      currentAudio.load();
+    }
+
+    currentAudio = new Audio();
+    currentAudio.src = url;
+    currentAudio.playbackRate = 0.95;
+    
+    currentAudio.onplay = () => document.getElementById("statusText").textContent = "再生中";
+    currentAudio.onended = () => {
+      document.getElementById("statusText").textContent = "待機中";
+      URL.revokeObjectURL(url);
+    };
+
+    await currentAudio.play();
 
   } catch(e){ 
     console.error(e);
@@ -104,7 +113,7 @@ if(SR){
   document.getElementById("micBtn").onclick = async () => { await unlock(); rec.start(); };
 }
 document.getElementById("sendBtn").onclick = async () => { await unlock(); const i = document.getElementById("textInput"); chat(i.value); i.value=""; };
-document.getElementById("stopBtn").onclick = () => { if(lastAudio) { lastAudio.pause(); lastAudio.src = ""; } };
+document.getElementById("stopBtn").onclick = () => { if(currentAudio) { currentAudio.pause(); currentAudio.src = ""; } };
 </script>
 </body>
 </html>
