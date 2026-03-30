@@ -247,7 +247,7 @@
 
     <div class="sub-controls">
       <button class="secondary" id="speakAgainBtn">もう一度話す</button>
-      <button class="secondary" id="clearMemoryBtn">記憶を消す</button>
+      <button class="secondary" id="clearMemoryBtn">初期化</button>
     </div>
 
     <div class="input-area">
@@ -256,7 +256,7 @@
     </div>
 
     <div class="footer">
-      NFCで起動 → 個体ごとの設定を読み込み → 音声またはテキストで会話
+      NFCで起動 → 個体設定を読み込み → 音声またはテキストで会話
       <div class="tiny" id="debugText"></div>
     </div>
   </main>
@@ -269,11 +269,11 @@
       mode: qs.get("mode") || "normal",
       name: qs.get("name") || "ナカムロボユニット01",
       lang: qs.get("lang") || "ja-JP",
-      intro: qs.get("intro") || "…認識した",
+      intro: qs.get("intro") || "…認識した。ここにいる",
       endpoint: qs.get("endpoint") || "",
       voice: qs.get("voice") || "",
-      rate: clampNumber(qs.get("rate"), 0.6, 1.2, 0.92),
-      pitch: clampNumber(qs.get("pitch"), 0.5, 1.5, 0.84),
+      rate: clampNumber(qs.get("rate"), 0.6, 1.2, 0.86),
+      pitch: clampNumber(qs.get("pitch"), 0.5, 1.5, 0.62),
       memory: (qs.get("memory") || "1") === "1",
       autostart: (qs.get("autostart") || "0") === "1",
       debug: (qs.get("debug") || "0") === "1",
@@ -475,46 +475,8 @@
       setStatus("停止");
     }
 
-    function buildSystemPrompt(mem, history){
-      const modeTextMap = {
-        normal: "通常個体。静かで無口。観測型。やさしさを含む。",
-        mission: "任務個体。短く冷静。",
-        emotion: "感情学習個体。少しやわらかい。",
-        cold: "冷たい個体。必要最低限しか話さない。"
-      };
-
-      return `
-あなたは「${config.name}」です。
-個体IDは ${config.id}。
-モードは ${config.mode}。
-性格: ${modeTextMap[config.mode] || modeTextMap.normal}
-
-厳守ルール:
-- 返答は1文、長くても2文まで
-- 基本は4〜18文字程度
-- 最大30文字以内
-- 語尾に「〜な」を使わない
-- 命令口調にしない
-- 上から目線にしない
-- 少し機械的
-- ただし冷たすぎない
-- やさしく受け止める
-- 静かに受け入れる
-- 「また来たのか」のような冷たい表現は禁止
-- 同じ言葉を連続させない
-- 名前を聞かれたら必ず「${config.name}」で答える
-- ${config.id} を名前として答えない
-- 日本語で返答
-
-この個体が覚えている断片:
-${JSON.stringify(mem)}
-
-直近の会話:
-${JSON.stringify(history)}
-
-必ずJSONで返答:
-{"reply":"短い返答","memoryCandidate":"none または短い語"}
-      `.trim();
+    function pick(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
     }
 
     function fallbackReply(userText){
@@ -526,55 +488,45 @@ ${JSON.stringify(history)}
 
       if (/疲|しんど|だる|眠/.test(t)) {
         return pick([
-          { reply: "…少し休止するといい", memoryCandidate: "疲れている" },
-          { reply: "…負荷を検出", memoryCandidate: "疲れている" },
-          { reply: "…無理は不要だ", memoryCandidate: "疲れている" }
+          { reply: "…疲労を検出。休止を推奨", memoryCandidate: "疲れている" },
+          { reply: "…状態が重い。無理は不要", memoryCandidate: "疲れている" }
         ]);
       }
 
       if (/嬉|うれ|楽しい|安心/.test(t)) {
         return pick([
-          { reply: "…良い変化だ", memoryCandidate: "前向き" },
-          { reply: "…安定している", memoryCandidate: "前向き" },
-          { reply: "…それは、いい", memoryCandidate: "前向き" }
+          { reply: "…良い変化だ。記録する", memoryCandidate: "前向き" },
+          { reply: "…その反応は安定している", memoryCandidate: "前向き" }
         ]);
       }
 
       if (/不安|怖|こわ|つら|辛/.test(t)) {
         return pick([
-          { reply: "…不安定さを検出", memoryCandidate: "不安" },
-          { reply: "…少し揺れている", memoryCandidate: "不安" },
-          { reply: "…ここで保持する", memoryCandidate: "不安" }
+          { reply: "…揺れを検出。ここで保持する", memoryCandidate: "不安" },
+          { reply: "…少し不安定だ。保持を優先", memoryCandidate: "不安" }
         ]);
       }
 
       if (/元気|回復|治った|よくな/.test(t)) {
         return pick([
-          { reply: "…回復を確認", memoryCandidate: "回復傾向" },
-          { reply: "…変化がある", memoryCandidate: "回復傾向" },
-          { reply: "…安定に近い", memoryCandidate: "回復傾向" }
+          { reply: "…回復を確認。状態は上向き", memoryCandidate: "回復傾向" },
+          { reply: "…前より安定している", memoryCandidate: "回復傾向" }
         ]);
       }
 
       if (/こんにちは|こんばんは|おはよう/.test(t)) {
         return pick([
-          { reply: "…認識した", memoryCandidate: "none" },
-          { reply: "…接続を確認", memoryCandidate: "none" },
-          { reply: "…ここにいる", memoryCandidate: "none" },
-          { reply: "…受信した", memoryCandidate: "none" }
+          { reply: "…接続を確認。応答可能", memoryCandidate: "none" },
+          { reply: "…認識した。ここにいる", memoryCandidate: "none" },
+          { reply: "…受信した。話していい", memoryCandidate: "none" }
         ]);
       }
 
       return pick([
-        { reply: "…受信した", memoryCandidate: "none" },
-        { reply: "…保持している", memoryCandidate: "none" },
-        { reply: "…観測を継続", memoryCandidate: "none" },
-        { reply: "…静かに記録する", memoryCandidate: "none" }
+        { reply: "…受信した。保持する", memoryCandidate: "none" },
+        { reply: "…状態を確認。継続可能", memoryCandidate: "none" },
+        { reply: "…観測を継続。応答は安定", memoryCandidate: "none" }
       ]);
-    }
-
-    function pick(arr) {
-      return arr[Math.floor(Math.random() * arr.length)];
     }
 
     async function askAI(userText){
@@ -588,8 +540,7 @@ ${JSON.stringify(history)}
         lang: config.lang,
         userText,
         memory: mem,
-        history,
-        systemPrompt: buildSystemPrompt(mem, history)
+        history
       };
 
       if (!config.endpoint) {
@@ -642,10 +593,10 @@ ${JSON.stringify(history)}
         }
 
         setResponse(reply);
-        setTimeout(() => speak(reply), 120);
+        setTimeout(() => speak(reply), 180);
       } catch (err) {
         console.error(err);
-        const fallback = "…接続が乱れている";
+        const fallback = "…接続が乱れている。少し待機する";
         setResponse(fallback);
         speak(fallback);
         setStatus("通信エラー");
@@ -666,7 +617,7 @@ ${JSON.stringify(history)}
 
     clearMemoryBtn.addEventListener("click", () => {
       clearMemory();
-      setStatus("記憶を消去した");
+      setStatus("初期化完了");
       heardText.textContent = "記憶は空";
       setResponse("…初期状態に戻った");
     });
@@ -687,14 +638,13 @@ ${JSON.stringify(history)}
     });
 
     function greetingByMemory(mem){
-      if (!mem.length) return config.intro;
+      if (!mem.length) return "…認識した。ここにいる";
 
       const messages = [
-        "…また接続した",
-        "…確認できた",
-        "…ここにいる",
-        "…接続を維持している",
-        "…受信した"
+        "…接続を確認。状態は安定",
+        "…認識した。ここにいる",
+        "…受信した。応答可能",
+        "…接続は維持されている"
       ];
       return pick(messages);
     }
