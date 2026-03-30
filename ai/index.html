@@ -75,19 +75,21 @@ async function chat(txt){
 
     if(!r.ok) throw new Error("Server Error");
 
-    // ヘッダーからテキストを復元
     const reply = decodeURIComponent(r.headers.get("X-Reply") || "…");
     document.getElementById("responseText").textContent = reply;
 
-    // ボディ(バイナリ)を直接Blobにして再生
     const blob = await r.blob();
     if(lastAudio){ lastAudio.pause(); lastAudio.src = ""; }
     const url = URL.createObjectURL(blob);
-    lastAudio = new Audio(url);
-    lastAudio.playbackRate = 0.94;
-    lastAudio.onplay = () => document.getElementById("statusText").textContent = "再生中";
-    lastAudio.onended = () => { document.getElementById("statusText").textContent = "待機中"; URL.revokeObjectURL(url); };
-    await lastAudio.play();
+    
+    // ブラウザの負荷分散のため、わずかに遅延させてから再生
+    setTimeout(async () => {
+      lastAudio = new Audio(url);
+      lastAudio.playbackRate = 0.95;
+      lastAudio.onplay = () => document.getElementById("statusText").textContent = "再生中";
+      lastAudio.onended = () => { document.getElementById("statusText").textContent = "待機中"; URL.revokeObjectURL(url); };
+      await lastAudio.play();
+    }, 50);
 
   } catch(e){ 
     console.error(e);
