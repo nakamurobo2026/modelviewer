@@ -75,7 +75,7 @@ async function chat(txt){
 
     if(!r.ok) throw new Error("Server Error");
 
-    // ヘッダーからテキストを取得
+    // ヘッダーからテキストを復元
     const reply = decodeURIComponent(r.headers.get("X-Reply") || "…");
     document.getElementById("responseText").textContent = reply;
 
