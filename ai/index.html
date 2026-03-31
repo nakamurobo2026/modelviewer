@@ -85,6 +85,12 @@ h2{
   font-size:20px;
   min-height:70px;
   color:var(--text);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  white-space:pre-wrap;
+  word-break:break-word;
 }
 
 button{
@@ -194,7 +200,7 @@ const config = {
   id: qs.get("id") || "robot01",
   name: qs.get("name") || "ナカムロボユニット01",
   endpoint: qs.get("endpoint") || "",
-  lang: "ja-JP"
+  lang: qs.get("lang") || "ja-JP"
 };
 
 document.getElementById("robotName").textContent = config.name;
@@ -205,31 +211,70 @@ const inputEl = document.getElementById("input");
 const micBtn = document.getElementById("mic");
 const enableBtn = document.getElementById("enable");
 
-let audioContext;
+let audioContext = null;
 let audioEnabled = false;
-let recognition;
+let recognition = null;
 let hasStarted = false;
 let conversation = false;
 let isSpeaking = false;
 let isRecognizing = false;
+let isFetching = false;
 let restartTimer = null;
+let currentSource = null;
+let aborter = null;
 
 function setStatus(t){
   statusEl.textContent = t;
 }
 
-function scheduleRestart(){
-  if(!conversation || isSpeaking || isRecognizing) return;
-  clearTimeout(restartTimer);
+function clearRestart(){
+  if(restartTimer){
+    clearTimeout(restartTimer);
+    restartTimer = null;
+  }
+}
+
+function stopPlayback(){
+  if(currentSource){
+    try{ currentSource.stop(0); }catch(e){}
+    try{ currentSource.disconnect(); }catch(e){}
+    currentSource = null;
+  }
+  isSpeaking = false;
+}
+
+function updateMicButton(){
+  if(conversation){
+    micBtn.textContent = "会話中";
+    micBtn.classList.remove("secondary");
+    micBtn.classList.add("primary");
+  }else{
+    micBtn.textContent = "会話開始";
+    micBtn.classList.remove("primary");
+    micBtn.classList.add("secondary");
+  }
+}
+
+function scheduleRestart(delay = 450){
+  clearRestart();
+  if(!conversation) return;
+  if(isSpeaking || isRecognizing || isFetching) return;
+
   restartTimer = setTimeout(() => {
-    try{ recognition.start(); }catch(e){}
-  }, 400);
+    if(!conversation) return;
+    if(isSpeaking || isRecognizing || isFetching) return;
+    try{
+      recognition.start();
+    }catch(e){}
+  }, delay);
 }
 
 enableBtn.onclick = async () => {
   try{
     const AC = window.AudioContext || window.webkitAudioContext;
-    audioContext = new AC();
+    if(!audioContext){
+      audioContext = new AC();
+    }
     await audioContext.resume();
 
     const buf = audioContext.createBuffer(1, 1, 22050);
@@ -255,7 +300,11 @@ enableBtn.onclick = async () => {
 async function playAudio(blob){
   const ab = await blob.arrayBuffer();
   const buf = await audioContext.decodeAudioData(ab);
+
+  stopPlayback();
+
   const src = audioContext.createBufferSource();
+  currentSource = src;
   src.buffer = buf;
   src.connect(audioContext.destination);
 
@@ -264,9 +313,11 @@ async function playAudio(blob){
 
   src.onended = () => {
     isSpeaking = false;
+    currentSource = null;
+
     if(conversation){
       setStatus("聞き取り待機中...");
-      scheduleRestart();
+      scheduleRestart(350);
     }else{
       setStatus("待機中");
     }
@@ -279,75 +330,162 @@ async function chat(text){
   const message = (text || "").trim();
   if(!message) return;
 
+  clearRestart();
+
   if(!audioEnabled){
     setStatus("音声未有効");
     responseEl.textContent = "先に音声を有効化してください。";
     return;
   }
+
   if(!config.endpoint){
     setStatus("未接続");
+    responseEl.textContent = "endpoint が未設定です。";
     return;
   }
 
+  if(aborter){
+    try{ aborter.abort(); }catch(e){}
+  }
+  aborter = new AbortController();
+
+  isFetching = true;
   setStatus("接続中...");
   responseEl.textContent = "解析中...";
 
-  const res = await fetch(config.endpoint,{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({
-      robotId:config.id,
-      robotName:config.name,
-      userText:message,
-      isFirstTurn:!hasStarted
-    })
-  });
+  try{
+    const res = await fetch(config.endpoint,{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({
+        robotId: config.id,
+        robotName: config.name,
+        userText: message,
+        isFirstTurn: !hasStarted
+      }),
+      signal: aborter.signal
+    });
 
-  const reply = res.headers.get("X-Reply");
-  if(reply){
-    responseEl.textContent = decodeURIComponent(reply);
+    const reply = res.headers.get("X-Reply");
+    if(reply){
+      responseEl.textContent = decodeURIComponent(reply);
+    }else{
+      responseEl.textContent = "応答生成中...";
+    }
+
+    if(!res.ok){
+      isFetching = false;
+      setStatus("通信失敗");
+      if(conversation) scheduleRestart(700);
+      return;
+    }
+
+    setStatus("応答生成中...");
+
+    const blob = await res.blob();
+    hasStarted = true;
+    isFetching = false;
+
+    await playAudio(blob);
+
+  }catch(e){
+    if(e.name === "AbortError"){
+      isFetching = false;
+      return;
+    }
+
+    isFetching = false;
+    setStatus("通信失敗");
+    responseEl.textContent = "エラーが発生しました。";
+
+    if(conversation){
+      scheduleRestart(700);
+    }
   }
-
-  setStatus("応答生成中...");
-
-  const blob = await res.blob();
-  hasStarted = true;
-
-  await playAudio(blob);
 }
 
-document.getElementById("send").onclick = () => {
+document.getElementById("send").onclick = async () => {
   conversation = false;
-  micBtn.textContent = "会話開始";
-  micBtn.classList.remove("primary");
-  micBtn.classList.add("secondary");
-  chat(inputEl.value);
+  updateMicButton();
+  await chat(inputEl.value);
   inputEl.value = "";
 };
+
+inputEl.addEventListener("keydown", async (e) => {
+  if(e.key === "Enter"){
+    e.preventDefault();
+    conversation = false;
+    updateMicButton();
+    await chat(inputEl.value);
+    inputEl.value = "";
+  }
+});
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 if(SR){
   recognition = new SR();
   recognition.lang = config.lang;
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  recognition.continuous = false;
 
   recognition.onstart = () => {
     isRecognizing = true;
     setStatus("聞き取り中...");
-    responseEl.textContent = "話してください";
+    if(!isSpeaking && !isFetching){
+      responseEl.textContent = "話してください";
+    }
   };
 
-  recognition.onresult = e => {
+  recognition.onresult = async (e) => {
     isRecognizing = false;
-    chat(e.results[0][0].transcript);
+    clearRestart();
+    const heard = e.results[0][0].transcript;
+    await chat(heard);
+  };
+
+  recognition.onerror = (e) => {
+    isRecognizing = false;
+
+    if(e.error === "aborted"){
+      if(!conversation){
+        setStatus("停止");
+      }
+      return;
+    }
+
+    if(e.error === "not-allowed" || e.error === "service-not-allowed"){
+      conversation = false;
+      updateMicButton();
+      setStatus("マイク許可が必要");
+      responseEl.textContent = "ブラウザでマイクを許可してください。";
+      return;
+    }
+
+    if(e.error === "no-speech"){
+      if(conversation && !isSpeaking && !isFetching){
+        setStatus("聞き取り待機中...");
+        scheduleRestart(300);
+        return;
+      }
+      setStatus("待機中");
+      return;
+    }
+
+    setStatus("音声認識エラー");
+    if(conversation){
+      scheduleRestart(700);
+    }
   };
 
   recognition.onend = () => {
     isRecognizing = false;
-    if(conversation && !isSpeaking){
+
+    if(conversation && !isSpeaking && !isFetching){
       setStatus("聞き取り待機中...");
-      scheduleRestart();
-    }else{
+      scheduleRestart(300);
+    }else if(!isSpeaking && !isFetching){
       setStatus("待機中");
     }
   };
@@ -355,34 +493,41 @@ if(SR){
   micBtn.onclick = () => {
     if(!audioEnabled){
       setStatus("音声未有効");
+      responseEl.textContent = "先に音声を有効化してください。";
       return;
     }
 
     conversation = !conversation;
+    updateMicButton();
+    clearRestart();
 
     if(conversation){
-      micBtn.textContent = "会話中";
-      micBtn.classList.remove("secondary");
-      micBtn.classList.add("primary");
-      recognition.start();
+      if(!isSpeaking && !isFetching && !isRecognizing){
+        try{
+          recognition.start();
+        }catch(e){}
+      }
     }else{
-      micBtn.textContent = "会話開始";
-      micBtn.classList.remove("primary");
-      micBtn.classList.add("secondary");
       try{ recognition.abort(); }catch(e){}
       setStatus("待機中");
     }
   };
+}else{
+  micBtn.disabled = true;
 }
 
 document.getElementById("stop").onclick = () => {
   conversation = false;
-  micBtn.textContent = "会話開始";
-  micBtn.classList.remove("primary");
-  micBtn.classList.add("secondary");
-  if(recognition){
-    try{ recognition.abort(); }catch(e){}
+  updateMicButton();
+  clearRestart();
+
+  if(aborter){
+    try{ aborter.abort(); }catch(e){}
   }
+
+  try{ recognition && recognition.abort(); }catch(e){}
+  stopPlayback();
+  isFetching = false;
   setStatus("停止");
 };
 </script>
