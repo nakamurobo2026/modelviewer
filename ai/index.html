@@ -1,274 +1,158 @@
-<!doctype html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>NAKAMUROBO AI</title>
-
 <style>
-:root{
-  --bg1:#f5f5f7;
-  --bg2:#e9eaee;
-  --card:rgba(255,255,255,0.78);
-  --line:rgba(0,0,0,0.08);
-  --text:#111;
-  --sub:#6e6e73;
-  --accent:#0071e3;
-}
-
-*{box-sizing:border-box}
-
-body{
-  margin:0;
-  background:radial-gradient(circle at top,#fff,var(--bg1) 40%,var(--bg2));
-  font-family:-apple-system;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  min-height:100vh;
-  padding:20px;
-}
-
-.app{
-  width:100%;
-  max-width:420px;
-  padding:20px;
-  border-radius:28px;
-  background:var(--card);
-  backdrop-filter:blur(20px);
-  box-shadow:0 30px 60px rgba(0,0,0,0.1);
-  text-align:center;
-}
-
-/* コア */
-.core{
-  width:120px;
-  height:120px;
-  border-radius:50%;
-  margin:auto;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background:radial-gradient(circle,#fff,#ddd);
-}
-
-.heart-svg{
-  width:38px;
-  height:34px;
-  animation:pulse 2s infinite;
-}
-
-@keyframes pulse{
-  50%{transform:scale(1.15);}
-}
-
-/* テキスト */
-.status{font-size:13px;color:var(--sub);}
-.response{margin:20px 0;font-size:20px;min-height:70px;}
-
-/* ボタン */
-button{
-  width:100%;
-  padding:14px;
-  margin:6px 0;
-  border-radius:16px;
-  border:none;
-  font-size:15px;
-  transition:all .2s ease;
-}
-
-.primary{background:var(--accent);color:#fff;}
-.secondary{background:#fff;border:1px solid var(--line);}
-.stop{background:#ffe5e5;}
-
-.enabled{
-  background:#fff !important;
-  color:#111 !important;
-  border:1px solid rgba(0,0,0,0.1);
-  opacity:0.7;
-}
-
-.disabled{
-  background:#eee;
-  color:#999;
-  border:1px solid rgba(0,0,0,0.08);
-}
-
-/* 入力 */
-.input-area{display:flex;gap:8px;margin-top:10px;}
-input{flex:1;padding:12px;border-radius:14px;border:1px solid var(--line);}
-.send{background:var(--accent);color:#fff;width:auto;}
-
-/* ガイド */
-.guide{font-size:12px;color:#8e8e93;margin-top:12px;}
+  /* 既存のスタイルに追記 */
+  .loading { opacity: 0.5; pointer-events: none; }
 </style>
-</head>
-
-<body>
-
-<div class="app">
-
-  <div class="core">
-    <svg class="heart-svg" viewBox="0 0 24 22">
-      <path fill="#FFD54A"
-      d="M12 21.2 10.55 19.88C5.4 15.22 2 12.14 2 8.35
-      2 5.27 4.42 3 7.5 3
-      c1.74 0 3.41.81 4.5 2.09
-      C13.09 3.81 14.76 3 16.5 3
-      19.58 3 22 5.27 22 8.35
-      c0 3.79-3.4 6.87-8.55 11.53
-      L12 21.2Z"/>
-    </svg>
-  </div>
-
-  <h2 id="robotName">ナカムロボユニット01</h2>
-
-  <div id="response" class="response">
-    音声を有効化してください
-  </div>
-
-  <div id="status" class="status">待機中</div>
-
-  <button id="enable" class="primary">音声を有効化</button>
-  <button id="mic" class="secondary disabled">会話開始</button>
-  <button id="stop" class="stop">停止</button>
-
-  <div class="input-area">
-    <input id="input" placeholder="入力..." />
-    <button id="send" class="send">送信</button>
-  </div>
-
-  <div class="guide">
-    音声を有効化後、会話を開始できます
-  </div>
-
-</div>
 
 <script>
-const qs=new URLSearchParams(location.search);
-
-const config={
-  id:qs.get("id")||"robot01",
-  name:qs.get("name")||"ナカムロボユニット01",
-  endpoint:qs.get("endpoint")||""
+const qs = new URLSearchParams(location.search);
+const config = {
+  id: qs.get("id") || "robot01",
+  name: qs.get("name") || "ナカムロボユニット01",
+  endpoint: qs.get("endpoint") || ""
 };
 
-document.getElementById("robotName").textContent=config.name;
+document.getElementById("robotName").textContent = config.name;
 
-const responseEl=document.getElementById("response");
-const statusEl=document.getElementById("status");
-const micBtn=document.getElementById("mic");
-const enableBtn=document.getElementById("enable");
+const responseEl = document.getElementById("response");
+const statusEl = document.getElementById("status");
+const micBtn = document.getElementById("mic");
+const enableBtn = document.getElementById("enable");
+const sendBtn = document.getElementById("send");
+const inputEl = document.getElementById("input");
 
 let audioContext;
-let audioEnabled=false;
+let audioEnabled = false;
 let recognition;
-let conversation=false;
+let conversation = false;
+let isProcessing = false; // ★ 解析・再生中フラグ
 
-function setStatus(t){statusEl.textContent=t;}
+function setStatus(t) { statusEl.textContent = t; }
 
 /* 音声有効化 */
-enableBtn.onclick=async()=>{
-  const AC=window.AudioContext||window.webkitAudioContext;
-  audioContext=new AC();
+enableBtn.onclick = async () => {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  audioContext = new AC();
   await audioContext.resume();
-
-  audioEnabled=true;
-
+  audioEnabled = true;
   setStatus("音声有効");
-  responseEl.textContent="接続完了。会話を開始できます";
-
-  enableBtn.textContent="音声有効";
-  enableBtn.classList.remove("primary");
+  responseEl.textContent = "接続完了。会話を開始できます";
+  enableBtn.textContent = "接続済み";
   enableBtn.classList.add("enabled");
-  enableBtn.disabled=true;
-
-  /* 会話ボタン有効化 */
-  micBtn.classList.remove("secondary","disabled");
+  enableBtn.disabled = true;
+  micBtn.classList.remove("disabled");
   micBtn.classList.add("primary");
 };
 
 /* 再生 */
-async function playAudio(blob){
-  const ab=await blob.arrayBuffer();
-  const buf=await audioContext.decodeAudioData(ab);
-  const src=audioContext.createBufferSource();
-  src.buffer=buf;
+async function playAudio(blob) {
+  isProcessing = true; // 再生開始
+  const ab = await blob.arrayBuffer();
+  const buf = await audioContext.decodeAudioData(ab);
+  const src = audioContext.createBufferSource();
+  src.buffer = buf;
   src.connect(audioContext.destination);
 
-  setStatus("再生中");
-
-  src.onended=()=>{
-    setStatus(conversation?"聞き取り待機中...":"待機中");
+  setStatus("再生中...");
+  src.onended = () => {
+    isProcessing = false; // 再生終了
+    if (conversation) {
+      setStatus("聞き取り中...");
+      try { recognition.start(); } catch(e){} 
+    } else {
+      setStatus("待機中");
+    }
   };
-
   src.start(0);
 }
 
 /* 通信 */
-async function chat(text){
-  setStatus("接続中...");
-  responseEl.textContent="解析中...";
+async function chat(text) {
+  if (!text || isProcessing) return; // 重複防止
+  
+  isProcessing = true;
+  if(conversation) try { recognition.stop(); } catch(e){}
 
-  const res=await fetch(config.endpoint,{
-    method:"POST",
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      robotId:config.id,
-      robotName:config.name,
-      userText:text
-    })
-  });
+  setStatus("解析中...");
+  responseEl.textContent = "解析中...";
+  
+  try {
+    const res = await fetch(config.endpoint, {
+      method: "POST",
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        robotId: config.id,
+        robotName: config.name,
+        userText: text
+      })
+    });
 
-  const reply=res.headers.get("X-Reply");
-  if(reply){
-    responseEl.textContent=decodeURIComponent(reply);
+    const reply = res.headers.get("X-Reply");
+    if (reply) {
+      responseEl.textContent = decodeURIComponent(reply);
+    }
+
+    const blob = await res.blob();
+    await playAudio(blob);
+  } catch (e) {
+    console.error(e);
+    responseEl.textContent = "通信エラーが発生しました";
+    isProcessing = false;
+    setStatus("エラー");
   }
-
-  const blob=await res.blob();
-  await playAudio(blob);
 }
 
 /* 音声認識 */
-const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SR) {
+  recognition = new SR();
+  recognition.lang = "ja-JP";
+  recognition.interimResults = false;
 
-if(SR){
-  recognition=new SR();
-  recognition.lang="ja-JP";
-
-  recognition.onresult=e=>{
-    chat(e.results[0][0].transcript);
+  recognition.onresult = e => {
+    const text = e.results[0][0].transcript;
+    chat(text);
   };
 
-  recognition.onend=()=>{
-    if(conversation){
+  recognition.onend = () => {
+    // ロボットが再生中（isProcessing）でなければ再開
+    if (conversation && !isProcessing) {
       recognition.start();
     }
   };
 
-  micBtn.onclick=()=>{
-    if(!audioEnabled)return;
+  micBtn.onclick = () => {
+    if (!audioEnabled || isProcessing) return;
 
-    conversation=!conversation;
-
-    if(conversation){
-      micBtn.textContent="会話中";
+    conversation = !conversation;
+    if (conversation) {
+      micBtn.textContent = "会話中 (停止するにはクリック)";
+      micBtn.classList.add("stop");
       recognition.start();
-    }else{
-      micBtn.textContent="会話開始";
+      setStatus("聞き取り中...");
+    } else {
+      micBtn.textContent = "会話開始";
+      micBtn.classList.remove("stop");
       recognition.stop();
       setStatus("待機中");
     }
   };
 }
 
-/* 入力 */
-document.getElementById("send").onclick=()=>{
-  conversation=false;
-  micBtn.textContent="会話開始";
-  chat(document.getElementById("input").value);
+/* テキスト送信 */
+sendBtn.onclick = () => {
+  if (isProcessing) return;
+  const val = inputEl.value.trim();
+  if (val) {
+    conversation = false; // テキスト送信時は自動会話モードを切る
+    micBtn.textContent = "会話開始";
+    micBtn.classList.remove("stop");
+    chat(val);
+    inputEl.value = "";
+  }
+};
+
+/* 停止ボタン */
+document.getElementById("stop").onclick = () => {
+  location.reload(); // 一番確実に止める
 };
 </script>
-
-</body>
-</html>
