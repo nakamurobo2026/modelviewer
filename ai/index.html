@@ -304,7 +304,6 @@ let sourceNode = null;
 let isSpeaking = false;
 let restartTimer = null;
 
-// audio graph
 let inputGain = null;
 let compressor = null;
 let highpass = null;
@@ -330,9 +329,7 @@ function stopPlayback() {
 
 async function ensureAudioContext() {
   const AC = window.AudioContext || window.webkitAudioContext;
-  if (!AC) {
-    throw new Error("このブラウザはAudioContext非対応です");
-  }
+  if (!AC) throw new Error("このブラウザはAudioContext非対応です");
 
   if (!audioContext) {
     audioContext = new AC();
@@ -437,7 +434,6 @@ function clearRestartTimer() {
 
 function scheduleRestartListening(delay = 500) {
   clearRestartTimer();
-
   if (!conversationMode || !rec || isSpeaking) return;
 
   restartTimer = setTimeout(() => {
@@ -466,10 +462,8 @@ async function playAudioBlob(blob) {
   sourceNode.buffer = audioBuffer;
   sourceNode.playbackRate.value = 0.97;
 
-  // dry path
   sourceNode.connect(inputGain);
 
-  // wet path: light robotic modulation
   const wetInput = audioContext.createGain();
   wetInput.gain.value = 1.0;
   sourceNode.connect(wetInput);
@@ -599,7 +593,6 @@ if (SR) {
   rec.onresult = async (e) => {
     isRecognizing = false;
     clearRestartTimer();
-
     const transcript = e.results[0][0].transcript;
     await chat(transcript);
   };
