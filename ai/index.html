@@ -10,7 +10,7 @@ body{ background:#000; color:#fff; font-family:sans-serif; margin:0; display:fle
 .app{ width:90%; max-width:400px; border:1px solid #333; padding:20px; border-radius:24px; text-align:center; background:#0a0a0a; }
 .response{ margin:15px 0; padding:20px; background:#111; border-radius:15px; min-height:80px; font-size:18px; border:1px solid #222; display:flex; align-items:center; justify-content:center; }
 .status{ font-size:12px; color:#888; margin-bottom:10px; }
-button{ width:100%; padding:18px; border-radius:15px; border:none; background:var(--accent); font-weight:bold; font-size:16px; cursor:pointer; color:#000; margin-top:10px; }
+button{ width:100%; padding:18px; border-radius:15px; border:none; background:var(--accent); font-weight:bold; font-size:16px; cursor:pointer; color:#000; margin-top:10px; -webkit-tap-highlight-color:transparent; }
 input{ width:100%; padding:15px; background:#000; border:1px solid #333; color:#fff; border-radius:12px; margin-bottom:10px; font-size:16px; outline:none; }
 </style>
 </head>
@@ -27,36 +27,41 @@ const qs = new URLSearchParams(location.search);
 const endpoint = qs.get("endpoint");
 const robotName = qs.get("name") || "ナカムロボ";
 
-// グローバルでAudioを一つだけ使い回す
-const audioPlayer = new Audio();
-audioPlayer.playbackRate = 0.95;
+// 音声再生用の「枠」を先に作っておく
+const audio = new Audio();
+audio.preload = "auto";
 
 async function runAI(txt) {
   if (!txt || !txt.trim()) return;
   const status = document.getElementById("statusText");
   status.textContent = "通信中...";
 
-  // ★重要: 通信前に「再生開始」してiPhoneのガードを外す
-  audioPlayer.src = "data:audio/wav;base64,UklGRigAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
-  try { await audioPlayer.play(); } catch(e) { console.error(e); }
+  // ★iPhone対策の肝: 通信が始まる「前」に、無音を再生してスピーカーの権限を奪う
+  audio.src = "data:audio/wav;base64,UklGRigAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
+  try {
+    await audio.play(); 
+  } catch(e) {
+    console.error("再生権限エラー:", e);
+  }
 
   try {
     const r = await fetch(endpoint, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ robotName, userText: txt, voice: "onyx" })
     });
     const d = await r.json();
-    if (d.error) throw new Error(d.error);
     
+    if (d.error) throw new Error(d.error);
     document.getElementById("responseText").textContent = d.reply;
 
     if (d.audioBase64) {
       status.textContent = "再生中";
-      audioPlayer.src = "data:audio/mpeg;base64," + d.audioBase64;
-      // すでにplay状態なのでsrcを変えるだけで鳴る
-      await audioPlayer.play();
+      // ★再生中のオーディオの「中身だけ」を差し替える（iPhoneではこれが最も安全）
+      audio.src = "data:audio/mpeg;base64," + d.audioBase64;
+      await audio.play();
     }
-    audioPlayer.onended = () => status.textContent = "READY";
+    audio.onended = () => status.textContent = "READY";
   } catch (e) {
     status.textContent = "エラー: " + e.message;
   }
@@ -70,7 +75,7 @@ document.getElementById("mainBtn").onclick = async () => {
     await runAI(val);
     i.value = "";
   } else {
-    // マイク起動
+    // マイクの起動（これもユーザー操作直後なのでOK）
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SR) {
       const rec = new SR();
