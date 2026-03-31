@@ -1,65 +1,118 @@
 <!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>NAKAMUROBO FIX</title>
-  <style>
-    body { background: #000; color: #fff; text-align: center; padding: 40px; font-family: sans-serif; }
-    button { width: 100%; padding: 25px; background: #ffd54a; border: none; border-radius: 12px; font-weight: bold; font-size: 18px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-    input { width: 100%; padding: 15px; margin-bottom: 20px; background: #111; color: #fff; border: 1px solid #333; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-    #res { margin-top: 30px; font-size: 18px; color: #888; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NAKAMUROBO AI</title>
+<style>
+:root{ --bg:#050505; --panel:#111; --line:#2a2a2a; --text:#f2f2f2; --sub:#9a9a9a; --accent:#ffd54a; --accent2:#7fd1ff; }
+*{box-sizing:border-box;}
+html,body{ margin:0; padding:0; background:radial-gradient(circle at top, #111 0%, #050505 55%, #000 100%); color:var(--text); font-family:sans-serif; min-height:100%; display:flex; align-items:center; justify-content:center; }
+.app{ width:100%; max-width:560px; background:rgba(15,15,15,0.88); border:1px solid var(--line); border-radius:24px; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,0.45); backdrop-filter:blur(10px); }
+.top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.badge{ font-size:12px; color:#0d0d0d; background:var(--accent); padding:6px 10px; border-radius:999px; font-weight:700; }
+.robot-id{ font-size:12px; color:var(--sub); }
+.avatar-wrap{ display:flex; flex-direction:column; align-items:center; padding:10px 0 20px; }
+.core{ width:120px; height:120px; border-radius:50%; border:1px solid #333; background: radial-gradient(circle, rgba(255,213,74,0.2) 0%, #050505 100%); display:flex; align-items:center; justify-content:center; }
+.heart{ width:32px; height:32px; background:var(--accent); transform:rotate(45deg); position:relative; animation:pulse 2.4s infinite ease-in-out; }
+.heart:before, .heart:after{ content:""; width:32px; height:32px; background:var(--accent); border-radius:50%; position:absolute; }
+.heart:before{ left:-16px; } .heart:after{ top:-16px; }
+@keyframes pulse{ 0%,100%{ transform:rotate(45deg) scale(1); } 50%{ transform:rotate(45deg) scale(1.1); } }
+.robot-name{ margin-top:14px; font-size:24px; font-weight:800; letter-spacing:0.1em; }
+.status{ margin-top:8px; color:var(--sub); font-size:13px; min-height:20px; }
+.response{ margin-top:18px; padding:20px; border-radius:18px; border:1px solid var(--line); background:rgba(255,255,255,0.03); min-height:100px; display:flex; align-items:center; justify-content:center; text-align:center; font-size:18px; line-height:1.6; white-space:pre-wrap; }
+.heard{ margin-top:12px; padding:12px; border-radius:14px; background:#0b0b0b; border:1px solid var(--line); color:var(--sub); font-size:13px; }
+.controls{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; }
+button{ border:none; border-radius:16px; padding:16px; font-size:16px; font-weight:700; cursor:pointer; }
+.mic-btn{ background:linear-gradient(180deg, #222, #000); color:#fff; border:1px solid #333; }
+.stop-btn{ background:#2b1111; color:#ffd6d6; }
+.input-area{ margin-top:16px; display:grid; grid-template-columns:1fr auto; gap:10px; }
+input{ background:#000; color:#fff; border:1px solid var(--line); border-radius:12px; padding:12px; outline:none; }
+.send-btn{ background:var(--accent2); color:#000; padding:0 20px; }
+</style>
 </head>
 <body>
-  <input id="input" type="text" placeholder="テスト入力">
-  <button id="btn">送信して再生</button>
-  <div id="res">待機中...</div>
+  <main class="app">
+    <div class="top"><div class="badge">VOICE LINK</div><div id="robotMeta" class="robot-id"></div></div>
+    <div class="avatar-wrap"><div class="core"><div class="heart"></div></div><div id="robotName" class="robot-name"></div><div id="statusText" class="status"></div></div>
+    <div id="responseText" class="response">…</div>
+    <div id="heardText" class="heard">待機中</div>
+    <div class="controls"><button id="micBtn" class="mic-btn">話しかける</button><button id="stopBtn" class="stop-btn">停止</button></div>
+    <div class="input-area"><input id="textInput" type="text" placeholder="メッセージを入力..." /><button id="sendBtn" class="send-btn">送信</button></div>
+  </main>
 
-  <script>
-    // ブラウザ起動時に再生用プレイヤーを固定で作っておく
-    const player = new Audio();
-    player.preload = "auto";
+<script>
+const qs = new URLSearchParams(location.search);
+const config = {
+  id: qs.get("id") || "robot01",
+  name: qs.get("name") || "ナカムロボ",
+  endpoint: qs.get("endpoint") || "",
+  voice: qs.get("voice") || "onyx"
+};
 
-    document.getElementById("btn").onclick = async () => {
-      const val = document.getElementById("input").value;
-      if(!val) return;
-      
-      const resDiv = document.getElementById("res");
-      resDiv.textContent = "通信中...";
+document.getElementById("robotMeta").textContent = `ID: ${config.id}`;
+document.getElementById("robotName").textContent = config.name;
 
-      // 【最重要】ボタンを押した瞬間に、ブラウザに「音を出すぞ」と宣言してスピーカーを予約する
-      // 空のデータを再生してロックを解除
-      player.src = "data:audio/wav;base64,UklGRigAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
-      try {
-        await player.play();
-      } catch(e) {
-        console.log("Unlock failed", e);
-      }
+let currentAudio = null;
+let audioUnlocked = false;
 
-      const endpoint = new URLSearchParams(location.search).get("endpoint");
+async function unlock(){
+  if(audioUnlocked) return;
+  const a = new Audio(); a.src = "data:audio/wav;base64,UklGRigAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
+  await a.play().catch(()=>{}); audioUnlocked = true;
+}
 
-      try {
-        const r = await fetch(endpoint, {
-          method: "POST",
-          body: JSON.stringify({ userText: val })
-        });
+async function chat(txt){
+  if(!txt.trim()) return;
+  document.getElementById("statusText").textContent = "通信中...";
+  document.getElementById("heardText").textContent = `入力: ${txt}`;
+  
+  try{
+    const r = await fetch(config.endpoint, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ robotId:config.id, robotName:config.name, userText:txt, voice:config.voice })
+    });
 
-        const reply = decodeURIComponent(r.headers.get("X-Reply") || "…");
-        resDiv.textContent = reply;
+    if(!r.ok) throw new Error("Server Error");
 
-        // 【最重要】既に再生が許可されたplayerの「中身」だけを通信結果に差し替える
-        const blob = await r.blob();
-        const url = URL.createObjectURL(blob);
-        player.src = url;
-        
-        // srcを変えた後に再度叩く
-        await player.play();
+    const reply = decodeURIComponent(r.headers.get("X-Reply") || "…");
+    document.getElementById("responseText").textContent = reply;
 
-      } catch (e) {
-        resDiv.textContent = "エラー: " + e.message;
-      }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    
+    if(currentAudio){
+      currentAudio.pause();
+      currentAudio.src = "";
+      currentAudio.load();
+    }
+
+    currentAudio = new Audio();
+    currentAudio.src = url;
+    currentAudio.playbackRate = 0.95;
+    
+    currentAudio.onplay = () => document.getElementById("statusText").textContent = "再生中";
+    currentAudio.onended = () => {
+      document.getElementById("statusText").textContent = "待機中";
+      URL.revokeObjectURL(url);
     };
-  </script>
+
+    await currentAudio.play();
+
+  } catch(e){ 
+    console.error(e);
+    document.getElementById("statusText").textContent = "通信・再生失敗"; 
+  }
+}
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if(SR){
+  const rec = new SR(); rec.lang = "ja-JP";
+  rec.onresult = (e) => chat(e.results[0][0].transcript);
+  document.getElementById("micBtn").onclick = async () => { await unlock(); rec.start(); };
+}
+document.getElementById("sendBtn").onclick = async () => { await unlock(); const i = document.getElementById("textInput"); chat(i.value); i.value=""; };
+document.getElementById("stopBtn").onclick = () => { if(currentAudio) { currentAudio.pause(); currentAudio.src = ""; } };
+</script>
 </body>
 </html>
