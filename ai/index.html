@@ -271,8 +271,7 @@ const config = {
   name: qs.get("name") || "ナカムロボユニット01",
   lang: qs.get("lang") || "ja-JP",
   memory: qs.get("memory") || "1",
-  endpoint: qs.get("endpoint") || "",
-  voice: qs.get("voice") || "onyx"
+  endpoint: qs.get("endpoint") || ""
 };
 
 const robotMeta = document.getElementById("robotMeta");
@@ -294,11 +293,20 @@ let isRecognizing = false;
 let conversationMode = false;
 let audioEnabled = false;
 let audioContext = null;
-let masterGain = null;
 let sourceNode = null;
 let isSpeaking = false;
 let restartTimer = null;
+
+// audio graph
+let inputGain = null;
 let compressor = null;
+let lowpass = null;
+let highpass = null;
+let ringOsc = null;
+let ringGain = null;
+let modGain = null;
+let dryGain = null;
+let wetGain = null;
 
 function setStatus(text) {
   statusText.textContent = text;
@@ -327,20 +335,56 @@ async function ensureAudioContext() {
     await audioContext.resume();
   }
 
-  if (!compressor) {
+  if (!inputGain) {
+    inputGain = audioContext.createGain();
+    inputGain.gain.value = 1.55;
+
+    // 音量安定
     compressor = audioContext.createDynamicsCompressor();
-    compressor.threshold.value = -18;
-    compressor.knee.value = 30;
+    compressor.threshold.value = -20;
+    compressor.knee.value = 24;
     compressor.ratio.value = 4;
     compressor.attack.value = 0.003;
-    compressor.release.value = 0.25;
-    compressor.connect(audioContext.destination);
-  }
+    compressor.release.value = 0.18;
 
-  if (!masterGain) {
-    masterGain = audioContext.createGain();
-    masterGain.gain.value = 2.4;
-    masterGain.connect(compressor);
+    // 帯域をロボっぽく狭める
+    highpass = audioContext.createBiquadFilter();
+    highpass.type = "highpass";
+    highpass.frequency.value = 180;
+    highpass.Q.value = 0.7;
+
+    lowpass = audioContext.createBiquadFilter();
+    lowpass.type = "lowpass";
+    lowpass.frequency.value = 3200;
+    lowpass.Q.value = 0.8;
+
+    // ドライ
+    dryGain = audioContext.createGain();
+    dryGain.gain.value = 0.72;
+
+    // リング変調の軽い混ぜ
+    wetGain = audioContext.createGain();
+    wetGain.gain.value = 0.28;
+
+    modGain = audioContext.createGain();
+    modGain.gain.value = 0.22;
+
+    ringGain = audioContext.createGain();
+    ringGain.gain.value = 0.0;
+
+    ringOsc = audioContext.createOscillator();
+    ringOsc.type = "sine";
+    ringOsc.frequency.value = 44; // ここがロボ感の芯
+    ringOsc.connect(modGain);
+    modGain.connect(ringGain.gain);
+    ringOsc.start();
+
+    inputGain.connect(compressor);
+    compressor.connect(highpass);
+    highpass.connect(lowpass);
+
+    lowpass.connect(dryGain);
+    dryGain.connect(audioContext.destination);
   }
 }
 
@@ -351,7 +395,7 @@ async function enableAudio() {
     const buffer = audioContext.createBuffer(1, 1, 22050);
     const source = audioContext.createBufferSource();
     source.buffer = buffer;
-    source.connect(masterGain);
+    source.connect(inputGain);
     source.start(0);
 
     audioEnabled = true;
@@ -415,14 +459,21 @@ async function playAudioBlob(blob) {
 
   stopPlayback();
 
-  const localGain = audioContext.createGain();
-  localGain.gain.value = 1.8;
-  localGain.connect(masterGain);
-
   sourceNode = audioContext.createBufferSource();
   sourceNode.buffer = audioBuffer;
-  sourceNode.playbackRate.value = 0.95;
-  sourceNode.connect(localGain);
+  sourceNode.playbackRate.value = 0.97;
+
+  // dry path
+  sourceNode.connect(inputGain);
+
+  // wet path: 軽いリング変調
+  const wetInput = audioContext.createGain();
+  wetInput.gain.value = 1.0;
+
+  sourceNode.connect(wetInput);
+  wetInput.connect(ringGain);
+  ringGain.connect(wetGain);
+  wetGain.connect(audioContext.destination);
 
   isSpeaking = true;
   setStatus("再生中");
@@ -437,7 +488,7 @@ async function playAudioBlob(blob) {
 
     if (conversationMode) {
       setStatus("聞き取り待機中...");
-      scheduleRestartListening(400);
+      scheduleRestartListening(420);
     } else {
       setStatus("待機中");
     }
@@ -473,7 +524,6 @@ async function chat(txt) {
         robotId: config.id,
         robotName: config.name,
         userText: message,
-        voice: config.voice,
         mode: config.mode,
         memory: config.memory
       })
@@ -563,7 +613,7 @@ if (SR) {
     if (e.error === "no-speech") {
       if (conversationMode && !isSpeaking) {
         setStatus("聞き取り待機中...");
-        scheduleRestartListening(300);
+        scheduleRestartListening(320);
         return;
       }
 
@@ -590,7 +640,7 @@ if (SR) {
 
     if (conversationMode && !isSpeaking) {
       setStatus("聞き取り待機中...");
-      scheduleRestartListening(300);
+      scheduleRestartListening(320);
       return;
     }
 
