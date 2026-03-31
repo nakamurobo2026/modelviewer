@@ -221,8 +221,6 @@ input{
     </div>
   </main>
 
-  <audio id="player" playsinline preload="auto"></audio>
-
 <script>
 const qs = new URLSearchParams(location.search);
 
@@ -248,53 +246,59 @@ const micBtn = document.getElementById("micBtn");
 const stopBtn = document.getElementById("stopBtn");
 const sendBtn = document.getElementById("sendBtn");
 const textInput = document.getElementById("textInput");
-const player = document.getElementById("player");
 
 robotMeta.textContent = `ID: ${config.id}`;
 robotName.textContent = config.name;
 
-let currentAudioUrl = null;
 let isRecognizing = false;
 let rec = null;
 let audioEnabled = false;
 let audioContext = null;
+let masterGain = null;
+let sourceNode = null;
 
 function setStatus(text) {
   statusText.textContent = text;
 }
 
-function cleanupAudioUrl() {
-  if (currentAudioUrl) {
-    try { URL.revokeObjectURL(currentAudioUrl); } catch (_) {}
-    currentAudioUrl = null;
+function stopPlayback() {
+  if (sourceNode) {
+    try { sourceNode.stop(0); } catch (_) {}
+    try { sourceNode.disconnect(); } catch (_) {}
+    sourceNode = null;
   }
 }
 
-function stopPlayback() {
-  try { player.pause(); } catch (_) {}
-  try { player.removeAttribute("src"); } catch (_) {}
-  try { player.load(); } catch (_) {}
-  cleanupAudioUrl();
+async function ensureAudioContext() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) {
+    throw new Error("このブラウザはAudioContext非対応です");
+  }
+
+  if (!audioContext) {
+    audioContext = new AC();
+  }
+
+  if (audioContext.state === "suspended") {
+    await audioContext.resume();
+  }
+
+  if (!masterGain) {
+    masterGain = audioContext.createGain();
+    masterGain.gain.value = 2.2; // 音量ブースト
+    masterGain.connect(audioContext.destination);
+  }
 }
 
 async function enableAudio() {
   try {
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (AC && !audioContext) {
-      audioContext = new AC();
-    }
+    await ensureAudioContext();
 
-    if (audioContext && audioContext.state === "suspended") {
-      await audioContext.resume();
-    }
-
-    if (audioContext) {
-      const buffer = audioContext.createBuffer(1, 1, 22050);
-      const source = audioContext.createBufferSource();
-      source.buffer = buffer;
-      source.connect(audioContext.destination);
-      source.start(0);
-    }
+    const buffer = audioContext.createBuffer(1, 1, 22050);
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(masterGain);
+    source.start(0);
 
     audioEnabled = true;
     setStatus("音声有効");
@@ -324,41 +328,36 @@ async function safeReadError(response) {
 }
 
 async function playAudioBlob(blob) {
-  cleanupAudioUrl();
-  currentAudioUrl = URL.createObjectURL(blob);
-
-  player.pause();
-  player.src = currentAudioUrl;
-  player.load();
-  player.playbackRate = 0.95;
-
-  player.onplay = () => {
-    setStatus("再生中");
-  };
-
-  player.onended = () => {
-    setStatus("待機中");
-    cleanupAudioUrl();
-  };
-
-  player.onerror = () => {
-    setStatus("音声再生エラー");
-  };
-
-  try {
-    await player.play();
-  } catch (e) {
-    const msg = String(e && e.message ? e.message : e).toLowerCase();
-    if (
-      msg.includes("notallowederror") ||
-      msg.includes("gesture") ||
-      msg.includes("user denied permission") ||
-      msg.includes("play() failed")
-    ) {
-      throw new Error("音声再生がまだ制限されています。先に『音声を有効化』を押してください。");
-    }
-    throw e;
+  if (!audioEnabled) {
+    throw new Error("先に『音声を有効化』を押してください。");
   }
+
+  await ensureAudioContext();
+
+  const arrayBuffer = await blob.arrayBuffer();
+  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+
+  stopPlayback();
+
+  const localGain = audioContext.createGain();
+  localGain.gain.value = 2.2; // ここでさらに音量アップ
+  localGain.connect(masterGain);
+
+  sourceNode = audioContext.createBufferSource();
+  sourceNode.buffer = audioBuffer;
+  sourceNode.playbackRate.value = 0.95;
+  sourceNode.connect(localGain);
+
+  sourceNode.onended = () => {
+    setStatus("待機中");
+    if (sourceNode) {
+      try { sourceNode.disconnect(); } catch (_) {}
+      sourceNode = null;
+    }
+  };
+
+  setStatus("再生中");
+  sourceNode.start(0);
 }
 
 async function chat(txt) {
