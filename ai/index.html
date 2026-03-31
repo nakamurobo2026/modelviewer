@@ -84,16 +84,11 @@ const inputEl = document.getElementById("input");
 
 let audioContext;
 let audioEnabled = false;
-let recognizing = false;
 let recognition;
 let hasStarted = false;
+let currentAbort = null;
 
-// ----------------
-// 状態管理
-// ----------------
-function setStatus(text){
-  statusEl.textContent = text;
-}
+function setStatus(t){ statusEl.textContent = t; }
 
 // ----------------
 // 音声有効化
@@ -102,12 +97,11 @@ document.getElementById("enable").onclick = async () => {
   try{
     const AC = window.AudioContext || window.webkitAudioContext;
     audioContext = new AC();
-
     await audioContext.resume();
 
-    const buffer = audioContext.createBuffer(1,1,22050);
+    const buf = audioContext.createBuffer(1,1,22050);
     const src = audioContext.createBufferSource();
-    src.buffer = buffer;
+    src.buffer = buf;
     src.connect(audioContext.destination);
     src.start(0);
 
@@ -116,34 +110,30 @@ document.getElementById("enable").onclick = async () => {
     setStatus("音声有効");
     responseEl.textContent = "音声が有効になりました";
 
-  }catch(e){
+  }catch{
     setStatus("音声有効化失敗");
   }
 };
 
 // ----------------
-// 音声再生
+// 再生
 // ----------------
 async function playAudio(blob){
-
-  const arrayBuffer = await blob.arrayBuffer();
-  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  const ab = await blob.arrayBuffer();
+  const audioBuf = await audioContext.decodeAudioData(ab);
 
   const src = audioContext.createBufferSource();
-  src.buffer = audioBuffer;
+  src.buffer = audioBuf;
   src.connect(audioContext.destination);
 
   setStatus("再生中");
 
-  src.onended = () => {
-    setStatus("待機中");
-  };
-
+  src.onended = () => setStatus("待機中");
   src.start(0);
 }
 
 // ----------------
-// 通信
+// 通信（爆速化）
 // ----------------
 async function chat(text){
 
@@ -157,8 +147,11 @@ async function chat(text){
     return;
   }
 
+  if(currentAbort) currentAbort.abort();
+  currentAbort = new AbortController();
+
   setStatus("接続中...");
-  responseEl.textContent = "…";
+  responseEl.textContent = "解析中...";
 
   try{
 
@@ -170,15 +163,19 @@ async function chat(text){
         robotName: config.name,
         userText: text,
         isFirstTurn: !hasStarted
-      })
+      }),
+      signal: currentAbort.signal
     });
 
-    setStatus("応答生成中...");
-
+    // 🔥 テキスト先出し
     const reply = res.headers.get("X-Reply");
     if(reply){
       responseEl.textContent = decodeURIComponent(reply);
+    }else{
+      responseEl.textContent = "応答生成中...";
     }
+
+    setStatus("応答生成中...");
 
     const blob = await res.blob();
 
@@ -187,13 +184,14 @@ async function chat(text){
     await playAudio(blob);
 
   }catch(e){
+    if(e.name === "AbortError") return;
     setStatus("通信失敗");
     responseEl.textContent = "エラー";
   }
 }
 
 // ----------------
-// テキスト送信
+// 入力
 // ----------------
 document.getElementById("send").onclick = () => {
   chat(inputEl.value);
@@ -206,25 +204,19 @@ document.getElementById("send").onclick = () => {
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 if(SR){
-
   recognition = new SR();
   recognition.lang = "ja-JP";
 
   recognition.onstart = () => {
-    recognizing = true;
     setStatus("聞き取り中...");
     responseEl.textContent = "話してください";
   };
 
   recognition.onresult = (e) => {
-    const text = e.results[0][0].transcript;
-    chat(text);
+    chat(e.results[0][0].transcript);
   };
 
-  recognition.onend = () => {
-    recognizing = false;
-    setStatus("待機中");
-  };
+  recognition.onend = () => setStatus("待機中");
 
   document.getElementById("mic").onclick = () => {
     if(!audioEnabled){
@@ -233,7 +225,6 @@ if(SR){
     }
     recognition.start();
   };
-
 }else{
   document.getElementById("mic").disabled = true;
 }
@@ -242,8 +233,9 @@ if(SR){
 // 停止
 // ----------------
 document.getElementById("stop").onclick = () => {
+  if(currentAbort) currentAbort.abort();
   if(recognition){
-    try{ recognition.abort(); }catch(e){}
+    try{ recognition.abort(); }catch{}
   }
   setStatus("停止");
 };
