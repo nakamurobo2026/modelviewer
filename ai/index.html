@@ -1,114 +1,706 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>NAKAMUROBO AI</title>
 <style>
-body{
+:root{
+  --bg:#050505;
+  --line:#2a2a2a;
+  --text:#f2f2f2;
+  --sub:#9a9a9a;
+  --accent:#ffd54a;
+  --accent2:#7fd1ff;
+  --ok:#7dffb3;
+  --danger:#ffd6d6;
+}
+*{box-sizing:border-box}
+html,body{
   margin:0;
+  padding:0;
+  min-height:100%;
+  background:
+    radial-gradient(circle at top, #111 0%, #050505 55%, #000 100%);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+body{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+.app{
+  width:100%;
+  max-width:560px;
+  background:rgba(15,15,15,0.92);
+  border:1px solid var(--line);
+  border-radius:24px;
+  padding:20px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.45);
+}
+.top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  margin-bottom:12px;
+}
+.badge{
+  font-size:12px;
+  color:#111;
+  background:var(--accent);
+  padding:6px 10px;
+  border-radius:999px;
+  font-weight:700;
+  white-space:nowrap;
+}
+.robot-id{
+  font-size:12px;
+  color:var(--sub);
+  text-align:right;
+  word-break:break-all;
+}
+.avatar-wrap{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:10px 0 20px;
+}
+.core{
+  width:120px;
+  height:120px;
+  border-radius:50%;
+  border:1px solid #333;
+  background:radial-gradient(circle, rgba(255,213,74,0.2) 0%, #050505 100%);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.heart{
+  width:32px;
+  height:32px;
+  background:var(--accent);
+  transform:rotate(45deg);
+  position:relative;
+  animation:pulse 2.4s infinite ease-in-out;
+}
+.heart:before,.heart:after{
+  content:"";
+  width:32px;
+  height:32px;
+  background:var(--accent);
+  border-radius:50%;
+  position:absolute;
+}
+.heart:before{ left:-16px; }
+.heart:after{ top:-16px; }
+
+@keyframes pulse{
+  0%,100%{ transform:rotate(45deg) scale(1); }
+  50%{ transform:rotate(45deg) scale(1.1); }
+}
+
+.robot-name{
+  margin-top:14px;
+  font-size:24px;
+  font-weight:800;
+  letter-spacing:0.08em;
+  text-align:center;
+  line-height:1.4;
+}
+.status{
+  margin-top:8px;
+  color:var(--sub);
+  font-size:13px;
+  min-height:20px;
+  text-align:center;
+}
+.response{
+  margin-top:18px;
+  padding:20px;
+  border-radius:18px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,0.03);
+  min-height:100px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  font-size:18px;
+  line-height:1.7;
+  white-space:pre-wrap;
+  word-break:break-word;
+}
+.heard{
+  margin-top:12px;
+  padding:12px;
+  border-radius:14px;
+  background:#0b0b0b;
+  border:1px solid var(--line);
+  color:var(--sub);
+  font-size:13px;
+  white-space:pre-wrap;
+  word-break:break-word;
+  text-align:left;
+  min-height:46px;
+}
+.controls{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:12px;
+  margin-top:16px;
+}
+button{
+  border:none;
+  border-radius:16px;
+  padding:14px 12px;
+  font-size:15px;
+  font-weight:700;
+  cursor:pointer;
+  min-height:52px;
+}
+.enable-btn{
+  background:linear-gradient(180deg, #1d3325, #0b1710);
+  color:var(--ok);
+  border:1px solid #254431;
+}
+.mic-btn{
+  background:linear-gradient(180deg, #222, #000);
+  color:#fff;
+  border:1px solid #333;
+}
+.stop-btn{
+  background:#2b1111;
+  color:var(--danger);
+}
+.input-area{
+  margin-top:16px;
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:10px;
+}
+input{
+  width:100%;
   background:#000;
   color:#fff;
-  font-family:sans-serif;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:12px;
+  outline:none;
+  min-height:48px;
+  font-size:16px;
 }
-.app{max-width:500px;width:100%;padding:20px;text-align:center;}
-button{padding:15px;margin:5px;border-radius:10px;border:none;}
-input{padding:12px;width:70%;}
-.response{font-size:22px;margin:20px 0;}
+.send-btn{
+  background:var(--accent2);
+  color:#000;
+  padding:0 20px;
+  min-width:84px;
+}
+.note{
+  margin-top:14px;
+  font-size:12px;
+  color:var(--sub);
+  text-align:center;
+  line-height:1.7;
+}
+
+@media (max-width: 520px){
+  body{
+    align-items:flex-start;
+    padding:12px;
+  }
+  .app{
+    max-width:100%;
+    padding:16px;
+    border-radius:20px;
+  }
+  .robot-name{
+    font-size:22px;
+  }
+  .response{
+    font-size:17px;
+    min-height:92px;
+  }
+  .controls{
+    grid-template-columns:1fr;
+  }
+  .input-area{
+    grid-template-columns:1fr;
+  }
+  .send-btn{
+    width:100%;
+  }
+}
 </style>
 </head>
 <body>
+  <main class="app">
+    <div class="top">
+      <div class="badge">VOICE LINK</div>
+      <div id="robotMeta" class="robot-id"></div>
+    </div>
 
-<div class="app">
-  <h2 id="robotName">ナカムロボユニット01</h2>
-  <div id="response" class="response">起動完了。通信、待機中です。</div>
-  <div id="status">待機中</div>
+    <div class="avatar-wrap">
+      <div class="core"><div class="heart"></div></div>
+      <div id="robotName" class="robot-name"></div>
+      <div id="statusText" class="status">待機中</div>
+    </div>
 
-  <button id="enable">音声ON</button>
-  <button id="mic">話す</button>
+    <div id="responseText" class="response">起動完了。通信、待機中です。</div>
+    <div id="heardText" class="heard">待機中</div>
 
-  <br><br>
+    <div class="controls">
+      <button id="enableBtn" class="enable-btn">音声を有効化</button>
+      <button id="micBtn" class="mic-btn">会話開始</button>
+      <button id="stopBtn" class="stop-btn">停止</button>
+    </div>
 
-  <input id="text" placeholder="入力">
-  <button id="send">送信</button>
-</div>
+    <div class="input-area">
+      <input id="textInput" type="text" placeholder="メッセージを入力..." />
+      <button id="sendBtn" class="send-btn">送信</button>
+    </div>
+
+    <div class="note">
+      1. まず「音声を有効化」<br>
+      2. そのあと送信、または会話開始
+    </div>
+  </main>
 
 <script>
-let hasStarted = false;
-let ctx, gain, compressor, hp, lp;
+const qs = new URLSearchParams(location.search);
 
-async function initAudio(){
-  ctx = new (window.AudioContext||window.webkitAudioContext)();
-
-  gain = ctx.createGain();
-  gain.gain.value = 1.6;
-
-  compressor = ctx.createDynamicsCompressor();
-  compressor.threshold.value = -20;
-  compressor.ratio.value = 4;
-
-  hp = ctx.createBiquadFilter();
-  hp.type="highpass";
-  hp.frequency.value=200;
-
-  lp = ctx.createBiquadFilter();
-  lp.type="lowpass";
-  lp.frequency.value=3000;
-
-  gain.connect(compressor);
-  compressor.connect(hp);
-  hp.connect(lp);
-  lp.connect(ctx.destination);
-
-  document.getElementById("status").innerText="音声ON";
-}
-
-async function speak(blob){
-  const array = await blob.arrayBuffer();
-  const audio = await ctx.decodeAudioData(array);
-
-  const src = ctx.createBufferSource();
-  src.buffer = audio;
-  src.playbackRate.value = 0.97;
-
-  src.connect(gain);
-  src.start();
-}
-
-async function chat(text){
-  document.getElementById("status").innerText="通信中";
-
-  const res = await fetch("YOUR_WORKER_URL",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      userText:text,
-      isFirstTurn:!hasStarted
-    })
-  });
-
-  const reply = decodeURIComponent(res.headers.get("X-Reply")||"");
-  document.getElementById("response").innerText = reply;
-
-  hasStarted = true;
-
-  const blob = await res.blob();
-  await speak(blob);
-
-  document.getElementById("status").innerText="待機中";
-}
-
-document.getElementById("enable").onclick = initAudio;
-
-document.getElementById("send").onclick = ()=>{
-  const text = document.getElementById("text").value;
-  chat(text);
+const config = {
+  id: qs.get("id") || "robot01",
+  mode: qs.get("mode") || "robot",
+  name: qs.get("name") || "ナカムロボユニット01",
+  lang: qs.get("lang") || "ja-JP",
+  memory: qs.get("memory") || "1",
+  endpoint: qs.get("endpoint") || ""
 };
 
+const robotMeta = document.getElementById("robotMeta");
+const robotName = document.getElementById("robotName");
+const statusText = document.getElementById("statusText");
+const responseText = document.getElementById("responseText");
+const heardText = document.getElementById("heardText");
+const enableBtn = document.getElementById("enableBtn");
+const micBtn = document.getElementById("micBtn");
+const stopBtn = document.getElementById("stopBtn");
+const sendBtn = document.getElementById("sendBtn");
+const textInput = document.getElementById("textInput");
+
+robotMeta.textContent = `ID: ${config.id}`;
+robotName.textContent = config.name;
+
+let hasStartedConversation = false;
+let rec = null;
+let isRecognizing = false;
+let conversationMode = false;
+let audioEnabled = false;
+let audioContext = null;
+let sourceNode = null;
+let isSpeaking = false;
+let restartTimer = null;
+
+// audio graph
+let inputGain = null;
+let compressor = null;
+let highpass = null;
+let lowpass = null;
+let ringOsc = null;
+let modGain = null;
+let ringGain = null;
+let wetGain = null;
+let dryGain = null;
+
+function setStatus(text) {
+  statusText.textContent = text;
+}
+
+function stopPlayback() {
+  if (sourceNode) {
+    try { sourceNode.stop(0); } catch (_) {}
+    try { sourceNode.disconnect(); } catch (_) {}
+    sourceNode = null;
+  }
+  isSpeaking = false;
+}
+
+async function ensureAudioContext() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) {
+    throw new Error("このブラウザはAudioContext非対応です");
+  }
+
+  if (!audioContext) {
+    audioContext = new AC();
+  }
+
+  if (audioContext.state === "suspended") {
+    await audioContext.resume();
+  }
+
+  if (!inputGain) {
+    inputGain = audioContext.createGain();
+    inputGain.gain.value = 1.55;
+
+    compressor = audioContext.createDynamicsCompressor();
+    compressor.threshold.value = -20;
+    compressor.knee.value = 24;
+    compressor.ratio.value = 4;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.18;
+
+    highpass = audioContext.createBiquadFilter();
+    highpass.type = "highpass";
+    highpass.frequency.value = 180;
+    highpass.Q.value = 0.7;
+
+    lowpass = audioContext.createBiquadFilter();
+    lowpass.type = "lowpass";
+    lowpass.frequency.value = 3200;
+    lowpass.Q.value = 0.8;
+
+    dryGain = audioContext.createGain();
+    dryGain.gain.value = 0.72;
+
+    wetGain = audioContext.createGain();
+    wetGain.gain.value = 0.28;
+
+    modGain = audioContext.createGain();
+    modGain.gain.value = 0.22;
+
+    ringGain = audioContext.createGain();
+    ringGain.gain.value = 0.0;
+
+    ringOsc = audioContext.createOscillator();
+    ringOsc.type = "sine";
+    ringOsc.frequency.value = 44;
+    ringOsc.connect(modGain);
+    modGain.connect(ringGain.gain);
+    ringOsc.start();
+
+    inputGain.connect(compressor);
+    compressor.connect(highpass);
+    highpass.connect(lowpass);
+
+    lowpass.connect(dryGain);
+    dryGain.connect(audioContext.destination);
+  }
+}
+
+async function enableAudio() {
+  try {
+    await ensureAudioContext();
+
+    const buffer = audioContext.createBuffer(1, 1, 22050);
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(inputGain);
+    source.start(0);
+
+    audioEnabled = true;
+    setStatus("音声有効");
+    responseText.textContent = "音声が有効になりました";
+    enableBtn.textContent = "音声有効";
+    return true;
+  } catch (e) {
+    console.error("enableAudio failed:", e);
+    audioEnabled = false;
+    setStatus("音声有効化失敗");
+    responseText.textContent = "音声の有効化に失敗しました。もう一度押してください。";
+    return false;
+  }
+}
+
+async function safeReadError(response) {
+  try {
+    const json = await response.json();
+    return json.detail || json.error || `HTTP ${response.status}`;
+  } catch (_) {
+    try {
+      return await response.text();
+    } catch (_) {
+      return `HTTP ${response.status}`;
+    }
+  }
+}
+
+function clearRestartTimer() {
+  if (restartTimer) {
+    clearTimeout(restartTimer);
+    restartTimer = null;
+  }
+}
+
+function scheduleRestartListening(delay = 500) {
+  clearRestartTimer();
+
+  if (!conversationMode || !rec || isSpeaking) return;
+
+  restartTimer = setTimeout(() => {
+    if (!conversationMode || !rec || isSpeaking) return;
+    try {
+      rec.start();
+    } catch (e) {
+      console.log("restart skipped:", e);
+    }
+  }, delay);
+}
+
+async function playAudioBlob(blob) {
+  if (!audioEnabled) {
+    throw new Error("先に『音声を有効化』を押してください。");
+  }
+
+  await ensureAudioContext();
+
+  const arrayBuffer = await blob.arrayBuffer();
+  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+
+  stopPlayback();
+
+  sourceNode = audioContext.createBufferSource();
+  sourceNode.buffer = audioBuffer;
+  sourceNode.playbackRate.value = 0.97;
+
+  // dry path
+  sourceNode.connect(inputGain);
+
+  // wet path: light robotic modulation
+  const wetInput = audioContext.createGain();
+  wetInput.gain.value = 1.0;
+  sourceNode.connect(wetInput);
+  wetInput.connect(ringGain);
+  ringGain.connect(wetGain);
+  wetGain.connect(audioContext.destination);
+
+  isSpeaking = true;
+  setStatus("再生中");
+
+  sourceNode.onended = () => {
+    isSpeaking = false;
+
+    if (sourceNode) {
+      try { sourceNode.disconnect(); } catch (_) {}
+      sourceNode = null;
+    }
+
+    if (conversationMode) {
+      setStatus("聞き取り待機中...");
+      scheduleRestartListening(420);
+    } else {
+      setStatus("待機中");
+    }
+  };
+
+  sourceNode.start(0);
+}
+
+async function chat(txt) {
+  const message = (txt || "").trim();
+  if (!message) return;
+
+  if (!audioEnabled) {
+    setStatus("音声未有効");
+    responseText.textContent = "先に『音声を有効化』を押してください";
+    return;
+  }
+
+  if (!config.endpoint) {
+    setStatus("endpoint未設定");
+    responseText.textContent = "URLに endpoint を設定してください";
+    return;
+  }
+
+  setStatus("通信中...");
+  heardText.textContent = `入力: ${message}`;
+
+  try {
+    const response = await fetch(config.endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        robotId: config.id,
+        robotName: config.name,
+        userText: message,
+        mode: config.mode,
+        memory: config.memory,
+        isFirstTurn: !hasStartedConversation
+      })
+    });
+
+    const replyHeader = response.headers.get("X-Reply");
+    if (replyHeader) {
+      try {
+        responseText.textContent = decodeURIComponent(replyHeader);
+      } catch (_) {
+        responseText.textContent = replyHeader;
+      }
+    }
+
+    if (!response.ok) {
+      const errMsg = await safeReadError(response);
+      throw new Error(errMsg);
+    }
+
+    hasStartedConversation = true;
+
+    const contentType = response.headers.get("Content-Type") || "";
+    if (!contentType.includes("audio/")) {
+      const errMsg = await safeReadError(response);
+      throw new Error(errMsg || "音声データではありません");
+    }
+
+    const blob = await response.blob();
+    if (!blob || blob.size === 0) {
+      throw new Error("音声データが空です");
+    }
+
+    await playAudioBlob(blob);
+
+  } catch (e) {
+    console.error(e);
+    setStatus("通信・再生失敗");
+    responseText.textContent = `エラー: ${e.message}`;
+
+    if (conversationMode) {
+      scheduleRestartListening(800);
+    }
+  }
+}
+
+async function sendCurrentText() {
+  const value = textInput.value;
+  textInput.value = "";
+  conversationMode = false;
+  await chat(value);
+}
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (SR) {
+  rec = new SR();
+  rec.lang = config.lang;
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+  rec.continuous = false;
+
+  rec.onstart = () => {
+    isRecognizing = true;
+    setStatus("聞き取り中...");
+    if (!isSpeaking) {
+      responseText.textContent = "話してください";
+    }
+  };
+
+  rec.onresult = async (e) => {
+    isRecognizing = false;
+    clearRestartTimer();
+
+    const transcript = e.results[0][0].transcript;
+    await chat(transcript);
+  };
+
+  rec.onerror = (e) => {
+    console.error("speech recognition error:", e);
+    isRecognizing = false;
+
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+      conversationMode = false;
+      setStatus("マイク許可が必要");
+      responseText.textContent = "ブラウザのサイト設定でマイクを許可してください。";
+      return;
+    }
+
+    if (e.error === "no-speech") {
+      if (conversationMode && !isSpeaking) {
+        setStatus("聞き取り待機中...");
+        scheduleRestartListening(320);
+        return;
+      }
+
+      setStatus("音声なし");
+      responseText.textContent = "音声を認識できませんでした。";
+      return;
+    }
+
+    if (e.error === "aborted") {
+      setStatus("停止");
+      return;
+    }
+
+    setStatus(`音声認識エラー: ${e.error}`);
+    responseText.textContent = `音声認識エラー: ${e.error}`;
+
+    if (conversationMode && !isSpeaking) {
+      scheduleRestartListening(800);
+    }
+  };
+
+  rec.onend = () => {
+    isRecognizing = false;
+
+    if (conversationMode && !isSpeaking) {
+      setStatus("聞き取り待機中...");
+      scheduleRestartListening(320);
+      return;
+    }
+
+    if (!isSpeaking) {
+      setStatus("待機中");
+    }
+  };
+
+  micBtn.onclick = async () => {
+    if (!audioEnabled) {
+      setStatus("音声未有効");
+      responseText.textContent = "先に『音声を有効化』を押してください";
+      return;
+    }
+
+    conversationMode = true;
+    clearRestartTimer();
+    stopPlayback();
+
+    try {
+      rec.start();
+    } catch (e) {
+      console.error(e);
+      setStatus("音声認識開始失敗");
+      responseText.textContent = `エラー: ${e.message}`;
+      conversationMode = false;
+    }
+  };
+} else {
+  micBtn.disabled = true;
+  micBtn.textContent = "音声非対応";
+}
+
+enableBtn.onclick = enableAudio;
+sendBtn.onclick = sendCurrentText;
+
+textInput.addEventListener("keydown", async (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    await sendCurrentText();
+  }
+});
+
+stopBtn.onclick = () => {
+  conversationMode = false;
+  isRecognizing = false;
+  clearRestartTimer();
+  stopPlayback();
+
+  if (rec) {
+    try { rec.abort(); } catch (_) {}
+  }
+
+  setStatus("停止");
+};
 </script>
 </body>
 </html>
