@@ -12,28 +12,15 @@
   --card:rgba(255,255,255,0.78);
   --line:rgba(0,0,0,0.08);
   --text:#111;
-  --sub:#6e6e73;
-
   --accent:#0a84ff;
   --accent-strong:#0066d6;
-  --accent-soft:#e8f2ff;
-
-  --start:#111;
-  --start-border:rgba(0,0,0,0.12);
-  --start-active:#0a84ff;
-  --start-active-text:#fff;
-
   --danger-bg:#fff1f1;
   --danger-border:#ffd1d1;
   --danger-text:#b42318;
 }
 
 *{box-sizing:border-box}
-
-html,body{
-  margin:0;
-  padding:0;
-}
+html,body{margin:0;padding:0}
 
 body{
   min-height:100vh;
@@ -67,9 +54,7 @@ body{
   align-items:center;
   justify-content:center;
   background:radial-gradient(circle at 35% 30%, #ffffff 0%, #f1f1f3 55%, #dddddf 100%);
-  box-shadow:
-    inset 0 2px 8px rgba(255,255,255,0.9),
-    0 10px 30px rgba(0,0,0,0.1);
+  box-shadow:inset 0 2px 8px rgba(255,255,255,0.9),0 10px 30px rgba(0,0,0,0.1);
 }
 
 .heart-svg{
@@ -79,16 +64,12 @@ body{
   animation:pulse 2.2s infinite ease-in-out;
   filter:drop-shadow(0 0 8px rgba(255,213,74,0.28));
 }
-
-.heart-svg.talking{
-  animation:pulseTalk 0.72s infinite ease-in-out;
-}
+.heart-svg.talking{ animation:pulseTalk 0.72s infinite ease-in-out; }
 
 @keyframes pulse{
   0%,100%{ transform:scale(1); }
   50%{ transform:scale(1.12); }
 }
-
 @keyframes pulseTalk{
   0%,100%{ transform:scale(1.02); }
   50%{ transform:scale(1.2); }
@@ -97,7 +78,6 @@ body{
 h2{
   margin:16px 0 8px;
   font-size:24px;
-  color:var(--text);
   letter-spacing:.02em;
 }
 
@@ -105,7 +85,6 @@ h2{
   margin:18px 0 12px;
   font-size:20px;
   min-height:84px;
-  color:var(--text);
   display:flex;
   align-items:center;
   justify-content:center;
@@ -155,7 +134,6 @@ h2{
   border-radius:50%;
   background:var(--accent);
   flex:0 0 auto;
-  opacity:.9;
 }
 
 .heard-text{
@@ -174,14 +152,7 @@ button{
   transition:all .18s ease;
   cursor:pointer;
 }
-
-button:active{
-  transform:scale(0.985);
-}
-
-button:disabled{
-  cursor:default;
-}
+button:active{ transform:scale(0.985); }
 
 .primary{
   background:linear-gradient(180deg,var(--accent),var(--accent-strong));
@@ -191,8 +162,8 @@ button:disabled{
 
 .secondary{
   background:#fff;
-  border:1.5px solid var(--start-border);
-  color:var(--start);
+  border:1.5px solid rgba(0,0,0,0.12);
+  color:#111;
   box-shadow:0 6px 16px rgba(0,0,0,0.05);
 }
 
@@ -205,9 +176,9 @@ button:disabled{
 }
 
 .live{
-  background:linear-gradient(180deg,var(--start-active),#0057b8) !important;
-  color:var(--start-active-text) !important;
-  border:1.5px solid rgba(0,0,0,0) !important;
+  background:linear-gradient(180deg,#0a84ff,#0057b8) !important;
+  color:#fff !important;
+  border:1.5px solid transparent !important;
   box-shadow:0 12px 24px rgba(10,132,255,0.26) !important;
 }
 
@@ -255,11 +226,9 @@ input:focus{
 }
 </style>
 </head>
-
 <body>
 
 <div class="app">
-
   <div class="core">
     <svg id="heart" class="heart-svg" viewBox="0 0 24 22" aria-hidden="true">
       <path fill="#FFD54A"
@@ -274,7 +243,6 @@ input:focus{
   </div>
 
   <h2 id="robotName">ナカムロボユニット01</h2>
-
   <div id="response" class="response">音声を有効化してください。</div>
 
   <div class="heard-wrap">
@@ -293,10 +261,7 @@ input:focus{
     <button id="send" class="send">送信</button>
   </div>
 
-  <div class="guide">
-    音声を有効化後、会話開始を押してください
-  </div>
-
+  <div class="guide">音声を有効化後、会話開始を押してください</div>
 </div>
 
 <script>
@@ -331,7 +296,6 @@ let currentSource = null;
 let manuallyStopped = false;
 let history = [];
 let heardTimer = null;
-let fallbackVoiceEnabled = true;
 
 function setResponse(text){
   responseEl.textContent = text;
@@ -357,7 +321,6 @@ function showHeard(text, keep = false){
   heardEl.classList.add("show");
 
   if(heardTimer) clearTimeout(heardTimer);
-
   if(!keep){
     heardTimer = setTimeout(() => {
       heardEl.classList.remove("show");
@@ -385,48 +348,41 @@ async function ensureAudio(){
 async function fetchWithTimeout(url, options = {}, timeout = 20000){
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
-
   try{
-    const res = await fetch(url, {
-      ...options,
-      signal: controller.signal
-    });
-    return res;
+    return await fetch(url, { ...options, signal: controller.signal });
   } finally {
     clearTimeout(timer);
   }
 }
 
 function getJapaneseVoice(){
-  const voices = window.speechSynthesis?.getVoices?.() || [];
-  const jaVoices = voices.filter(v => /ja-JP|ja_JP|Japanese|日本/.test(`${v.lang} ${v.name}`));
-  return jaVoices[0] || null;
+  if(!("speechSynthesis" in window)) return null;
+  const voices = window.speechSynthesis.getVoices() || [];
+  return voices.find(v => /ja-JP|ja_JP|Japanese|日本/.test(`${v.lang} ${v.name}`)) || null;
 }
 
 function speakFallback(text){
-  if(!fallbackVoiceEnabled) return Promise.resolve();
-  if(!("speechSynthesis" in window)) return Promise.resolve();
-  if(!text) return Promise.resolve();
+  if(!("speechSynthesis" in window) || !text){
+    return Promise.resolve();
+  }
 
   return new Promise((resolve) => {
     try{
       window.speechSynthesis.cancel();
 
-      const uttr = new SpeechSynthesisUtterance(text);
-      uttr.lang = "ja-JP";
-      uttr.rate = 0.9;
-      uttr.pitch = 0.78;
-      uttr.volume = 1.0;
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = "ja-JP";
+      utter.rate = 0.9;
+      utter.pitch = 0.78;
+      utter.volume = 1.0;
 
       const voice = getJapaneseVoice();
-      if(voice){
-        uttr.voice = voice;
-      }
+      if(voice) utter.voice = voice;
 
       isPlaying = true;
       setTalking(true);
 
-      uttr.onend = () => {
+      utter.onend = () => {
         isPlaying = false;
         setTalking(false);
         if(conversation && !manuallyStopped){
@@ -435,13 +391,13 @@ function speakFallback(text){
         resolve();
       };
 
-      uttr.onerror = () => {
+      utter.onerror = () => {
         isPlaying = false;
         setTalking(false);
         resolve();
       };
 
-      window.speechSynthesis.speak(uttr);
+      window.speechSynthesis.speak(utter);
     }catch(e){
       isPlaying = false;
       setTalking(false);
@@ -454,13 +410,9 @@ enableBtn.onclick = async () => {
   try{
     await ensureAudio();
     audioEnabled = true;
-
     if("speechSynthesis" in window){
-      try{
-        window.speechSynthesis.getVoices();
-      }catch(e){}
+      try{ window.speechSynthesis.getVoices(); }catch(e){}
     }
-
     setResponse("会話開始ボタンで始まります。");
     showHeard("会話準備完了", true);
 
@@ -488,42 +440,40 @@ async function stopCurrentAudio(){
   setTalking(false);
 }
 
-async function playAudio(blob){
-  if(!audioEnabled){
-    return;
-  }
-
+async function playAudio(blob, fallbackText = ""){
   await ensureAudio();
   await stopCurrentAudio();
 
-  const ab = await blob.arrayBuffer();
-  const buf = await audioContext.decodeAudioData(ab);
+  try{
+    const ab = await blob.arrayBuffer();
+    const buf = await audioContext.decodeAudioData(ab);
 
-  const src = audioContext.createBufferSource();
-  src.buffer = buf;
-  src.connect(audioContext.destination);
-  currentSource = src;
-  isPlaying = true;
-  setTalking(true);
+    const src = audioContext.createBufferSource();
+    src.buffer = buf;
+    src.connect(audioContext.destination);
+    currentSource = src;
+    isPlaying = true;
+    setTalking(true);
 
-  src.onended = () => {
-    isPlaying = false;
-    setTalking(false);
-    currentSource = null;
+    src.onended = () => {
+      isPlaying = false;
+      setTalking(false);
+      currentSource = null;
+      if(conversation && !manuallyStopped){
+        setTimeout(() => safeRecognitionStart(), 450);
+      }
+    };
 
-    if(conversation && !manuallyStopped){
-      setTimeout(() => safeRecognitionStart(), 450);
-    }
-  };
-
-  src.start(0);
+    src.start(0);
+  }catch(e){
+    console.error("audio decode/play failed:", e);
+    showHeard("音声再生を切り替えます", false);
+    await speakFallback(fallbackText || "応答を確認しました。");
+  }
 }
 
 function safeRecognitionStart(){
-  if(!recognition || !conversation || isProcessing || isPlaying || manuallyStopped){
-    return;
-  }
-
+  if(!recognition || !conversation || isProcessing || isPlaying || manuallyStopped) return;
   try{
     recognition.start();
     showHeard("聞き取り中...", true);
@@ -531,12 +481,8 @@ function safeRecognitionStart(){
 }
 
 function safeRecognitionStop(){
-  if(!recognition){
-    return;
-  }
-  try{
-    recognition.stop();
-  }catch(e){}
+  if(!recognition) return;
+  try{ recognition.stop(); }catch(e){}
 }
 
 async function chat(text){
@@ -549,7 +495,6 @@ async function chat(text){
 
   showHeard(`入力: ${userText}`, true);
   pushHistory("user", userText);
-
   setResponse("解析中...");
 
   let replyText = "";
@@ -590,7 +535,7 @@ async function chat(text){
       const blob = await res.blob();
       firstTurn = false;
       if(replyText) pushHistory("assistant", replyText);
-      await playAudio(blob);
+      await playAudio(blob, replyText);
       return;
     }
 
@@ -614,43 +559,32 @@ async function chat(text){
 
       firstTurn = false;
 
-      if(data?.ttsFallback){
-        showHeard("音声生成を再試行します", false);
-        await speakFallback(replyText);
-        return;
-      }
-
-      if(conversation && !manuallyStopped){
-        setTimeout(() => safeRecognitionStart(), 450);
-      }
+      showHeard("代替音声で応答します", false);
+      await speakFallback(replyText);
+      return;
 
     }catch(e){
       replyText = "応答を確認しました。";
       setResponse(replyText);
       pushHistory("assistant", replyText);
       firstTurn = false;
-
-      if(conversation && !manuallyStopped){
-        setTimeout(() => safeRecognitionStart(), 450);
-      }
+      await speakFallback(replyText);
+      return;
     }
 
   }catch(e){
     console.error(e);
-
     let msg = "通信が不安定です。再接続してください。";
     if(e.name === "AbortError"){
       msg = "応答が遅延しています。もう一度話してください。";
     }
-
     setResponse(msg);
     pushHistory("assistant", msg);
-
-    if(conversation && !manuallyStopped){
-      setTimeout(() => safeRecognitionStart(), 700);
-    }
   } finally {
     isProcessing = false;
+    if(conversation && !manuallyStopped && !isPlaying){
+      setTimeout(() => safeRecognitionStart(), 500);
+    }
   }
 }
 
@@ -756,13 +690,11 @@ stopBtn.onclick = async () => {
   safeRecognitionStop();
   await stopCurrentAudio();
   isProcessing = false;
-
   try{
     if("speechSynthesis" in window){
       window.speechSynthesis.cancel();
     }
   }catch(e){}
-
   showHeard("停止しました", false);
 };
 
@@ -782,7 +714,7 @@ sendBtn.onclick = async () => {
   await chat(text);
 };
 
-inputEl.addEventListener("keydown", async (e) => {
+inputEl.addEventListener("keydown", (e) => {
   if(e.key === "Enter"){
     e.preventDefault();
     sendBtn.click();
@@ -791,12 +723,9 @@ inputEl.addEventListener("keydown", async (e) => {
 
 if("speechSynthesis" in window){
   window.speechSynthesis.onvoiceschanged = () => {
-    try{
-      window.speechSynthesis.getVoices();
-    }catch(e){}
+    try{ window.speechSynthesis.getVoices(); }catch(e){}
   };
 }
 </script>
-
 </body>
 </html>
