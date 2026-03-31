@@ -13,10 +13,20 @@
   --line:rgba(0,0,0,0.08);
   --text:#111;
   --sub:#6e6e73;
-  --accent:#0071e3;
-  --accent-soft:#dcecff;
-  --danger-bg:#ffe5e5;
-  --danger-text:#8a1f1f;
+
+  /* ボタン色を分かりやすく強化 */
+  --accent:#0a84ff;
+  --accent-strong:#0066d6;
+  --accent-soft:#e8f2ff;
+
+  --start:#111;
+  --start-border:rgba(0,0,0,0.12);
+  --start-active:#0a84ff;
+  --start-active-text:#fff;
+
+  --danger-bg:#fff1f1;
+  --danger-border:#ffd1d1;
+  --danger-text:#b42318;
 }
 
 *{box-sizing:border-box}
@@ -122,7 +132,7 @@ h2{
   max-width:100%;
   padding:8px 12px;
   border-radius:999px;
-  background:rgba(255,255,255,0.72);
+  background:rgba(255,255,255,0.78);
   border:1px solid rgba(0,0,0,0.06);
   color:#5f6470;
   font-size:12px;
@@ -135,6 +145,7 @@ h2{
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
+  box-shadow:0 6px 18px rgba(0,0,0,0.04);
 }
 
 .heard.show{
@@ -146,9 +157,9 @@ h2{
   width:7px;
   height:7px;
   border-radius:50%;
-  background:#0071e3;
+  background:var(--accent);
   flex:0 0 auto;
-  opacity:.8;
+  opacity:.9;
 }
 
 .heard-text{
@@ -160,10 +171,11 @@ h2{
 button{
   width:100%;
   margin:6px 0;
-  padding:14px;
+  padding:15px 14px;
   border-radius:16px;
   border:none;
   font-size:15px;
+  font-weight:600;
   transition:all .18s ease;
   cursor:pointer;
 }
@@ -172,34 +184,48 @@ button:active{
   transform:scale(0.985);
 }
 
-.primary{
-  background:var(--accent);
-  color:#fff;
-}
-
-.secondary{
-  background:#fff;
-  border:1px solid var(--line);
-  color:var(--text);
-}
-
-.stop{
-  background:var(--danger-bg);
-  color:var(--danger-text);
-}
-
-.enabled{
-  background:#fff !important;
-  color:#111 !important;
-  border:1px solid rgba(0,0,0,0.1) !important;
-  opacity:0.88;
+button:disabled{
   cursor:default;
 }
 
+/* 音声有効化ボタン */
+.primary{
+  background:linear-gradient(180deg,var(--accent),var(--accent-strong));
+  color:#fff;
+  box-shadow:0 10px 24px rgba(10,132,255,0.22);
+}
+
+/* 会話開始ボタンを分かりやすく */
+.secondary{
+  background:#fff;
+  border:1.5px solid var(--start-border);
+  color:var(--start);
+  box-shadow:0 6px 16px rgba(0,0,0,0.05);
+}
+
+/* 音声有効後のボタン */
+.enabled{
+  background:#eef6ff !important;
+  color:#0a84ff !important;
+  border:1.5px solid rgba(10,132,255,0.22) !important;
+  box-shadow:0 8px 20px rgba(10,132,255,0.08);
+  opacity:1;
+}
+
+/* 会話中はかなり分かる色に */
 .live{
-  background:var(--accent-soft) !important;
-  color:#111 !important;
-  border:1px solid rgba(0,113,227,0.16) !important;
+  background:linear-gradient(180deg,var(--start-active),#0057b8) !important;
+  color:var(--start-active-text) !important;
+  border:1.5px solid rgba(0,0,0,0) !important;
+  box-shadow:0 12px 24px rgba(10,132,255,0.26) !important;
+}
+
+/* 停止 */
+.stop{
+  background:var(--danger-bg);
+  color:var(--danger-text);
+  border:1px solid var(--danger-border);
+  box-shadow:0 6px 16px rgba(180,35,24,0.06);
 }
 
 /* input */
@@ -220,15 +246,16 @@ input{
 }
 
 input:focus{
-  border-color:rgba(0,113,227,0.38);
-  box-shadow:0 0 0 4px rgba(0,113,227,0.08);
+  border-color:rgba(10,132,255,0.38);
+  box-shadow:0 0 0 4px rgba(10,132,255,0.08);
 }
 
 .send{
-  background:var(--accent);
+  background:linear-gradient(180deg,var(--accent),var(--accent-strong));
   color:#fff;
   width:auto;
   min-width:84px;
+  box-shadow:0 10px 24px rgba(10,132,255,0.18);
 }
 
 /* guide */
@@ -385,8 +412,10 @@ enableBtn.onclick = async () => {
   try{
     await ensureAudio();
     audioEnabled = true;
-    setResponse("接続完了。会話を開始できます");
-    showHeard("マイク準備完了", true);
+
+    /* 文言変更 */
+    setResponse("会話開始ボタンで始まります。");
+    showHeard("会話準備完了", true);
 
     enableBtn.textContent = "音声有効";
     enableBtn.classList.remove("primary");
