@@ -8,34 +8,26 @@
 :root{ --bg1:#f5f5f7; --bg2:#e9eaee; --card:rgba(255,255,255,0.85); --line:rgba(0,0,0,0.08); --text:#111; --sub:#6e6e73; --accent:#0071e3; }
 *{box-sizing:border-box}
 body{ margin:0; background:radial-gradient(circle at top,#fff,var(--bg1) 40%,var(--bg2)); font-family:-apple-system,sans-serif; display:flex; justify-content:center; align-items:center; min-height:100vh; padding:20px; transition: background 2s; }
-
 .app{ width:100%; max-width:420px; padding:24px; border-radius:28px; background:var(--card); backdrop-filter:blur(20px); box-shadow:0 30px 60px rgba(0,0,0,0.1); text-align:center; position:relative; overflow:hidden; transition: all 2s; }
-
-/* スリープモード演出 */
 .sleep-mode { background: rgba(15, 15, 20, 0.98); color: #fff; border: 1px solid #333; }
-.sleep-mode .response { color: #888; font-style: normal; }
+.sleep-mode .response { color: #888; }
 .sleep-mode .heart-svg { filter: grayscale(1) brightness(0.4); animation: pulse 6s infinite !important; }
-.sleep-mode .status { color: #d32f2f; font-weight: bold; }
-.sleep-mode h2 { color: #555; }
-
 .core{ width:100px; height:100px; border-radius:50%; margin:auto; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle,#fff,#ddd); }
 .heart-svg{ width:34px; height:30px; animation:pulse 2s infinite; }
 @keyframes pulse{ 50%{transform:scale(1.15);} }
-
 .vol-container { width:120px; height:6px; background:var(--line); margin:15px auto; border-radius:3px; overflow:hidden; opacity:0; }
 .vol-bar { width:0%; height:100%; background:var(--accent); transition:width 0.1s ease; }
 .status{font-size:11px;color:var(--sub);margin-top:8px;letter-spacing: 0.1em;}
 .response{margin:15px 0;font-size:17px;min-height:80px;display:flex;align-items:center;justify-content:center;line-height:1.6;color:var(--text);padding:0 15px;}
-
 button{ width:100%; padding:14px; margin:6px 0; border-radius:16px; border:none; font-size:15px; font-weight:600; cursor:pointer; transition:all .4s ease; }
 button:disabled{ opacity:0.1; cursor:not-allowed; }
 .primary{background:var(--accent);color:#fff;}
 .secondary{background:#fff;border:1px solid var(--line);color:var(--text);}
 .is-talking{background:#ff3b30 !important;color:#fff !important;}
-
 .input-area{display:flex;gap:8px;margin-top:10px;}
 input{flex:1;padding:12px;border-radius:14px;border:1px solid var(--line);outline:none;font-size:16px;}
 .send{background:var(--accent);color:#fff;width:auto;padding:0 20px;}
+#debug{ color:red; font-size:10px; margin-top:10px; word-break: break-all; }
 </style>
 </head>
 <body>
@@ -51,13 +43,14 @@ input{flex:1;padding:12px;border-radius:14px;border:1px solid var(--line);outlin
   <button id="enable" class="primary">同期を開始する</button>
   <button id="mic" class="secondary" disabled>会話を開始</button>
   
-  <div id="ui-area">
+  <div id="ui-area" style="display:none;">
     <div class="input-area">
       <input id="input" placeholder="メッセージを入力..." />
-      <button id="send" class="send" disabled>送信</button>
+      <button id="send" class="send">送信</button>
     </div>
   </div>
   
+  <div id="debug"></div>
   <p style="font-size: 10px; color: #aaa; margin-top: 20px; cursor:pointer;" onclick="location.reload()">SYSTEM REBOOT</p>
 </div>
 
@@ -78,11 +71,19 @@ const sendBtn = document.getElementById("send");
 const inputEl = document.getElementById("input");
 const volBar = document.getElementById("volume-bar");
 const volCont = document.getElementById("volume-container");
+const debugEl = document.getElementById("debug");
 
 let audioContext, recognition, conversation = false, isProcessing = false;
 
-async function initMonitor() {
+enableBtn.onclick = async () => {
+  if (!config.endpoint || !config.endpoint.startsWith('http')) {
+    debugEl.textContent = "エラー: URLパラメータに正しい 'endpoint' が設定されていません。";
+    return;
+  }
   try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    audioContext = new AC(); await audioContext.resume();
+    // マイク初期化
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const source = audioContext.createMediaStreamSource(stream);
     const analyser = audioContext.createAnalyser();
@@ -94,23 +95,22 @@ async function initMonitor() {
       let v = 0; for(let i=0; i<dataArray.length; i++) v += dataArray[i];
       volBar.style.width = isProcessing ? "0%" : Math.min(100, (v/dataArray.length/50)*100) + "%";
     }; update();
-  } catch(e) { console.warn("Mic access denied"); }
-}
 
-enableBtn.onclick = async () => {
-  if (!config.endpoint) { alert("Endpoint URL未設定"); return; }
-  const AC = window.AudioContext || window.webkitAudioContext;
-  audioContext = new AC(); await audioContext.resume();
-  await initMonitor();
-  enableBtn.style.display = "none";
-  micBtn.disabled = false; sendBtn.disabled = false;
-  responseEl.textContent = "同期完了。接続を維持しています。";
-  statusEl.textContent = "SIGNAL: STABLE";
+    enableBtn.style.display = "none";
+    document.getElementById("ui-area").style.display = "block";
+    micBtn.disabled = false;
+    responseEl.textContent = "同期完了。接続を維持しています。";
+    statusEl.textContent = "SIGNAL: STABLE";
+    debugEl.textContent = "";
+  } catch(e) {
+    debugEl.textContent = "エラー: マイクの使用が許可されていないか、オーディオの初期化に失敗しました。";
+  }
 };
 
 async function chat(text) {
   if (!text || isProcessing) return;
   isProcessing = true;
+  debugEl.textContent = "";
   if (conversation && recognition) try { recognition.stop(); } catch(e){}
   responseEl.textContent = "解析中..."; statusEl.textContent = "SYNCING...";
 
@@ -121,17 +121,21 @@ async function chat(text) {
     });
 
     const reply = res.headers.get("X-Reply");
+    const errorMsg = res.headers.get("X-Error");
+
     if (reply) responseEl.textContent = decodeURIComponent(reply);
+    if (errorMsg) debugEl.textContent = "Worker内部エラー: " + decodeURIComponent(errorMsg);
 
     if (res.status === 403) {
       appEl.classList.add("sleep-mode");
       document.body.style.background = "#050507"; 
-      statusEl.textContent = "LOW BATTERY: SLEEP MODE";
       micBtn.style.display = "none";
       document.getElementById("ui-area").style.display = "none";
       document.getElementById("heart").style.animationDuration = "6s";
       return;
     }
+
+    if (!res.ok) throw new Error("通信エラー: " + res.status);
 
     const blob = await res.blob();
     const ab = await blob.arrayBuffer();
@@ -147,7 +151,8 @@ async function chat(text) {
     };
     src.start(0);
   } catch (e) {
-    responseEl.textContent = "信号ロスト。再接続してください。";
+    responseEl.textContent = "信号ロスト。";
+    debugEl.textContent = "詳細: " + e.message;
     isProcessing = false; statusEl.textContent = "SIGNAL: ERROR";
   }
 }
