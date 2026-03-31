@@ -1,27 +1,27 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>NAKAMUROBO AI</title>
 
 <style>
 :root{
-  --bg:#050505;
-  --line:#2a2a2a;
-  --text:#f2f2f2;
-  --sub:#888;
-  --accent:#ffd54a;
-  --accent2:#00e5ff;
+  --bg1:#f5f5f7;
+  --bg2:#e9eaee;
+  --card:rgba(255,255,255,0.75);
+  --line:rgba(0,0,0,0.08);
+  --text:#111;
+  --sub:#6e6e73;
+  --accent:#0071e3;
 }
 
 *{box-sizing:border-box}
 
 body{
   margin:0;
-  background:radial-gradient(circle at top,#111,#000);
-  color:var(--text);
-  font-family:sans-serif;
+  background:radial-gradient(circle at top,#fff,var(--bg1) 40%,var(--bg2));
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;
   display:flex;
   justify-content:center;
   align-items:center;
@@ -32,10 +32,10 @@ body{
   width:100%;
   max-width:420px;
   padding:20px;
-  border:1px solid var(--line);
-  border-radius:20px;
-  background:rgba(0,0,0,0.9);
-  box-shadow:0 0 40px rgba(0,0,0,0.8);
+  border-radius:28px;
+  background:var(--card);
+  backdrop-filter:blur(20px);
+  box-shadow:0 30px 60px rgba(0,0,0,0.1);
   text-align:center;
 }
 
@@ -45,45 +45,59 @@ body{
   width:120px;
   height:120px;
   border-radius:50%;
-  border:1px solid #333;
   margin:0 auto;
   display:flex;
   align-items:center;
   justify-content:center;
-  background:radial-gradient(circle,#222,#000);
+  background:radial-gradient(circle,#fff,#ddd);
+  box-shadow:0 10px 30px rgba(0,0,0,0.1);
 }
 
+/* 🔥 修正版ハート */
 .heart{
-  width:28px;
-  height:28px;
-  background:var(--accent);
+  width:30px;
+  height:30px;
+  background:#ffd54a;
   transform:rotate(45deg);
-  animation:pulse 2s infinite;
+  position:relative;
+  animation:pulse 2.2s infinite ease-in-out;
 }
 
-.heart:before,.heart:after{
+.heart:before,
+.heart:after{
   content:"";
-  width:28px;
-  height:28px;
-  background:var(--accent);
-  border-radius:50%;
   position:absolute;
+  width:30px;
+  height:30px;
+  background:#ffd54a;
+  border-radius:50%;
 }
 
-.heart:before{left:-14px;}
-.heart:after{top:-14px;}
+.heart:before{
+  left:-15px;
+  top:0;
+}
+
+.heart:after{
+  left:0;
+  top:-15px;
+}
 
 @keyframes pulse{
   0%,100%{transform:scale(1) rotate(45deg);}
-  50%{transform:scale(1.2) rotate(45deg);}
+  50%{transform:scale(1.15) rotate(45deg);}
 }
 
 /* ---------- テキスト ---------- */
 
 h2{
-  margin:15px 0 5px;
-  font-size:22px;
-  letter-spacing:2px;
+  margin:16px 0 6px;
+  font-size:24px;
+}
+
+.status{
+  color:var(--sub);
+  font-size:13px;
 }
 
 .response{
@@ -92,29 +106,29 @@ h2{
   min-height:60px;
 }
 
-.status{
-  font-size:13px;
-  color:var(--sub);
-  margin-bottom:10px;
-}
-
 /* ---------- ボタン ---------- */
 
 button{
   width:100%;
   margin:6px 0;
   padding:14px;
+  border-radius:16px;
   border:none;
-  border-radius:12px;
   font-size:15px;
-  font-weight:bold;
-  background:#111;
-  color:#fff;
-  border:1px solid #333;
 }
 
-button:active{
-  transform:scale(0.97);
+.primary{
+  background:var(--accent);
+  color:#fff;
+}
+
+.secondary{
+  background:#fff;
+  border:1px solid var(--line);
+}
+
+.stop{
+  background:#ffe5e5;
 }
 
 /* ---------- 入力 ---------- */
@@ -128,16 +142,13 @@ button:active{
 input{
   flex:1;
   padding:12px;
-  border-radius:10px;
-  border:1px solid #333;
-  background:#000;
-  color:#fff;
+  border-radius:14px;
+  border:1px solid var(--line);
 }
 
 .send{
-  background:var(--accent2);
-  color:#000;
-  font-weight:bold;
+  background:var(--accent);
+  color:#fff;
 }
 </style>
 </head>
@@ -158,9 +169,9 @@ input{
 
   <div id="status" class="status">待機中</div>
 
-  <button id="enable">音声を有効化</button>
-  <button id="mic">会話開始</button>
-  <button id="stop">停止</button>
+  <button id="enable" class="primary">音声を有効化</button>
+  <button id="mic" class="secondary">会話開始</button>
+  <button id="stop" class="stop">停止</button>
 
   <div class="input-area">
     <input id="input" placeholder="入力..." />
