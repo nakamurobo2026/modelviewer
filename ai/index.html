@@ -4,109 +4,326 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>NAKAMUROBO AI</title>
+
 <style>
-:root{ --bg1:#f5f5f7; --bg2:#e9eaee; --card:rgba(255,255,255,0.85); --line:rgba(0,0,0,0.08); --text:#111; --sub:#6e6e73; --accent:#0071e3; }
+:root{
+  --bg1:#f5f5f7;
+  --bg2:#e9eaee;
+  --card:rgba(255,255,255,0.78);
+  --line:rgba(0,0,0,0.08);
+  --text:#111;
+  --sub:#6e6e73;
+  --accent:#0071e3;
+}
+
 *{box-sizing:border-box}
-body{ margin:0; background:radial-gradient(circle at top,#fff,var(--bg1) 40%,var(--bg2)); font-family:-apple-system,sans-serif; display:flex; justify-content:center; align-items:center; min-height:100vh; padding:20px; }
-.app{ width:100%; max-width:420px; padding:24px; border-radius:28px; background:var(--card); backdrop-filter:blur(20px); box-shadow:0 30px 60px rgba(0,0,0,0.1); text-align:center; position:relative; }
-.sleep-mode { background: rgba(15, 15, 20, 0.98); color: #fff; border: 1px solid #333; }
-.sleep-mode .heart-svg { filter: grayscale(1) brightness(0.4); animation: pulse 6s infinite !important; }
-.core{ width:100px; height:100px; border-radius:50%; margin:auto; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle,#fff,#ddd); }
-.heart-svg{ width:34px; height:30px; animation:pulse 2s infinite; }
-@keyframes pulse{ 50%{transform:scale(1.15);} }
-.vol-container { width:120px; height:6px; background:var(--line); margin:15px auto; border-radius:3px; overflow:hidden; opacity:0; }
-.vol-bar { width:0%; height:100%; background:var(--accent); transition:width 0.1s ease; }
-.status{font-size:11px;color:var(--sub);margin-top:8px;}
-.response{margin:15px 0;font-size:17px;min-height:80px;display:flex;align-items:center;justify-content:center;line-height:1.6;}
-button{ width:100%; padding:14px; margin:6px 0; border-radius:16px; border:none; font-size:15px; font-weight:600; cursor:pointer; }
-button:disabled{ opacity:0.1; cursor:not-allowed; }
-.primary{background:var(--accent);color:#fff;}
-.secondary{background:#fff;border:1px solid var(--line);color:var(--text);}
-.is-talking{background:#ff3b30 !important;color:#fff !important;}
-.input-area{display:flex;gap:8px;margin-top:10px;}
-input{flex:1;padding:12px;border-radius:14px;border:1px solid var(--line);outline:none;font-size:16px;}
-.send{background:var(--accent);color:#fff;width:auto;padding:0 20px;}
+
+body{
+  margin:0;
+  background:radial-gradient(circle at top,#fff,var(--bg1) 40%,var(--bg2));
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+  padding:20px;
+}
+
+.app{
+  width:100%;
+  max-width:420px;
+  padding:20px;
+  border-radius:28px;
+  background:var(--card);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  box-shadow:0 30px 60px rgba(0,0,0,0.1);
+  text-align:center;
+}
+
+/* ---------- コア ---------- */
+
+.core{
+  width:120px;
+  height:120px;
+  border-radius:50%;
+  margin:0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:radial-gradient(circle at 35% 30%, #ffffff 0%, #f1f1f3 55%, #dddddf 100%);
+  box-shadow:
+    inset 0 2px 8px rgba(255,255,255,0.9),
+    0 10px 30px rgba(0,0,0,0.1);
+}
+
+.heart-svg{
+  width:38px;
+  height:34px;
+  display:block;
+  animation:pulse 2.2s infinite ease-in-out;
+  filter:drop-shadow(0 0 8px rgba(255,213,74,0.28));
+}
+
+@keyframes pulse{
+  0%,100%{ transform:scale(1); }
+  50%{ transform:scale(1.12); }
+}
+
+/* ---------- テキスト ---------- */
+
+h2{
+  margin:16px 0 6px;
+  font-size:24px;
+  color:var(--text);
+}
+
+.status{
+  color:var(--sub);
+  font-size:13px;
+  min-height:18px;
+}
+
+.response{
+  margin:20px 0;
+  font-size:20px;
+  min-height:70px;
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+
+/* ---------- ボタン ---------- */
+
+button{
+  width:100%;
+  margin:6px 0;
+  padding:14px;
+  border-radius:16px;
+  border:none;
+  font-size:15px;
+  transition:all .18s ease;
+}
+
+.primary{
+  background:var(--accent);
+  color:#fff;
+}
+
+.secondary{
+  background:#fff;
+  border:1px solid var(--line);
+  color:var(--text);
+}
+
+.stop{
+  background:#ffe5e5;
+  color:#8a1f1f;
+}
+
+.enabled{
+  background:#fff !important;
+  color:#111 !important;
+  border:1px solid rgba(0,0,0,0.1) !important;
+  opacity:0.7;
+  cursor:default;
+}
+
+/* ---------- 入力 ---------- */
+
+.input-area{
+  display:flex;
+  gap:8px;
+  margin-top:10px;
+}
+
+input{
+  flex:1;
+  padding:12px;
+  border-radius:14px;
+  border:1px solid var(--line);
+}
+
+.send{
+  background:var(--accent);
+  color:#fff;
+  width:auto;
+  min-width:84px;
+}
+
+/* ---------- ガイド ---------- */
+
+.guide{
+  margin-top:14px;
+  font-size:12px;
+  color:#8e8e93;
+  line-height:1.6;
+}
 </style>
 </head>
+
 <body>
-<div id="app" class="app">
+
+<div class="app">
+
   <div class="core">
-    <svg id="heart" class="heart-svg" viewBox="0 0 24 22"><path fill="#FFD54A" d="M12 21.2 10.55 19.88C5.4 15.22 2 12.14 2 8.35 2 5.27 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09 C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.27 22 8.35 c0 3.79-3.4 6.87-8.55 11.53 L12 21.2Z"/></svg>
+    <svg class="heart-svg" viewBox="0 0 24 22">
+      <path fill="#FFD54A"
+        d="M12 21.2 10.55 19.88C5.4 15.22 2 12.14 2 8.35
+        2 5.27 4.42 3 7.5 3
+        c1.74 0 3.41.81 4.5 2.09
+        C13.09 3.81 14.76 3 16.5 3
+        19.58 3 22 5.27 22 8.35
+        c0 3.79-3.4 6.87-8.55 11.53
+        L12 21.2Z"/>
+    </svg>
   </div>
-  <div id="volume-container" class="vol-container"><div id="volume-bar" class="vol-bar"></div></div>
-  <h2 id="robotName" style="font-size:18px;margin:10px 0 0;">ナカムロボ</h2>
-  <div id="status" class="status">SIGNAL: WAITING</div>
-  <div id="response" class="response">音声を有効化してください。</div>
-  
-  <button id="enable" class="primary">同期を開始する</button>
-  <button id="mic" class="secondary" disabled style="display:none;">会話を開始</button>
-  
-  <div id="ui-area" style="display:none;">
-    <div class="input-area">
-      <input id="input" placeholder="メッセージを入力..." />
-      <button id="send" class="send">送信</button>
-    </div>
+
+  <h2 id="robotName">ナカムロボユニット01</h2>
+
+  <div id="response" class="response">
+    音声を有効化してください。
   </div>
-  <p style="font-size: 10px; color: #aaa; margin-top: 20px; cursor:pointer;" onclick="location.reload()">SYSTEM REBOOT</p>
+
+  <div id="status" class="status">待機中</div>
+
+  <button id="enable" class="primary">音声を有効化</button>
+  <button id="mic" class="secondary">会話開始</button>
+  <button id="stop" class="stop">停止</button>
+
+  <div class="input-area">
+    <input id="input" placeholder="入力..." />
+    <button id="send" class="send">送信</button>
+  </div>
+
+  <div class="guide">
+    音声を有効化後、会話を開始できます
+  </div>
+
 </div>
 
 <script>
 const qs = new URLSearchParams(location.search);
-const config = { id: qs.get("id") || "robot01", name: qs.get("name") || "ナカムロボ", endpoint: qs.get("endpoint") || "" };
-document.getElementById("robotName").textContent = config.name;
-const appEl = document.getElementById("app"), responseEl = document.getElementById("response"), statusEl = document.getElementById("status"), micBtn = document.getElementById("mic"), enableBtn = document.getElementById("enable"), sendBtn = document.getElementById("send"), inputEl = document.getElementById("input"), volBar = document.getElementById("volume-bar"), volCont = document.getElementById("volume-container");
 
-let audioContext, recognition, conversation = false, isProcessing = false;
+const config = {
+  id: qs.get("id") || "robot01",
+  name: qs.get("name") || "ナカムロボユニット01",
+  endpoint: qs.get("endpoint") || ""
+};
+
+document.getElementById("robotName").textContent = config.name;
+
+const responseEl = document.getElementById("response");
+const statusEl = document.getElementById("status");
+const inputEl = document.getElementById("input");
+const micBtn = document.getElementById("mic");
+const enableBtn = document.getElementById("enable");
+
+let audioContext;
+let audioEnabled=false;
+let recognition;
+let conversation=false;
+
+function setStatus(t){statusEl.textContent=t;}
 
 enableBtn.onclick = async () => {
   const AC = window.AudioContext || window.webkitAudioContext;
-  audioContext = new AC(); await audioContext.resume();
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  const source = audioContext.createMediaStreamSource(stream);
-  const analyser = audioContext.createAnalyser();
-  analyser.fftSize = 256; source.connect(analyser);
-  const dataArray = new Uint8Array(analyser.frequencyBinCount);
-  volCont.style.opacity = "1";
-  const update = () => { requestAnimationFrame(update); analyser.getByteFrequencyData(dataArray); let v = 0; for(let i=0; i<dataArray.length; i++) v += dataArray[i]; volBar.style.width = isProcessing ? "0%" : Math.min(100, (v/dataArray.length/50)*100) + "%"; }; update();
-  enableBtn.style.display = "none"; micBtn.style.display = "block"; micBtn.disabled = false; document.getElementById("ui-area").style.display = "block";
-  responseEl.textContent = "同期完了。接続を維持しています。"; statusEl.textContent = "SIGNAL: STABLE";
+  audioContext = new AC();
+  await audioContext.resume();
+
+  audioEnabled = true;
+
+  setStatus("音声有効");
+  responseEl.textContent = "接続完了。会話を開始できます";
+
+  enableBtn.textContent = "音声有効";
+  enableBtn.classList.remove("primary");
+  enableBtn.classList.add("enabled");
+  enableBtn.disabled = true;
 };
 
-async function chat(text) {
-  if (!text || isProcessing) return;
-  isProcessing = true;
-  if (conversation && recognition) try { recognition.stop(); } catch(e){}
-  responseEl.textContent = "解析中..."; statusEl.textContent = "SYNCING...";
+async function playAudio(blob){
+  const ab=await blob.arrayBuffer();
+  const buf=await audioContext.decodeAudioData(ab);
+  const src=audioContext.createBufferSource();
+  src.buffer=buf;
+  src.connect(audioContext.destination);
 
-  try {
-    const res = await fetch(config.endpoint, { method: "POST", headers: {'Content-Type':'application/json'}, body: JSON.stringify({ robotId: config.id, robotName: config.name, userText: text }) });
-    const reply = res.headers.get("X-Reply");
-    if (reply) responseEl.textContent = decodeURIComponent(reply);
-    if (res.status === 403) { appEl.classList.add("sleep-mode"); micBtn.style.display = "none"; document.getElementById("ui-area").style.display = "none"; return; }
-    
-    const ab = await res.arrayBuffer();
-    const buf = await audioContext.decodeAudioData(ab);
-    const src = audioContext.createBufferSource();
-    src.buffer = buf; src.connect(audioContext.destination);
-    statusEl.textContent = "PLAYING";
-    src.onended = () => { isProcessing = false; if (conversation) { statusEl.textContent = "LISTENING"; try { recognition.start(); } catch(e){} } else { statusEl.textContent = "SIGNAL: STABLE"; } };
-    src.start(0);
-  } catch (e) { responseEl.textContent = "信号ロスト。"; isProcessing = false; }
+  setStatus("再生中");
+
+  src.onended=()=>{
+    setStatus(conversation?"聞き取り待機中...":"待機中");
+  };
+
+  src.start(0);
+}
+
+async function chat(text){
+  setStatus("接続中...");
+  responseEl.textContent="解析中...";
+
+  const res=await fetch(config.endpoint,{
+    method:"POST",
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      robotId:config.id,
+      robotName:config.name,
+      userText:text
+    })
+  });
+
+  const reply=res.headers.get("X-Reply");
+  if(reply){
+    responseEl.textContent=decodeURIComponent(reply);
+  }
+
+  const blob=await res.blob();
+  await playAudio(blob);
 }
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-if (SR) {
-  recognition = new SR(); recognition.lang = "ja-JP";
-  recognition.onresult = e => chat(e.results[0][0].transcript);
-  recognition.onend = () => { if(conversation && !isProcessing) try { recognition.start(); } catch(e){} };
-  micBtn.onclick = () => {
-    conversation = !conversation;
-    if (conversation) { micBtn.textContent = "会話を停止"; micBtn.classList.add("is-talking"); recognition.start(); statusEl.textContent = "LISTENING"; }
-    else { micBtn.textContent = "会話を開始"; micBtn.classList.remove("is-talking"); recognition.stop(); statusEl.textContent = "SIGNAL: STABLE"; }
+
+if(SR){
+  recognition=new SR();
+  recognition.lang="ja-JP";
+
+  recognition.onresult=e=>{
+    chat(e.results[0][0].transcript);
+  };
+
+  recognition.onend=()=>{
+    if(conversation){
+      recognition.start();
+    }
+  };
+
+  micBtn.onclick=()=>{
+    if(!audioEnabled){setStatus("音声未有効");return;}
+
+    conversation=!conversation;
+
+    if(conversation){
+      micBtn.textContent="会話中";
+      micBtn.classList.add("primary");
+      recognition.start();
+    }else{
+      micBtn.textContent="会話開始";
+      micBtn.classList.remove("primary");
+      recognition.stop();
+      setStatus("待機中");
+    }
   };
 }
-sendBtn.onclick = () => { chat(inputEl.value); inputEl.value = ""; };
-inputEl.onkeypress = e => { if(e.key==="Enter") sendBtn.click(); };
+
+document.getElementById("send").onclick=()=>{
+  conversation=false;
+  micBtn.textContent="会話開始";
+  micBtn.classList.remove("primary");
+  chat(inputEl.value);
+};
 </script>
+
 </body>
 </html>
