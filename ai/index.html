@@ -27,7 +27,7 @@ button:disabled{ opacity:0.1; cursor:not-allowed; }
 .input-area{display:flex;gap:8px;margin-top:10px;}
 input{flex:1;padding:12px;border-radius:14px;border:1px solid var(--line);outline:none;font-size:16px;}
 .send{background:var(--accent);color:#fff;width:auto;padding:0 20px;}
-#debug{ color:red; font-size:10px; margin-top:10px; word-break: break-all; }
+#debug-info{ font-size:10px; color:red; margin-top:10px; word-break: break-all; min-height: 12px; }
 </style>
 </head>
 <body>
@@ -41,7 +41,7 @@ input{flex:1;padding:12px;border-radius:14px;border:1px solid var(--line);outlin
   <div id="response" class="response">音声を有効化してください。</div>
   
   <button id="enable" class="primary">同期を開始する</button>
-  <button id="mic" class="secondary" disabled>会話を開始</button>
+  <button id="mic" class="secondary" disabled style="display:none;">会話を開始</button>
   
   <div id="ui-area" style="display:none;">
     <div class="input-area">
@@ -50,8 +50,8 @@ input{flex:1;padding:12px;border-radius:14px;border:1px solid var(--line);outlin
     </div>
   </div>
   
-  <div id="debug"></div>
-  <p style="font-size: 10px; color: #aaa; margin-top: 20px; cursor:pointer;" onclick="location.reload()">SYSTEM REBOOT</p>
+  <div id="debug-info"></div>
+  <p style="font-size: 10px; color: #aaa; margin-top: 20px; cursor:pointer;" onclick="location.reload()">REBOOT SYSTEM</p>
 </div>
 
 <script>
@@ -71,19 +71,15 @@ const sendBtn = document.getElementById("send");
 const inputEl = document.getElementById("input");
 const volBar = document.getElementById("volume-bar");
 const volCont = document.getElementById("volume-container");
-const debugEl = document.getElementById("debug");
+const debugEl = document.getElementById("debug-info");
 
 let audioContext, recognition, conversation = false, isProcessing = false;
 
 enableBtn.onclick = async () => {
-  if (!config.endpoint || !config.endpoint.startsWith('http')) {
-    debugEl.textContent = "エラー: URLパラメータに正しい 'endpoint' が設定されていません。";
-    return;
-  }
+  if (!config.endpoint) { alert("Endpointが設定されていません。"); return; }
   try {
     const AC = window.AudioContext || window.webkitAudioContext;
     audioContext = new AC(); await audioContext.resume();
-    // マイク初期化
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const source = audioContext.createMediaStreamSource(stream);
     const analyser = audioContext.createAnalyser();
@@ -97,14 +93,12 @@ enableBtn.onclick = async () => {
     }; update();
 
     enableBtn.style.display = "none";
-    document.getElementById("ui-area").style.display = "block";
+    micBtn.style.display = "block";
     micBtn.disabled = false;
+    document.getElementById("ui-area").style.display = "block";
     responseEl.textContent = "同期完了。接続を維持しています。";
     statusEl.textContent = "SIGNAL: STABLE";
-    debugEl.textContent = "";
-  } catch(e) {
-    debugEl.textContent = "エラー: マイクの使用が許可されていないか、オーディオの初期化に失敗しました。";
-  }
+  } catch(e) { debugEl.textContent = "Error: マイクへのアクセスを許可してください。"; }
 };
 
 async function chat(text) {
@@ -121,21 +115,22 @@ async function chat(text) {
     });
 
     const reply = res.headers.get("X-Reply");
-    const errorMsg = res.headers.get("X-Error");
+    const errorLog = res.headers.get("X-Error");
 
     if (reply) responseEl.textContent = decodeURIComponent(reply);
-    if (errorMsg) debugEl.textContent = "Worker内部エラー: " + decodeURIComponent(errorMsg);
+    if (errorLog) debugEl.textContent = "Log: " + decodeURIComponent(errorLog);
 
     if (res.status === 403) {
       appEl.classList.add("sleep-mode");
       document.body.style.background = "#050507"; 
+      statusEl.textContent = "LOW BATTERY: SLEEP MODE";
       micBtn.style.display = "none";
       document.getElementById("ui-area").style.display = "none";
       document.getElementById("heart").style.animationDuration = "6s";
       return;
     }
 
-    if (!res.ok) throw new Error("通信エラー: " + res.status);
+    if (!res.ok) throw new Error("HTTP Error " + res.status);
 
     const blob = await res.blob();
     const ab = await blob.arrayBuffer();
@@ -152,7 +147,7 @@ async function chat(text) {
     src.start(0);
   } catch (e) {
     responseEl.textContent = "信号ロスト。";
-    debugEl.textContent = "詳細: " + e.message;
+    debugEl.textContent = "Detail: " + e.message;
     isProcessing = false; statusEl.textContent = "SIGNAL: ERROR";
   }
 }
