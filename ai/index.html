@@ -7,7 +7,6 @@
 <style>
 :root{
   --bg:#050505;
-  --panel:#111;
   --line:#2a2a2a;
   --text:#f2f2f2;
   --sub:#9a9a9a;
@@ -32,12 +31,11 @@ body{
 .app{
   width:100%;
   max-width:560px;
-  background:rgba(15,15,15,0.88);
+  background:rgba(15,15,15,0.92);
   border:1px solid var(--line);
   border-radius:24px;
   padding:20px;
   box-shadow:0 20px 60px rgba(0,0,0,0.45);
-  backdrop-filter:blur(10px);
 }
 .top{
   display:flex;
@@ -47,7 +45,7 @@ body{
 }
 .badge{
   font-size:12px;
-  color:#0d0d0d;
+  color:#111;
   background:var(--accent);
   padding:6px 10px;
   border-radius:999px;
@@ -81,8 +79,7 @@ body{
   position:relative;
   animation:pulse 2.4s infinite ease-in-out;
 }
-.heart:before,
-.heart:after{
+.heart:before,.heart:after{
   content:"";
   width:32px;
   height:32px;
@@ -92,12 +89,10 @@ body{
 }
 .heart:before{ left:-16px; }
 .heart:after{ top:-16px; }
-
 @keyframes pulse{
   0%,100%{ transform:rotate(45deg) scale(1); }
   50%{ transform:rotate(45deg) scale(1.1); }
 }
-
 .robot-name{
   margin-top:14px;
   font-size:24px;
@@ -214,10 +209,12 @@ input{
     </div>
 
     <div class="note">
-      まずは送信ボタンで確認。<br>
-      話しかけるはマイク許可が必要。
+      iPhoneのChromeは再生制限が強いです。<br>
+      まずは送信ボタンで確認してください。
     </div>
   </main>
+
+  <audio id="player" playsinline webkit-playsinline preload="auto"></audio>
 
 <script>
 const qs = new URLSearchParams(location.search);
@@ -243,46 +240,66 @@ const micBtn = document.getElementById("micBtn");
 const stopBtn = document.getElementById("stopBtn");
 const sendBtn = document.getElementById("sendBtn");
 const textInput = document.getElementById("textInput");
+const player = document.getElementById("player");
 
 robotMeta.textContent = `ID: ${config.id}`;
 robotName.textContent = config.name;
 
-let currentAudio = null;
 let currentAudioUrl = null;
-let audioUnlocked = false;
 let isRecognizing = false;
 let rec = null;
+let audioReady = false;
+let audioContext = null;
 
 function setStatus(text) {
   statusText.textContent = text;
 }
 
-function cleanupAudio() {
-  if (currentAudio) {
-    try { currentAudio.pause(); } catch (_) {}
-    try { currentAudio.removeAttribute("src"); } catch (_) {}
-    try { currentAudio.load(); } catch (_) {}
-    currentAudio = null;
-  }
+function cleanupAudioUrl() {
   if (currentAudioUrl) {
     try { URL.revokeObjectURL(currentAudioUrl); } catch (_) {}
     currentAudioUrl = null;
   }
 }
 
-async function forceUnlockNow() {
-  if (audioUnlocked) return true;
+function stopPlayback() {
+  try { player.pause(); } catch (_) {}
+  try { player.removeAttribute("src"); } catch (_) {}
+  try { player.load(); } catch (_) {}
+  cleanupAudioUrl();
+}
+
+async function unlockAudioSystem() {
+  if (audioReady) return true;
 
   try {
-    const a = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==");
-    a.volume = 0;
-    await a.play();
-    a.pause();
-    a.currentTime = 0;
-    audioUnlocked = true;
+    if (!audioContext) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) {
+        audioContext = new AC();
+      }
+    }
+
+    if (audioContext && audioContext.state === "suspended") {
+      await audioContext.resume();
+    }
+
+    player.setAttribute("playsinline", "");
+    player.setAttribute("webkit-playsinline", "");
+
+    player.muted = true;
+    player.src = "data:audio/mp3;base64,SUQzAwAAAAAA";
+    await player.play();
+    player.pause();
+    player.currentTime = 0;
+    player.muted = false;
+    player.removeAttribute("src");
+    player.load();
+
+    audioReady = true;
     return true;
   } catch (e) {
-    console.log("force unlock failed:", e);
+    console.log("unlockAudioSystem failed:", e);
     return false;
   }
 }
@@ -301,42 +318,39 @@ async function safeReadError(response) {
 }
 
 async function playAudioBlob(blob) {
-  cleanupAudio();
-
+  cleanupAudioUrl();
   currentAudioUrl = URL.createObjectURL(blob);
-  currentAudio = new Audio();
-  currentAudio.src = currentAudioUrl;
-  currentAudio.preload = "auto";
-  currentAudio.playbackRate = 0.95;
-  currentAudio.crossOrigin = "anonymous";
 
-  currentAudio.onplay = () => {
+  player.pause();
+  player.src = currentAudioUrl;
+  player.load();
+  player.playbackRate = 0.95;
+
+  player.onplay = () => {
     setStatus("再生中");
   };
 
-  currentAudio.onended = () => {
+  player.onended = () => {
     setStatus("待機中");
-    cleanupAudio();
+    cleanupAudioUrl();
   };
 
-  currentAudio.onerror = () => {
+  player.onerror = () => {
     setStatus("音声再生エラー");
   };
 
   try {
-    await currentAudio.play();
+    await player.play();
   } catch (e) {
     const msg = String(e && e.message ? e.message : e).toLowerCase();
-
     if (
       msg.includes("user denied permission") ||
       msg.includes("notallowederror") ||
       msg.includes("gesture") ||
       msg.includes("play() failed")
     ) {
-      throw new Error("音声再生が許可されていません。送信ボタンをもう一度押してください");
+      throw new Error("ブラウザが音声再生を止めています。iPhoneではSafariのほうが安定します。");
     }
-
     throw e;
   }
 }
@@ -357,9 +371,7 @@ async function chat(txt) {
   try {
     const response = await fetch(config.endpoint, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         robotId: config.id,
         robotName: config.name,
@@ -393,12 +405,12 @@ async function chat(txt) {
       throw new Error(errMsg || "音声データではありません");
     }
 
-    const audioBlob = await response.blob();
-    if (!audioBlob || audioBlob.size === 0) {
+    const blob = await response.blob();
+    if (!blob || blob.size === 0) {
       throw new Error("音声データが空です");
     }
 
-    await playAudioBlob(audioBlob);
+    await playAudioBlob(blob);
 
   } catch (e) {
     console.error(e);
@@ -411,10 +423,10 @@ async function sendCurrentText() {
   const value = textInput.value;
   textInput.value = "";
 
-  const ok = await forceUnlockNow();
+  const ok = await unlockAudioSystem();
   if (!ok) {
     setStatus("音声再生が許可されていません");
-    responseText.textContent = "Chromeのタブで直接開いて、もう一度送信してください";
+    responseText.textContent = "iPhoneのChromeでは失敗することがあります。Safariで開くと安定しやすいです。";
     return;
   }
 
@@ -439,10 +451,10 @@ if (SR) {
     const transcript = e.results[0][0].transcript;
     isRecognizing = false;
 
-    const ok = await forceUnlockNow();
+    const ok = await unlockAudioSystem();
     if (!ok) {
       setStatus("音声再生が許可されていません");
-      responseText.textContent = "Chromeのタブで直接開いて、もう一度試してください";
+      responseText.textContent = "まずSafariで試してください。";
       return;
     }
 
@@ -455,13 +467,13 @@ if (SR) {
 
     if (e.error === "not-allowed" || e.error === "service-not-allowed") {
       setStatus("マイク許可が必要");
-      responseText.textContent = "Chromeのサイト設定でマイクを許可してください。";
+      responseText.textContent = "ブラウザのサイト設定でマイクを許可してください。";
       return;
     }
 
     if (e.error === "no-speech") {
       setStatus("音声なし");
-      responseText.textContent = "音声を認識できませんでした。もう一度どうぞ。";
+      responseText.textContent = "音声を認識できませんでした。";
       return;
     }
 
@@ -482,15 +494,15 @@ if (SR) {
   };
 
   micBtn.onclick = async () => {
-    const ok = await forceUnlockNow();
+    const ok = await unlockAudioSystem();
     if (!ok) {
       setStatus("音声再生が許可されていません");
-      responseText.textContent = "Chromeのタブで直接開いてから試してください";
+      responseText.textContent = "iPhoneのChromeでは制限が強いです。Safari推奨です。";
       return;
     }
 
     try {
-      cleanupAudio();
+      stopPlayback();
       rec.start();
     } catch (e) {
       console.error(e);
@@ -498,7 +510,7 @@ if (SR) {
 
       if (msg.includes("permission")) {
         setStatus("マイク許可が必要");
-        responseText.textContent = "Chromeのサイト設定でマイクを許可してください。";
+        responseText.textContent = "マイクの使用が許可されていません。";
         return;
       }
 
@@ -521,7 +533,7 @@ textInput.addEventListener("keydown", async (e) => {
 });
 
 stopBtn.onclick = () => {
-  cleanupAudio();
+  stopPlayback();
 
   if (rec && isRecognizing) {
     try { rec.abort(); } catch (_) {}
