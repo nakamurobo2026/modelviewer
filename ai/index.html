@@ -88,20 +88,14 @@ body{
 
 /* text */
 h2{
-  margin:16px 0 6px;
+  margin:16px 0 8px;
   font-size:24px;
   color:var(--text);
   letter-spacing:.02em;
 }
 
-.status{
-  color:var(--sub);
-  font-size:13px;
-  min-height:18px;
-}
-
 .response{
-  margin:18px 0 10px;
+  margin:18px 0 12px;
   font-size:20px;
   min-height:84px;
   color:var(--text);
@@ -118,7 +112,7 @@ h2{
   min-height:40px;
   display:flex;
   justify-content:center;
-  margin-bottom:8px;
+  margin-bottom:12px;
 }
 
 .heard{
@@ -275,8 +269,6 @@ input:focus{
     </div>
   </div>
 
-  <div id="status" class="status">待機中</div>
-
   <button id="enable" class="primary">音声を有効化</button>
   <button id="mic" class="secondary">会話開始</button>
   <button id="stop" class="stop">停止</button>
@@ -304,7 +296,6 @@ const config = {
 document.getElementById("robotName").textContent = config.name;
 
 const responseEl = document.getElementById("response");
-const statusEl = document.getElementById("status");
 const inputEl = document.getElementById("input");
 const micBtn = document.getElementById("mic");
 const enableBtn = document.getElementById("enable");
@@ -323,13 +314,8 @@ let isPlaying = false;
 let isProcessing = false;
 let currentSource = null;
 let manuallyStopped = false;
-let lastTranscript = "";
 let history = [];
 let heardTimer = null;
-
-function setStatus(text){
-  statusEl.textContent = text;
-}
 
 function setResponse(text){
   responseEl.textContent = text;
@@ -355,6 +341,7 @@ function showHeard(text, keep = false){
   heardEl.classList.add("show");
 
   if(heardTimer) clearTimeout(heardTimer);
+
   if(!keep){
     heardTimer = setTimeout(() => {
       heardEl.classList.remove("show");
@@ -379,21 +366,36 @@ async function ensureAudio(){
   }
 }
 
+async function fetchWithTimeout(url, options = {}, timeout = 20000){
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+
+  try{
+    const res = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    return res;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 enableBtn.onclick = async () => {
   try{
     await ensureAudio();
     audioEnabled = true;
-    setStatus("音声有効");
     setResponse("接続完了。会話を開始できます");
     showHeard("マイク準備完了", true);
+
     enableBtn.textContent = "音声有効";
     enableBtn.classList.remove("primary");
     enableBtn.classList.add("enabled");
     enableBtn.disabled = true;
   }catch(e){
     console.error(e);
-    setStatus("音声初期化失敗");
     setResponse("音声初期化に失敗しました");
+    showHeard("音声初期化失敗");
   }
 };
 
@@ -427,7 +429,6 @@ async function playAudio(blob){
   currentSource = src;
   isPlaying = true;
   setTalking(true);
-  setStatus("応答中");
 
   src.onended = () => {
     isPlaying = false;
@@ -435,10 +436,7 @@ async function playAudio(blob){
     currentSource = null;
 
     if(conversation && !manuallyStopped){
-      setStatus("聞き取り待機中...");
-      safeRecognitionStart();
-    }else{
-      setStatus("待機中");
+      setTimeout(() => safeRecognitionStart(), 450);
     }
   };
 
@@ -452,7 +450,7 @@ function safeRecognitionStart(){
 
   try{
     recognition.start();
-    setStatus("聞き取り待機中...");
+    showHeard("聞き取り中...", true);
   }catch(e){}
 }
 
@@ -473,15 +471,15 @@ async function chat(text){
   isProcessing = true;
   safeRecognitionStop();
 
-  lastTranscript = userText;
   showHeard(`入力: ${userText}`, true);
   pushHistory("user", userText);
 
-  setStatus("解析中...");
   setResponse("解析中...");
 
+  let replyText = "";
+
   try{
-    const res = await fetch(config.endpoint, {
+    const res = await fetchWithTimeout(config.endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -491,11 +489,9 @@ async function chat(text){
         isFirstTurn: firstTurn,
         history
       })
-    });
+    }, 20000);
 
     const replyHeader = res.headers.get("X-Reply");
-    let replyText = "";
-
     if(replyHeader){
       replyText = decodeURIComponent(replyHeader);
       setResponse(replyText);
@@ -507,21 +503,17 @@ async function chat(text){
         const data = await res.json();
         if(data?.error) msg = data.error;
       }catch(e){}
-      setStatus("通信エラー");
       setResponse(msg);
       pushHistory("assistant", msg);
-      isProcessing = false;
       return;
     }
 
     const contentType = res.headers.get("Content-Type") || "";
+
     if(contentType.includes("audio/")){
       const blob = await res.blob();
       firstTurn = false;
-      if(replyText){
-        pushHistory("assistant", replyText);
-      }
-      isProcessing = false;
+      if(replyText) pushHistory("assistant", replyText);
       await playAudio(blob);
       return;
     }
@@ -534,6 +526,9 @@ async function chat(text){
       }else if(data?.error){
         replyText = data.error;
         setResponse(replyText);
+      }else{
+        replyText = "応答を確認しました。";
+        setResponse(replyText);
       }
     }catch(e){
       replyText = "応答を確認しました。";
@@ -545,21 +540,27 @@ async function chat(text){
     }
 
     firstTurn = false;
-    isProcessing = false;
 
     if(conversation && !manuallyStopped){
-      safeRecognitionStart();
-    }else{
-      setStatus("待機中");
+      setTimeout(() => safeRecognitionStart(), 450);
     }
 
   }catch(e){
     console.error(e);
-    isProcessing = false;
-    setStatus("接続エラー");
-    const msg = "通信が不安定です。再接続してください。";
+
+    let msg = "通信が不安定です。再接続してください。";
+    if(e.name === "AbortError"){
+      msg = "応答が遅延しています。もう一度話してください。";
+    }
+
     setResponse(msg);
     pushHistory("assistant", msg);
+
+    if(conversation && !manuallyStopped){
+      setTimeout(() => safeRecognitionStart(), 700);
+    }
+  } finally {
+    isProcessing = false;
   }
 }
 
@@ -573,7 +574,6 @@ if(SR){
 
   recognition.onstart = () => {
     if(!isProcessing && !isPlaying && conversation){
-      setStatus("聞き取り中...");
       showHeard("聞き取り中...", true);
     }
   };
@@ -603,37 +603,39 @@ if(SR){
 
   recognition.onerror = (e) => {
     if(e.error === "not-allowed"){
-      setStatus("マイク権限が必要です");
       showHeard("マイク権限が必要です");
+      setResponse("マイク権限が必要です");
     }else if(e.error === "no-speech"){
       if(conversation && !isProcessing && !isPlaying){
-        setStatus("聞き取り待機中...");
         showHeard("音声を確認できませんでした");
-        setTimeout(() => safeRecognitionStart(), 300);
+        setTimeout(() => safeRecognitionStart(), 350);
       }
     }else{
       if(conversation && !isProcessing && !isPlaying){
-        setStatus("聞き取り待機中...");
         showHeard("再接続中...");
-        setTimeout(() => safeRecognitionStart(), 320);
+        setTimeout(() => safeRecognitionStart(), 500);
       }
     }
   };
 
   recognition.onend = () => {
     if(conversation && !isProcessing && !isPlaying && !manuallyStopped){
-      setTimeout(() => safeRecognitionStart(), 260);
+      setTimeout(() => {
+        if(conversation && !isProcessing && !isPlaying && !manuallyStopped){
+          safeRecognitionStart();
+        }
+      }, 500);
     }
   };
 }else{
   micBtn.disabled = true;
-  setStatus("音声認識非対応ブラウザ");
+  setResponse("このブラウザは音声認識に対応していません");
 }
 
 micBtn.onclick = async () => {
   if(!audioEnabled){
-    setStatus("先に音声を有効化してください");
     setResponse("音声を有効化してください。");
+    showHeard("先に音声を有効化してください");
     return;
   }
 
@@ -648,7 +650,6 @@ micBtn.onclick = async () => {
   }else{
     safeRecognitionStop();
     await stopCurrentAudio();
-    setStatus("待機中");
     showHeard("会話モード停止", false);
   }
 };
@@ -660,7 +661,6 @@ stopBtn.onclick = async () => {
   safeRecognitionStop();
   await stopCurrentAudio();
   isProcessing = false;
-  setStatus("停止しました");
   showHeard("停止しました", false);
 };
 
