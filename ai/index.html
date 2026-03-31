@@ -21,7 +21,7 @@
 body{
   margin:0;
   background:radial-gradient(circle at top,#fff,var(--bg1) 40%,var(--bg2));
-  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;
+  font-family:-apple-system;
   display:flex;
   justify-content:center;
   align-items:center;
@@ -36,125 +36,71 @@ body{
   border-radius:28px;
   background:var(--card);
   backdrop-filter:blur(20px);
-  -webkit-backdrop-filter:blur(20px);
   box-shadow:0 30px 60px rgba(0,0,0,0.1);
   text-align:center;
 }
 
+/* コア */
 .core{
   width:120px;
   height:120px;
   border-radius:50%;
-  margin:0 auto;
+  margin:auto;
   display:flex;
   align-items:center;
   justify-content:center;
-  background:radial-gradient(circle at 35% 30%, #ffffff 0%, #f1f1f3 55%, #dddddf 100%);
-  box-shadow:
-    inset 0 2px 8px rgba(255,255,255,0.9),
-    0 10px 30px rgba(0,0,0,0.1);
+  background:radial-gradient(circle,#fff,#ddd);
 }
 
 .heart-svg{
   width:38px;
   height:34px;
-  display:block;
-  animation:pulse 2.2s infinite ease-in-out;
-  filter:drop-shadow(0 0 8px rgba(255,213,74,0.28));
+  animation:pulse 2s infinite;
 }
 
 @keyframes pulse{
-  0%,100%{ transform:scale(1); }
-  50%{ transform:scale(1.12); }
+  50%{transform:scale(1.15);}
 }
 
-h2{
-  margin:16px 0 6px;
-  font-size:24px;
-  color:var(--text);
-}
+/* テキスト */
+.status{font-size:13px;color:var(--sub);}
+.response{margin:20px 0;font-size:20px;min-height:70px;}
 
-.status{
-  color:var(--sub);
-  font-size:13px;
-  min-height:18px;
-}
-
-.response{
-  margin:20px 0;
-  font-size:20px;
-  min-height:70px;
-  color:var(--text);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  text-align:center;
-  white-space:pre-wrap;
-  word-break:break-word;
-}
-
+/* ボタン */
 button{
   width:100%;
-  margin:6px 0;
   padding:14px;
+  margin:6px 0;
   border-radius:16px;
   border:none;
   font-size:15px;
-  transition:all .18s ease;
+  transition:all .2s ease;
 }
 
-.primary{
-  background:var(--accent);
-  color:#fff;
-}
-
-.secondary{
-  background:#fff;
-  border:1px solid var(--line);
-  color:var(--text);
-}
-
-.stop{
-  background:#ffe5e5;
-  color:#8a1f1f;
-}
+.primary{background:var(--accent);color:#fff;}
+.secondary{background:#fff;border:1px solid var(--line);}
+.stop{background:#ffe5e5;}
 
 .enabled{
   background:#fff !important;
   color:#111 !important;
-  border:1px solid rgba(0,0,0,0.1) !important;
-  opacity:0.72;
-  cursor:default;
+  border:1px solid rgba(0,0,0,0.1);
+  opacity:0.7;
 }
 
-.input-area{
-  display:flex;
-  gap:8px;
-  margin-top:10px;
+.disabled{
+  background:#eee;
+  color:#999;
+  border:1px solid rgba(0,0,0,0.08);
 }
 
-input{
-  flex:1;
-  padding:12px;
-  border-radius:14px;
-  border:1px solid var(--line);
-  min-width:0;
-  font-size:16px;
-}
+/* 入力 */
+.input-area{display:flex;gap:8px;margin-top:10px;}
+input{flex:1;padding:12px;border-radius:14px;border:1px solid var(--line);}
+.send{background:var(--accent);color:#fff;width:auto;}
 
-.send{
-  background:var(--accent);
-  color:#fff;
-  width:auto;
-  min-width:84px;
-}
-
-.guide{
-  margin-top:14px;
-  font-size:12px;
-  color:#8e8e93;
-  line-height:1.6;
-}
+/* ガイド */
+.guide{font-size:12px;color:#8e8e93;margin-top:12px;}
 </style>
 </head>
 
@@ -163,23 +109,28 @@ input{
 <div class="app">
 
   <div class="core">
-    <svg class="heart-svg" viewBox="0 0 24 22" aria-hidden="true">
-      <path
-        fill="#FFD54A"
-        d="M12 21.2 10.55 19.88C5.4 15.22 2 12.14 2 8.35 2 5.27 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.27 22 8.35c0 3.79-3.4 6.87-8.55 11.53L12 21.2Z"/>
+    <svg class="heart-svg" viewBox="0 0 24 22">
+      <path fill="#FFD54A"
+      d="M12 21.2 10.55 19.88C5.4 15.22 2 12.14 2 8.35
+      2 5.27 4.42 3 7.5 3
+      c1.74 0 3.41.81 4.5 2.09
+      C13.09 3.81 14.76 3 16.5 3
+      19.58 3 22 5.27 22 8.35
+      c0 3.79-3.4 6.87-8.55 11.53
+      L12 21.2Z"/>
     </svg>
   </div>
 
   <h2 id="robotName">ナカムロボユニット01</h2>
 
   <div id="response" class="response">
-    音声を有効化してください。
+    音声を有効化してください
   </div>
 
   <div id="status" class="status">待機中</div>
 
   <button id="enable" class="primary">音声を有効化</button>
-  <button id="mic" class="secondary">会話開始</button>
+  <button id="mic" class="secondary disabled">会話開始</button>
   <button id="stop" class="stop">停止</button>
 
   <div class="input-area">
@@ -194,341 +145,128 @@ input{
 </div>
 
 <script>
-const qs = new URLSearchParams(location.search);
+const qs=new URLSearchParams(location.search);
 
-const config = {
-  id: qs.get("id") || "robot01",
-  name: qs.get("name") || "ナカムロボユニット01",
-  endpoint: qs.get("endpoint") || "",
-  lang: qs.get("lang") || "ja-JP"
+const config={
+  id:qs.get("id")||"robot01",
+  name:qs.get("name")||"ナカムロボユニット01",
+  endpoint:qs.get("endpoint")||""
 };
 
-document.getElementById("robotName").textContent = config.name;
+document.getElementById("robotName").textContent=config.name;
 
-const responseEl = document.getElementById("response");
-const statusEl = document.getElementById("status");
-const inputEl = document.getElementById("input");
-const micBtn = document.getElementById("mic");
-const enableBtn = document.getElementById("enable");
+const responseEl=document.getElementById("response");
+const statusEl=document.getElementById("status");
+const micBtn=document.getElementById("mic");
+const enableBtn=document.getElementById("enable");
 
-let audioContext = null;
-let audioEnabled = false;
-let recognition = null;
-let hasStarted = false;
-let conversation = false;
-let isSpeaking = false;
-let isRecognizing = false;
-let isFetching = false;
-let restartTimer = null;
-let currentSource = null;
-let aborter = null;
+let audioContext;
+let audioEnabled=false;
+let recognition;
+let conversation=false;
 
-function setStatus(t){
-  statusEl.textContent = t;
-}
+function setStatus(t){statusEl.textContent=t;}
 
-function clearRestart(){
-  if(restartTimer){
-    clearTimeout(restartTimer);
-    restartTimer = null;
-  }
-}
+/* 音声有効化 */
+enableBtn.onclick=async()=>{
+  const AC=window.AudioContext||window.webkitAudioContext;
+  audioContext=new AC();
+  await audioContext.resume();
 
-function stopPlayback(){
-  if(currentSource){
-    try{ currentSource.stop(0); }catch(e){}
-    try{ currentSource.disconnect(); }catch(e){}
-    currentSource = null;
-  }
-  isSpeaking = false;
-}
+  audioEnabled=true;
 
-function updateMicButton(){
-  if(conversation){
-    micBtn.textContent = "会話中";
-    micBtn.classList.remove("secondary");
-    micBtn.classList.add("primary");
-  }else{
-    micBtn.textContent = "会話開始";
-    micBtn.classList.remove("primary");
-    micBtn.classList.add("secondary");
-  }
-}
+  setStatus("音声有効");
+  responseEl.textContent="接続完了。会話を開始できます";
 
-function scheduleRestart(delay = 450){
-  clearRestart();
-  if(!conversation) return;
-  if(isSpeaking || isRecognizing || isFetching) return;
+  enableBtn.textContent="音声有効";
+  enableBtn.classList.remove("primary");
+  enableBtn.classList.add("enabled");
+  enableBtn.disabled=true;
 
-  restartTimer = setTimeout(() => {
-    if(!conversation) return;
-    if(isSpeaking || isRecognizing || isFetching) return;
-    try{
-      recognition.start();
-    }catch(e){}
-  }, delay);
-}
-
-enableBtn.onclick = async () => {
-  try{
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if(!audioContext){
-      audioContext = new AC();
-    }
-    await audioContext.resume();
-
-    const buf = audioContext.createBuffer(1, 1, 22050);
-    const src = audioContext.createBufferSource();
-    src.buffer = buf;
-    src.connect(audioContext.destination);
-    src.start(0);
-
-    audioEnabled = true;
-    setStatus("音声有効");
-    responseEl.textContent = "準備完了";
-
-    enableBtn.textContent = "音声有効";
-    enableBtn.classList.remove("primary");
-    enableBtn.classList.add("enabled");
-    enableBtn.disabled = true;
-
-  }catch(e){
-    setStatus("音声有効化失敗");
-  }
+  /* 会話ボタン有効化 */
+  micBtn.classList.remove("secondary","disabled");
+  micBtn.classList.add("primary");
 };
 
+/* 再生 */
 async function playAudio(blob){
-  const ab = await blob.arrayBuffer();
-  const buf = await audioContext.decodeAudioData(ab);
-
-  stopPlayback();
-
-  const src = audioContext.createBufferSource();
-  currentSource = src;
-  src.buffer = buf;
+  const ab=await blob.arrayBuffer();
+  const buf=await audioContext.decodeAudioData(ab);
+  const src=audioContext.createBufferSource();
+  src.buffer=buf;
   src.connect(audioContext.destination);
 
-  isSpeaking = true;
   setStatus("再生中");
 
-  src.onended = () => {
-    isSpeaking = false;
-    currentSource = null;
-
-    if(conversation){
-      setStatus("聞き取り待機中...");
-      scheduleRestart(350);
-    }else{
-      setStatus("待機中");
-    }
+  src.onended=()=>{
+    setStatus(conversation?"聞き取り待機中...":"待機中");
   };
 
   src.start(0);
 }
 
+/* 通信 */
 async function chat(text){
-  const message = (text || "").trim();
-  if(!message) return;
-
-  clearRestart();
-
-  if(!audioEnabled){
-    setStatus("音声未有効");
-    responseEl.textContent = "先に音声を有効化してください。";
-    return;
-  }
-
-  if(!config.endpoint){
-    setStatus("未接続");
-    responseEl.textContent = "endpoint が未設定です。";
-    return;
-  }
-
-  if(aborter){
-    try{ aborter.abort(); }catch(e){}
-  }
-  aborter = new AbortController();
-
-  isFetching = true;
   setStatus("接続中...");
-  responseEl.textContent = "解析中...";
+  responseEl.textContent="解析中...";
 
-  try{
-    const res = await fetch(config.endpoint,{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({
-        robotId: config.id,
-        robotName: config.name,
-        userText: message,
-        isFirstTurn: !hasStarted
-      }),
-      signal: aborter.signal
-    });
+  const res=await fetch(config.endpoint,{
+    method:"POST",
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      robotId:config.id,
+      robotName:config.name,
+      userText:text
+    })
+  });
 
-    const reply = res.headers.get("X-Reply");
-    if(reply){
-      responseEl.textContent = decodeURIComponent(reply);
-    }else{
-      responseEl.textContent = "応答生成中...";
-    }
-
-    if(!res.ok){
-      isFetching = false;
-      setStatus("通信失敗");
-      if(conversation) scheduleRestart(700);
-      return;
-    }
-
-    setStatus("応答生成中...");
-
-    const blob = await res.blob();
-    hasStarted = true;
-    isFetching = false;
-
-    await playAudio(blob);
-
-  }catch(e){
-    if(e.name === "AbortError"){
-      isFetching = false;
-      return;
-    }
-
-    isFetching = false;
-    setStatus("通信失敗");
-    responseEl.textContent = "エラーが発生しました。";
-
-    if(conversation){
-      scheduleRestart(700);
-    }
+  const reply=res.headers.get("X-Reply");
+  if(reply){
+    responseEl.textContent=decodeURIComponent(reply);
   }
+
+  const blob=await res.blob();
+  await playAudio(blob);
 }
 
-document.getElementById("send").onclick = async () => {
-  conversation = false;
-  updateMicButton();
-  await chat(inputEl.value);
-  inputEl.value = "";
-};
-
-inputEl.addEventListener("keydown", async (e) => {
-  if(e.key === "Enter"){
-    e.preventDefault();
-    conversation = false;
-    updateMicButton();
-    await chat(inputEl.value);
-    inputEl.value = "";
-  }
-});
-
-const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+/* 音声認識 */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 
 if(SR){
-  recognition = new SR();
-  recognition.lang = config.lang;
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
-  recognition.continuous = false;
+  recognition=new SR();
+  recognition.lang="ja-JP";
 
-  recognition.onstart = () => {
-    isRecognizing = true;
-    setStatus("聞き取り中...");
-    if(!isSpeaking && !isFetching){
-      responseEl.textContent = "話してください";
-    }
+  recognition.onresult=e=>{
+    chat(e.results[0][0].transcript);
   };
 
-  recognition.onresult = async (e) => {
-    isRecognizing = false;
-    clearRestart();
-    const heard = e.results[0][0].transcript;
-    await chat(heard);
-  };
-
-  recognition.onerror = (e) => {
-    isRecognizing = false;
-
-    if(e.error === "aborted"){
-      if(!conversation){
-        setStatus("停止");
-      }
-      return;
-    }
-
-    if(e.error === "not-allowed" || e.error === "service-not-allowed"){
-      conversation = false;
-      updateMicButton();
-      setStatus("マイク許可が必要");
-      responseEl.textContent = "ブラウザでマイクを許可してください。";
-      return;
-    }
-
-    if(e.error === "no-speech"){
-      if(conversation && !isSpeaking && !isFetching){
-        setStatus("聞き取り待機中...");
-        scheduleRestart(300);
-        return;
-      }
-      setStatus("待機中");
-      return;
-    }
-
-    setStatus("音声認識エラー");
+  recognition.onend=()=>{
     if(conversation){
-      scheduleRestart(700);
+      recognition.start();
     }
   };
 
-  recognition.onend = () => {
-    isRecognizing = false;
+  micBtn.onclick=()=>{
+    if(!audioEnabled)return;
 
-    if(conversation && !isSpeaking && !isFetching){
-      setStatus("聞き取り待機中...");
-      scheduleRestart(300);
-    }else if(!isSpeaking && !isFetching){
-      setStatus("待機中");
-    }
-  };
-
-  micBtn.onclick = () => {
-    if(!audioEnabled){
-      setStatus("音声未有効");
-      responseEl.textContent = "先に音声を有効化してください。";
-      return;
-    }
-
-    conversation = !conversation;
-    updateMicButton();
-    clearRestart();
+    conversation=!conversation;
 
     if(conversation){
-      if(!isSpeaking && !isFetching && !isRecognizing){
-        try{
-          recognition.start();
-        }catch(e){}
-      }
+      micBtn.textContent="会話中";
+      recognition.start();
     }else{
-      try{ recognition.abort(); }catch(e){}
+      micBtn.textContent="会話開始";
+      recognition.stop();
       setStatus("待機中");
     }
   };
-}else{
-  micBtn.disabled = true;
 }
 
-document.getElementById("stop").onclick = () => {
-  conversation = false;
-  updateMicButton();
-  clearRestart();
-
-  if(aborter){
-    try{ aborter.abort(); }catch(e){}
-  }
-
-  try{ recognition && recognition.abort(); }catch(e){}
-  stopPlayback();
-  isFetching = false;
-  setStatus("停止");
+/* 入力 */
+document.getElementById("send").onclick=()=>{
+  conversation=false;
+  micBtn.textContent="会話開始";
+  chat(document.getElementById("input").value);
 };
 </script>
 
