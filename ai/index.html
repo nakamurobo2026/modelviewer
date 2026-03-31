@@ -132,12 +132,6 @@ body{
   font-size:13px;
   white-space:pre-wrap;
 }
-.controls{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-  margin-top:16px;
-}
 .controls-3{
   display:grid;
   grid-template-columns:1fr 1fr 1fr;
@@ -294,7 +288,6 @@ async function enableAudio() {
       await audioContext.resume();
     }
 
-    // 短い無音に近いバッファを直接鳴らす
     if (audioContext) {
       const buffer = audioContext.createBuffer(1, 1, 22050);
       const source = audioContext.createBufferSource();
