@@ -1,14 +1,237 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NAKAMUROBO AI</title>
+<style>
+:root{
+  --bg:#050505;
+  --panel:#111;
+  --line:#2a2a2a;
+  --text:#f2f2f2;
+  --sub:#9a9a9a;
+  --accent:#ffd54a;
+  --accent2:#7fd1ff;
+}
+*{box-sizing:border-box}
+html,body{
+  margin:0;
+  padding:0;
+  min-height:100%;
+  background:radial-gradient(circle at top, #111 0%, #050505 55%, #000 100%);
+  color:var(--text);
+  font-family:sans-serif;
+}
+body{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+.app{
+  width:100%;
+  max-width:560px;
+  background:rgba(15,15,15,0.88);
+  border:1px solid var(--line);
+  border-radius:24px;
+  padding:20px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.45);
+  backdrop-filter:blur(10px);
+}
+.top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:12px;
+}
+.badge{
+  font-size:12px;
+  color:#0d0d0d;
+  background:var(--accent);
+  padding:6px 10px;
+  border-radius:999px;
+  font-weight:700;
+}
+.robot-id{
+  font-size:12px;
+  color:var(--sub);
+}
+.avatar-wrap{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:10px 0 20px;
+}
+.core{
+  width:120px;
+  height:120px;
+  border-radius:50%;
+  border:1px solid #333;
+  background:radial-gradient(circle, rgba(255,213,74,0.2) 0%, #050505 100%);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.heart{
+  width:32px;
+  height:32px;
+  background:var(--accent);
+  transform:rotate(45deg);
+  position:relative;
+  animation:pulse 2.4s infinite ease-in-out;
+}
+.heart:before,
+.heart:after{
+  content:"";
+  width:32px;
+  height:32px;
+  background:var(--accent);
+  border-radius:50%;
+  position:absolute;
+}
+.heart:before{ left:-16px; }
+.heart:after{ top:-16px; }
+
+@keyframes pulse{
+  0%,100%{ transform:rotate(45deg) scale(1); }
+  50%{ transform:rotate(45deg) scale(1.1); }
+}
+
+.robot-name{
+  margin-top:14px;
+  font-size:24px;
+  font-weight:800;
+  letter-spacing:0.08em;
+  text-align:center;
+}
+.status{
+  margin-top:8px;
+  color:var(--sub);
+  font-size:13px;
+  min-height:20px;
+}
+.response{
+  margin-top:18px;
+  padding:20px;
+  border-radius:18px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,0.03);
+  min-height:100px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  font-size:18px;
+  line-height:1.6;
+  white-space:pre-wrap;
+}
+.heard{
+  margin-top:12px;
+  padding:12px;
+  border-radius:14px;
+  background:#0b0b0b;
+  border:1px solid var(--line);
+  color:var(--sub);
+  font-size:13px;
+  white-space:pre-wrap;
+}
+.controls{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:16px;
+}
+button{
+  border:none;
+  border-radius:16px;
+  padding:16px;
+  font-size:16px;
+  font-weight:700;
+  cursor:pointer;
+}
+.mic-btn{
+  background:linear-gradient(180deg, #222, #000);
+  color:#fff;
+  border:1px solid #333;
+}
+.stop-btn{
+  background:#2b1111;
+  color:#ffd6d6;
+}
+.input-area{
+  margin-top:16px;
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:10px;
+}
+input{
+  background:#000;
+  color:#fff;
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:12px;
+  outline:none;
+}
+.send-btn{
+  background:var(--accent2);
+  color:#000;
+  padding:0 20px;
+}
+.note{
+  margin-top:14px;
+  font-size:12px;
+  color:var(--sub);
+  text-align:center;
+  line-height:1.6;
+}
+</style>
+</head>
+<body>
+  <main class="app">
+    <div class="top">
+      <div class="badge">VOICE LINK</div>
+      <div id="robotMeta" class="robot-id"></div>
+    </div>
+
+    <div class="avatar-wrap">
+      <div class="core"><div class="heart"></div></div>
+      <div id="robotName" class="robot-name"></div>
+      <div id="statusText" class="status">待機中</div>
+    </div>
+
+    <div id="responseText" class="response">…</div>
+    <div id="heardText" class="heard">待機中</div>
+
+    <div class="controls">
+      <button id="micBtn" class="mic-btn">話しかける</button>
+      <button id="stopBtn" class="stop-btn">停止</button>
+    </div>
+
+    <div class="input-area">
+      <input id="textInput" type="text" placeholder="メッセージを入力..." />
+      <button id="sendBtn" class="send-btn">送信</button>
+    </div>
+
+    <div class="note">
+      最初は送信ボタンで確認してください。<br>
+      話しかけるはマイク許可が必要です。
+    </div>
+  </main>
+
 <script>
 const qs = new URLSearchParams(location.search);
 
 const config = {
   id: qs.get("id") || "robot01",
+  mode: qs.get("mode") || "normal",
   name: qs.get("name") || "ナカムロボユニット01",
-  endpoint: qs.get("endpoint") || "",
-  voice: qs.get("voice") || "onyx",
   lang: qs.get("lang") || "ja-JP",
+  memory: qs.get("memory") || "1",
   rate: Number(qs.get("rate") || 1.0),
-  pitch: Number(qs.get("pitch") || 1.0)
+  pitch: Number(qs.get("pitch") || 1.0),
+  endpoint: qs.get("endpoint") || "",
+  voice: qs.get("voice") || "onyx"
 };
 
 const robotMeta = document.getElementById("robotMeta");
@@ -27,6 +250,7 @@ robotName.textContent = config.name;
 let currentAudio = null;
 let currentAudioUrl = null;
 let audioUnlocked = false;
+let isRecognizing = false;
 
 function setStatus(text) {
   statusText.textContent = text;
@@ -34,13 +258,14 @@ function setStatus(text) {
 
 function cleanupAudio() {
   if (currentAudio) {
-    currentAudio.pause();
-    currentAudio.removeAttribute("src");
-    currentAudio.load();
+    try { currentAudio.pause(); } catch (_) {}
+    try { currentAudio.removeAttribute("src"); } catch (_) {}
+    try { currentAudio.load(); } catch (_) {}
     currentAudio = null;
   }
+
   if (currentAudioUrl) {
-    URL.revokeObjectURL(currentAudioUrl);
+    try { URL.revokeObjectURL(currentAudioUrl); } catch (_) {}
     currentAudioUrl = null;
   }
 }
@@ -58,19 +283,19 @@ async function unlockAudio() {
     audioUnlocked = true;
     return true;
   } catch (e) {
-    console.log("audio unlock failed:", e);
+    console.log("unlockAudio failed:", e);
     return false;
   }
 }
 
 async function safeReadError(response) {
   try {
-    const data = await response.json();
-    return data.detail || data.error || `HTTP ${response.status}`;
-  } catch (e) {
+    const json = await response.json();
+    return json.detail || json.error || `HTTP ${response.status}`;
+  } catch (_) {
     try {
       return await response.text();
-    } catch (e2) {
+    } catch (_) {
       return `HTTP ${response.status}`;
     }
   }
@@ -101,9 +326,16 @@ async function playAudioBlob(blob) {
   try {
     await currentAudio.play();
   } catch (e) {
-    if (String(e && e.message).toLowerCase().includes("user denied permission")) {
-      throw new Error("音声再生が許可されていません。Safariで開いて、音声再生を許可してください");
+    const msg = String(e && e.message ? e.message : e).toLowerCase();
+
+    if (
+      msg.includes("user denied permission") ||
+      msg.includes("notallowederror") ||
+      msg.includes("gesture")
+    ) {
+      throw new Error("音声再生が許可されていません。Safariで開いて送信ボタンを押してください");
     }
+
     throw e;
   }
 }
@@ -131,13 +363,22 @@ async function chat(txt) {
         robotId: config.id,
         robotName: config.name,
         userText: message,
-        voice: config.voice
+        voice: config.voice,
+        mode: config.mode,
+        lang: config.lang,
+        memory: config.memory,
+        rate: config.rate,
+        pitch: config.pitch
       })
     });
 
     const replyHeader = response.headers.get("X-Reply");
     if (replyHeader) {
-      responseText.textContent = decodeURIComponent(replyHeader);
+      try {
+        responseText.textContent = decodeURIComponent(replyHeader);
+      } catch (_) {
+        responseText.textContent = replyHeader;
+      }
     }
 
     if (!response.ok) {
@@ -175,16 +416,20 @@ if (SR) {
   rec.maxAlternatives = 1;
 
   rec.onstart = () => {
+    isRecognizing = true;
     setStatus("聞き取り中...");
+    responseText.textContent = "話してください";
   };
 
   rec.onresult = async (e) => {
     const transcript = e.results[0][0].transcript;
+    isRecognizing = false;
     await chat(transcript);
   };
 
   rec.onerror = (e) => {
     console.error("speech recognition error:", e);
+    isRecognizing = false;
 
     if (e.error === "not-allowed" || e.error === "service-not-allowed") {
       setStatus("マイク許可が必要");
@@ -198,12 +443,20 @@ if (SR) {
       return;
     }
 
+    if (e.error === "aborted") {
+      setStatus("停止");
+      return;
+    }
+
     setStatus(`音声認識エラー: ${e.error}`);
     responseText.textContent = `音声認識エラー: ${e.error}`;
   };
 
   rec.onend = () => {
-    if (statusText.textContent === "聞き取り中...") {
+    if (isRecognizing) {
+      isRecognizing = false;
+      setStatus("待機中");
+    } else if (statusText.textContent === "聞き取り中...") {
       setStatus("待機中");
     }
   };
@@ -212,11 +465,15 @@ if (SR) {
     await unlockAudio();
 
     try {
+      if (currentAudio) {
+        cleanupAudio();
+      }
       rec.start();
     } catch (e) {
       console.error(e);
+      const msg = String(e && e.message ? e.message : e).toLowerCase();
 
-      if (String(e && e.message).toLowerCase().includes("permission")) {
+      if (msg.includes("permission")) {
         setStatus("マイク許可が必要");
         responseText.textContent = "マイクの使用が許可されていません。Safariのサイト設定を確認してください。";
         return;
@@ -250,6 +507,14 @@ textInput.addEventListener("keydown", async (e) => {
 
 stopBtn.onclick = () => {
   cleanupAudio();
+
+  if (rec && isRecognizing) {
+    try { rec.abort(); } catch (_) {}
+    isRecognizing = false;
+  }
+
   setStatus("停止");
 };
 </script>
+</body>
+</html>
