@@ -18,10 +18,8 @@
   --danger-border:#ffd1d1;
   --danger-text:#b42318;
 }
-
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
-
 body{
   min-height:100vh;
   background:radial-gradient(circle at top,#fff,var(--bg1) 40%,var(--bg2));
@@ -32,7 +30,6 @@ body{
   padding:20px;
   color:var(--text);
 }
-
 .app{
   width:100%;
   max-width:430px;
@@ -44,7 +41,6 @@ body{
   box-shadow:0 30px 60px rgba(0,0,0,0.1);
   text-align:center;
 }
-
 .core{
   width:120px;
   height:120px;
@@ -56,7 +52,6 @@ body{
   background:radial-gradient(circle at 35% 30%, #ffffff 0%, #f1f1f3 55%, #dddddf 100%);
   box-shadow:inset 0 2px 8px rgba(255,255,255,0.9),0 10px 30px rgba(0,0,0,0.1);
 }
-
 .heart-svg{
   width:38px;
   height:34px;
@@ -65,7 +60,6 @@ body{
   filter:drop-shadow(0 0 8px rgba(255,213,74,0.28));
 }
 .heart-svg.talking{ animation:pulseTalk 0.72s infinite ease-in-out; }
-
 @keyframes pulse{
   0%,100%{ transform:scale(1); }
   50%{ transform:scale(1.12); }
@@ -74,13 +68,11 @@ body{
   0%,100%{ transform:scale(1.02); }
   50%{ transform:scale(1.2); }
 }
-
 h2{
   margin:16px 0 8px;
   font-size:24px;
   letter-spacing:.02em;
 }
-
 .response{
   margin:18px 0 12px;
   font-size:20px;
@@ -92,14 +84,12 @@ h2{
   line-height:1.55;
   padding:0 4px;
 }
-
 .heard-wrap{
   min-height:40px;
   display:flex;
   justify-content:center;
   margin-bottom:12px;
 }
-
 .heard{
   display:inline-flex;
   align-items:center;
@@ -122,12 +112,10 @@ h2{
   text-overflow:ellipsis;
   box-shadow:0 6px 18px rgba(0,0,0,0.04);
 }
-
 .heard.show{
   opacity:1;
   transform:translateY(0);
 }
-
 .heard-dot{
   width:7px;
   height:7px;
@@ -135,12 +123,10 @@ h2{
   background:var(--accent);
   flex:0 0 auto;
 }
-
 .heard-text{
   overflow:hidden;
   text-overflow:ellipsis;
 }
-
 button{
   width:100%;
   margin:6px 0;
@@ -153,20 +139,17 @@ button{
   cursor:pointer;
 }
 button:active{ transform:scale(0.985); }
-
 .primary{
   background:linear-gradient(180deg,var(--accent),var(--accent-strong));
   color:#fff;
   box-shadow:0 10px 24px rgba(10,132,255,0.22);
 }
-
 .secondary{
   background:#fff;
   border:1.5px solid rgba(0,0,0,0.12);
   color:#111;
   box-shadow:0 6px 16px rgba(0,0,0,0.05);
 }
-
 .enabled{
   background:#eef6ff !important;
   color:#0a84ff !important;
@@ -174,27 +157,23 @@ button:active{ transform:scale(0.985); }
   box-shadow:0 8px 20px rgba(10,132,255,0.08);
   opacity:1;
 }
-
 .live{
   background:linear-gradient(180deg,#0a84ff,#0057b8) !important;
   color:#fff !important;
   border:1.5px solid transparent !important;
   box-shadow:0 12px 24px rgba(10,132,255,0.26) !important;
 }
-
 .stop{
   background:var(--danger-bg);
   color:var(--danger-text);
   border:1px solid var(--danger-border);
   box-shadow:0 6px 16px rgba(180,35,24,0.06);
 }
-
 .input-area{
   display:flex;
   gap:8px;
   margin-top:10px;
 }
-
 input{
   flex:1;
   padding:12px;
@@ -204,12 +183,10 @@ input{
   font-size:15px;
   background:#fff;
 }
-
 input:focus{
   border-color:rgba(10,132,255,0.38);
   box-shadow:0 0 0 4px rgba(10,132,255,0.08);
 }
-
 .send{
   background:linear-gradient(180deg,var(--accent),var(--accent-strong));
   color:#fff;
@@ -217,13 +194,13 @@ input:focus{
   min-width:84px;
   box-shadow:0 10px 24px rgba(10,132,255,0.18);
 }
-
 .guide{
   margin-top:14px;
   font-size:12px;
   color:#8e8e93;
   line-height:1.65;
 }
+audio{display:none}
 </style>
 </head>
 <body>
@@ -262,6 +239,7 @@ input:focus{
   </div>
 
   <div class="guide">音声を有効化後、会話開始を押してください</div>
+  <audio id="player" playsinline preload="auto"></audio>
 </div>
 
 <script>
@@ -284,18 +262,18 @@ const sendBtn = document.getElementById("send");
 const heartEl = document.getElementById("heart");
 const heardEl = document.getElementById("heard");
 const heardTextEl = document.getElementById("heardText");
+const playerEl = document.getElementById("player");
 
-let audioContext = null;
 let audioEnabled = false;
 let recognition = null;
 let conversation = false;
 let firstTurn = true;
 let isPlaying = false;
 let isProcessing = false;
-let currentSource = null;
 let manuallyStopped = false;
 let history = [];
 let heardTimer = null;
+let currentObjectUrl = null;
 
 function setResponse(text){
   responseEl.textContent = text;
@@ -319,12 +297,9 @@ function showHeard(text, keep = false){
   if(!text) return;
   heardTextEl.textContent = text;
   heardEl.classList.add("show");
-
   if(heardTimer) clearTimeout(heardTimer);
   if(!keep){
-    heardTimer = setTimeout(() => {
-      heardEl.classList.remove("show");
-    }, 4200);
+    heardTimer = setTimeout(() => heardEl.classList.remove("show"), 4200);
   }
 }
 
@@ -332,16 +307,6 @@ function pushHistory(role, content){
   history.push({ role, content });
   if(history.length > 8){
     history = history.slice(-8);
-  }
-}
-
-async function ensureAudio(){
-  if(!audioContext){
-    const AC = window.AudioContext || window.webkitAudioContext;
-    audioContext = new AC();
-  }
-  if(audioContext.state !== "running"){
-    await audioContext.resume();
   }
 }
 
@@ -361,6 +326,14 @@ function getJapaneseVoice(){
   return voices.find(v => /ja-JP|ja_JP|Japanese|日本/.test(`${v.lang} ${v.name}`)) || null;
 }
 
+function stopFallbackSpeech(){
+  try{
+    if("speechSynthesis" in window){
+      window.speechSynthesis.cancel();
+    }
+  }catch(e){}
+}
+
 function speakFallback(text){
   if(!("speechSynthesis" in window) || !text){
     return Promise.resolve();
@@ -368,12 +341,12 @@ function speakFallback(text){
 
   return new Promise((resolve) => {
     try{
-      window.speechSynthesis.cancel();
+      stopFallbackSpeech();
 
       const utter = new SpeechSynthesisUtterance(text);
       utter.lang = "ja-JP";
-      utter.rate = 0.9;
-      utter.pitch = 0.78;
+      utter.rate = 0.92;
+      utter.pitch = 0.8;
       utter.volume = 1.0;
 
       const voice = getJapaneseVoice();
@@ -406,68 +379,60 @@ function speakFallback(text){
   });
 }
 
-enableBtn.onclick = async () => {
-  try{
-    await ensureAudio();
-    audioEnabled = true;
-    if("speechSynthesis" in window){
-      try{ window.speechSynthesis.getVoices(); }catch(e){}
-    }
-    setResponse("会話開始ボタンで始まります。");
-    showHeard("会話準備完了", true);
-
-    enableBtn.textContent = "音声有効";
-    enableBtn.classList.remove("primary");
-    enableBtn.classList.add("enabled");
-    enableBtn.disabled = true;
-  }catch(e){
-    console.error(e);
-    setResponse("音声初期化に失敗しました");
-    showHeard("音声初期化失敗");
+function cleanupAudioUrl(){
+  if(currentObjectUrl){
+    URL.revokeObjectURL(currentObjectUrl);
+    currentObjectUrl = null;
   }
-};
+}
 
 async function stopCurrentAudio(){
   try{
-    if(currentSource){
-      currentSource.onended = null;
-      currentSource.stop(0);
-      currentSource.disconnect();
-      currentSource = null;
-    }
+    playerEl.pause();
+    playerEl.removeAttribute("src");
+    playerEl.load();
   }catch(e){}
+  cleanupAudioUrl();
+  stopFallbackSpeech();
   isPlaying = false;
   setTalking(false);
 }
 
 async function playAudio(blob, fallbackText = ""){
-  await ensureAudio();
   await stopCurrentAudio();
 
   try{
-    const ab = await blob.arrayBuffer();
-    const buf = await audioContext.decodeAudioData(ab);
+    const url = URL.createObjectURL(blob);
+    currentObjectUrl = url;
+    playerEl.src = url;
 
-    const src = audioContext.createBufferSource();
-    src.buffer = buf;
-    src.connect(audioContext.destination);
-    currentSource = src;
     isPlaying = true;
     setTalking(true);
 
-    src.onended = () => {
+    playerEl.onended = () => {
       isPlaying = false;
       setTalking(false);
-      currentSource = null;
+      cleanupAudioUrl();
       if(conversation && !manuallyStopped){
         setTimeout(() => safeRecognitionStart(), 450);
       }
     };
 
-    src.start(0);
+    playerEl.onerror = async () => {
+      isPlaying = false;
+      setTalking(false);
+      cleanupAudioUrl();
+      showHeard("代替音声に切り替えます", false);
+      await speakFallback(fallbackText || "応答を確認しました。");
+    };
+
+    await playerEl.play();
   }catch(e){
-    console.error("audio decode/play failed:", e);
-    showHeard("音声再生を切り替えます", false);
+    console.error("audio play failed:", e);
+    isPlaying = false;
+    setTalking(false);
+    cleanupAudioUrl();
+    showHeard("代替音声に切り替えます", false);
     await speakFallback(fallbackText || "応答を確認しました。");
   }
 }
@@ -484,6 +449,33 @@ function safeRecognitionStop(){
   if(!recognition) return;
   try{ recognition.stop(); }catch(e){}
 }
+
+enableBtn.onclick = async () => {
+  try{
+    audioEnabled = true;
+    try{
+      playerEl.muted = false;
+      await playerEl.play().catch(()=>{});
+      playerEl.pause();
+    }catch(e){}
+
+    if("speechSynthesis" in window){
+      try{ window.speechSynthesis.getVoices(); }catch(e){}
+    }
+
+    setResponse("会話開始ボタンで始まります。");
+    showHeard("会話準備完了", true);
+
+    enableBtn.textContent = "音声有効";
+    enableBtn.classList.remove("primary");
+    enableBtn.classList.add("enabled");
+    enableBtn.disabled = true;
+  }catch(e){
+    console.error(e);
+    setResponse("音声初期化に失敗しました");
+    showHeard("音声初期化失敗");
+  }
+};
 
 async function chat(text){
   const userText = String(text || "").trim();
@@ -522,7 +514,8 @@ async function chat(text){
       let msg = "通信異常を確認しました。";
       try{
         const data = await res.json();
-        if(data?.error) msg = data.error;
+        if(data?.reply) msg = data.reply;
+        else if(data?.error) msg = data.error;
       }catch(e){}
       setResponse(msg);
       pushHistory("assistant", msg);
@@ -539,38 +532,25 @@ async function chat(text){
       return;
     }
 
+    let data = null;
     try{
-      const data = await res.json();
+      data = await res.json();
+    }catch(e){}
 
-      if(data?.reply){
-        replyText = data.reply;
-        setResponse(replyText);
-      }else if(data?.error){
-        replyText = data.error;
-        setResponse(replyText);
-      }else{
-        replyText = "応答を確認しました。";
-        setResponse(replyText);
-      }
-
-      if(replyText){
-        pushHistory("assistant", replyText);
-      }
-
-      firstTurn = false;
-
-      showHeard("代替音声で応答します", false);
-      await speakFallback(replyText);
-      return;
-
-    }catch(e){
+    if(data?.reply){
+      replyText = data.reply;
+      setResponse(replyText);
+    }else if(!replyText){
       replyText = "応答を確認しました。";
       setResponse(replyText);
-      pushHistory("assistant", replyText);
-      firstTurn = false;
-      await speakFallback(replyText);
-      return;
     }
+
+    pushHistory("assistant", replyText);
+    firstTurn = false;
+
+    showHeard("代替音声で応答します", false);
+    await speakFallback(replyText);
+    return;
 
   }catch(e){
     console.error(e);
@@ -674,11 +654,6 @@ micBtn.onclick = async () => {
   }else{
     safeRecognitionStop();
     await stopCurrentAudio();
-    try{
-      if("speechSynthesis" in window){
-        window.speechSynthesis.cancel();
-      }
-    }catch(e){}
     showHeard("会話モード停止", false);
   }
 };
@@ -690,11 +665,6 @@ stopBtn.onclick = async () => {
   safeRecognitionStop();
   await stopCurrentAudio();
   isProcessing = false;
-  try{
-    if("speechSynthesis" in window){
-      window.speechSynthesis.cancel();
-    }
-  }catch(e){}
   showHeard("停止しました", false);
 };
 
@@ -706,11 +676,7 @@ sendBtn.onclick = async () => {
   manuallyStopped = true;
   setConversationUI(false);
   safeRecognitionStop();
-  try{
-    if("speechSynthesis" in window){
-      window.speechSynthesis.cancel();
-    }
-  }catch(e){}
+  await stopCurrentAudio();
   await chat(text);
 };
 
