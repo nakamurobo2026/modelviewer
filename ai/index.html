@@ -6,12 +6,12 @@
 <title>NAKAMUROBO AI</title>
 <style>
 :root{ --bg:#050505; --accent:#ffd54a; --text:#f2f2f2; }
-body{ background:#000; color:#fff; font-family:sans-serif; margin:0; display:flex; justify-content:center; align-items:center; height:100vh; }
+body{ background:#000; color:#fff; font-family:sans-serif; margin:0; display:flex; justify-content:center; align-items:center; height:100vh; overflow:hidden; }
 .app{ width:90%; max-width:400px; border:1px solid #333; padding:20px; border-radius:24px; text-align:center; background:#0a0a0a; }
-.response{ margin:20px 0; padding:20px; background:#111; border-radius:15px; min-height:60px; font-size:18px; border:1px solid #222; }
+.response{ margin:15px 0; padding:20px; background:#111; border-radius:15px; min-height:80px; font-size:18px; border:1px solid #222; display:flex; align-items:center; justify-content:center; }
 .status{ font-size:12px; color:#888; margin-bottom:10px; }
 button{ width:100%; padding:18px; border-radius:15px; border:none; background:var(--accent); font-weight:bold; font-size:16px; cursor:pointer; color:#000; margin-top:10px; }
-input{ width:100%; padding:15px; background:#000; border:1px solid #333; color:#fff; border-radius:12px; margin-bottom:10px; font-size:16px; }
+input{ width:100%; padding:15px; background:#000; border:1px solid #333; color:#fff; border-radius:12px; margin-bottom:10px; font-size:16px; outline:none; }
 </style>
 </head>
 <body>
@@ -27,18 +27,18 @@ const qs = new URLSearchParams(location.search);
 const endpoint = qs.get("endpoint");
 const robotName = qs.get("name") || "ナカムロボ";
 
-// グローバルでAudioを一つだけ作っておく
+// グローバルでAudioを一つだけ使い回す
 const audioPlayer = new Audio();
 audioPlayer.playbackRate = 0.95;
 
 async function runAI(txt) {
-  if (!txt) return;
+  if (!txt || !txt.trim()) return;
   const status = document.getElementById("statusText");
   status.textContent = "通信中...";
 
-  // ★重要: 通信が始まる前に「音声を出す準備」を完了させる
+  // ★重要: 通信前に「再生開始」してiPhoneのガードを外す
   audioPlayer.src = "data:audio/wav;base64,UklGRigAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
-  await audioPlayer.play().catch(() => {});
+  try { await audioPlayer.play(); } catch(e) { console.error(e); }
 
   try {
     const r = await fetch(endpoint, {
@@ -46,26 +46,28 @@ async function runAI(txt) {
       body: JSON.stringify({ robotName, userText: txt, voice: "onyx" })
     });
     const d = await r.json();
+    if (d.error) throw new Error(d.error);
     
     document.getElementById("responseText").textContent = d.reply;
 
     if (d.audioBase64) {
       status.textContent = "再生中";
       audioPlayer.src = "data:audio/mpeg;base64," + d.audioBase64;
+      // すでにplay状態なのでsrcを変えるだけで鳴る
       await audioPlayer.play();
     }
     audioPlayer.onended = () => status.textContent = "READY";
   } catch (e) {
-    status.textContent = "エラー発生";
-    console.error(e);
+    status.textContent = "エラー: " + e.message;
   }
 }
 
-// ボタン一つに集約（iPhoneでは操作回数が少ないほうが安定するため）
 document.getElementById("mainBtn").onclick = async () => {
   const i = document.getElementById("textInput");
-  if (i.value) {
-    await runAI(i.value);
+  const val = i.value.trim();
+  
+  if (val) {
+    await runAI(val);
     i.value = "";
   } else {
     // マイク起動
