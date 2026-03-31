@@ -271,10 +271,8 @@ const config = {
   name: qs.get("name") || "ナカムロボユニット01",
   lang: qs.get("lang") || "ja-JP",
   memory: qs.get("memory") || "1",
-  rate: Number(qs.get("rate") || 1.0),
-  pitch: Number(qs.get("pitch") || 1.0),
   endpoint: qs.get("endpoint") || "",
-  voice: qs.get("voice") || "alloy"
+  voice: qs.get("voice") || "onyx"
 };
 
 const robotMeta = document.getElementById("robotMeta");
@@ -477,10 +475,7 @@ async function chat(txt) {
         userText: message,
         voice: config.voice,
         mode: config.mode,
-        lang: config.lang,
-        memory: config.memory,
-        rate: config.rate,
-        pitch: config.pitch
+        memory: config.memory
       })
     });
 
