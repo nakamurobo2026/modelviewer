@@ -3,25 +3,17 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>NAKAMUROBO AI</title>
 
 <style>
 :root{
-  --bg1:#f5f5f7;
-  --bg2:#e9eaee;
-  --card:rgba(255,255,255,0.75);
-  --line:rgba(0,0,0,0.08);
-  --text:#111;
-  --sub:#6e6e73;
   --accent:#0071e3;
+  --sub:#6e6e73;
 }
-
-*{box-sizing:border-box}
 
 body{
   margin:0;
-  background:radial-gradient(circle at top,#fff,var(--bg1) 40%,var(--bg2));
-  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;
+  background:#f5f5f7;
+  font-family:-apple-system;
   display:flex;
   justify-content:center;
   align-items:center;
@@ -29,126 +21,71 @@ body{
 }
 
 .app{
-  width:100%;
+  width:90%;
   max-width:420px;
   padding:20px;
   border-radius:28px;
-  background:var(--card);
-  backdrop-filter:blur(20px);
-  box-shadow:0 30px 60px rgba(0,0,0,0.1);
+  background:white;
   text-align:center;
+  box-shadow:0 20px 50px rgba(0,0,0,0.1);
 }
 
-/* ---------- コア ---------- */
-
+/* ハート */
 .core{
   width:120px;
   height:120px;
+  margin:auto;
   border-radius:50%;
-  margin:0 auto;
+  background:#eee;
   display:flex;
   align-items:center;
   justify-content:center;
-  background:radial-gradient(circle,#fff,#ddd);
-  box-shadow:0 10px 30px rgba(0,0,0,0.1);
 }
 
-/* 🔥 修正版ハート */
 .heart{
   width:30px;
   height:30px;
   background:#ffd54a;
   transform:rotate(45deg);
   position:relative;
-  animation:pulse 2.2s infinite ease-in-out;
+  animation:pulse 2s infinite;
 }
-
-.heart:before,
-.heart:after{
+.heart:before,.heart:after{
   content:"";
   position:absolute;
-  width:30px;
-  height:30px;
+  width:30px;height:30px;
   background:#ffd54a;
   border-radius:50%;
 }
-
-.heart:before{
-  left:-15px;
-  top:0;
-}
-
-.heart:after{
-  left:0;
-  top:-15px;
-}
+.heart:before{left:-15px;}
+.heart:after{top:-15px;}
 
 @keyframes pulse{
-  0%,100%{transform:scale(1) rotate(45deg);}
-  50%{transform:scale(1.15) rotate(45deg);}
+  50%{transform:scale(1.2) rotate(45deg);}
 }
 
-/* ---------- テキスト ---------- */
-
-h2{
-  margin:16px 0 6px;
-  font-size:24px;
-}
-
-.status{
-  color:var(--sub);
-  font-size:13px;
-}
-
-.response{
-  margin:20px 0;
-  font-size:20px;
-  min-height:60px;
-}
-
-/* ---------- ボタン ---------- */
+/* UI */
+.status{font-size:13px;color:var(--sub);}
+.response{margin:20px 0;font-size:20px;min-height:60px;}
 
 button{
   width:100%;
-  margin:6px 0;
   padding:14px;
+  margin:6px 0;
   border-radius:16px;
   border:none;
   font-size:15px;
 }
 
-.primary{
-  background:var(--accent);
-  color:#fff;
-}
-
-.secondary{
-  background:#fff;
-  border:1px solid var(--line);
-}
-
-.stop{
-  background:#ffe5e5;
-}
-
-/* ---------- 入力 ---------- */
-
-.input-area{
-  display:flex;
-  gap:8px;
-  margin-top:10px;
-}
+.primary{background:var(--accent);color:#fff;}
+.secondary{background:#eee;}
+.active{background:#34c759;color:#fff;}
 
 input{
-  flex:1;
+  width:100%;
   padding:12px;
   border-radius:14px;
-  border:1px solid var(--line);
-}
-
-.send{
-  background:var(--accent);
-  color:#fff;
+  border:1px solid #ddd;
 }
 </style>
 </head>
@@ -157,80 +94,80 @@ input{
 
 <div class="app">
 
-  <div class="core">
-    <div class="heart"></div>
-  </div>
+  <div class="core"><div class="heart"></div></div>
 
-  <h2 id="robotName">ナカムロボユニット01</h2>
+  <h2 id="name">ナカムロボユニット01</h2>
 
-  <div id="response" class="response">
-    音声を有効化してください。
-  </div>
-
+  <div id="response">音声を有効化してください</div>
   <div id="status" class="status">待機中</div>
 
   <button id="enable" class="primary">音声を有効化</button>
   <button id="mic" class="secondary">会話開始</button>
-  <button id="stop" class="stop">停止</button>
+  <button id="stop">停止</button>
 
-  <div class="input-area">
-    <input id="input" placeholder="入力..." />
-    <button id="send" class="send">送信</button>
-  </div>
+  <input id="input" placeholder="入力..." />
+  <button id="send" class="primary">送信</button>
 
 </div>
 
 <script>
-const qs = new URLSearchParams(location.search);
 
-const config = {
-  id: qs.get("id") || "robot01",
-  name: qs.get("name") || "ナカムロボユニット01",
-  endpoint: qs.get("endpoint") || ""
+const qs=new URLSearchParams(location.search);
+
+const config={
+  id:qs.get("id")||"robot01",
+  name:qs.get("name")||"ナカムロボユニット01",
+  endpoint:qs.get("endpoint")||""
 };
 
-document.getElementById("robotName").textContent = config.name;
+document.getElementById("name").textContent=config.name;
 
-const responseEl = document.getElementById("response");
-const statusEl = document.getElementById("status");
-const inputEl = document.getElementById("input");
+const statusEl=document.getElementById("status");
+const responseEl=document.getElementById("response");
+const micBtn=document.getElementById("mic");
+const enableBtn=document.getElementById("enable");
 
 let audioContext;
 let audioEnabled=false;
 let recognition;
+let conversation=false;
 let hasStarted=false;
-let aborter=null;
 
 function setStatus(t){statusEl.textContent=t;}
 
-document.getElementById("enable").onclick=async()=>{
+// 音声有効化
+enableBtn.onclick=async()=>{
   const AC=window.AudioContext||window.webkitAudioContext;
   audioContext=new AC();
   await audioContext.resume();
   audioEnabled=true;
+
   setStatus("音声有効");
-  responseEl.textContent="音声が有効になりました";
+  responseEl.textContent="準備完了";
+
+  // 🔥 消す
+  enableBtn.style.display="none";
 };
 
+// 再生
 async function playAudio(blob){
   const ab=await blob.arrayBuffer();
   const buf=await audioContext.decodeAudioData(ab);
   const src=audioContext.createBufferSource();
   src.buffer=buf;
   src.connect(audioContext.destination);
+
   setStatus("再生中");
-  src.onended=()=>setStatus("待機中");
+
+  src.onended=()=>{
+    setStatus(conversation?"聞き取り待機中":"待機中");
+  };
+
   src.start(0);
 }
 
+// 通信
 async function chat(text){
-
-  if(!audioEnabled){setStatus("音声未有効");return;}
-  if(!config.endpoint){setStatus("未接続");return;}
-
-  if(aborter) aborter.abort();
-  aborter=new AbortController();
-
   setStatus("接続中...");
   responseEl.textContent="解析中...";
 
@@ -242,14 +179,11 @@ async function chat(text){
       robotName:config.name,
       userText:text,
       isFirstTurn:!hasStarted
-    }),
-    signal:aborter.signal
+    })
   });
 
   const reply=res.headers.get("X-Reply");
-  if(reply){
-    responseEl.textContent=decodeURIComponent(reply);
-  }
+  if(reply) responseEl.textContent=decodeURIComponent(reply);
 
   setStatus("応答生成中...");
 
@@ -259,11 +193,7 @@ async function chat(text){
   await playAudio(blob);
 }
 
-document.getElementById("send").onclick=()=>{
-  chat(inputEl.value);
-  inputEl.value="";
-};
-
+// 音声認識
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 
 if(SR){
@@ -279,18 +209,40 @@ if(SR){
     chat(e.results[0][0].transcript);
   };
 
-  recognition.onend=()=>setStatus("待機中");
+  recognition.onend=()=>{
+    if(conversation){
+      recognition.start();
+    }else{
+      setStatus("待機中");
+    }
+  };
 
-  document.getElementById("mic").onclick=()=>{
+  micBtn.onclick=()=>{
     if(!audioEnabled){setStatus("音声未有効");return;}
-    recognition.start();
+
+    conversation=!conversation;
+
+    if(conversation){
+      micBtn.textContent="会話中";
+      micBtn.classList.add("active");
+      recognition.start();
+    }else{
+      micBtn.textContent="会話開始";
+      micBtn.classList.remove("active");
+      recognition.stop();
+      setStatus("待機中");
+    }
   };
 }
 
-document.getElementById("stop").onclick=()=>{
-  if(recognition){try{recognition.abort();}catch{}}
-  setStatus("停止");
+// 入力
+document.getElementById("send").onclick=()=>{
+  conversation=false;
+  micBtn.textContent="会話開始";
+  micBtn.classList.remove("active");
+  chat(document.getElementById("input").value);
 };
+
 </script>
 
 </body>
