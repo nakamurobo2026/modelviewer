@@ -9,15 +9,14 @@
 *{box-sizing:border-box}
 body{ margin:0; background:radial-gradient(circle at top,#fff,var(--bg1) 40%,var(--bg2)); font-family:-apple-system,sans-serif; display:flex; justify-content:center; align-items:center; min-height:100vh; padding:20px; transition: background 2s; }
 .app{ width:100%; max-width:420px; padding:24px; border-radius:28px; background:var(--card); backdrop-filter:blur(20px); box-shadow:0 30px 60px rgba(0,0,0,0.1); text-align:center; position:relative; overflow:hidden; transition: all 2s; }
-.sleep-mode { background: rgba(15, 15, 20, 0.98); color: #fff; border: 1px solid #333; }
-.sleep-mode .response { color: #888; }
+.sleep-mode { background: rgba(15, 15, 20, 0.98); color: #fff; }
 .sleep-mode .heart-svg { filter: grayscale(1) brightness(0.4); animation: pulse 6s infinite !important; }
 .core{ width:100px; height:100px; border-radius:50%; margin:auto; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle,#fff,#ddd); }
 .heart-svg{ width:34px; height:30px; animation:pulse 2s infinite; }
 @keyframes pulse{ 50%{transform:scale(1.15);} }
 .vol-container { width:120px; height:6px; background:var(--line); margin:15px auto; border-radius:3px; overflow:hidden; opacity:0; }
 .vol-bar { width:0%; height:100%; background:var(--accent); transition:width 0.1s ease; }
-.status{font-size:11px;color:var(--sub);margin-top:8px;letter-spacing: 0.1em;}
+.status{font-size:11px;color:var(--sub);margin-top:8px;}
 .response{margin:15px 0;font-size:17px;min-height:80px;display:flex;align-items:center;justify-content:center;line-height:1.6;color:var(--text);padding:0 15px;}
 button{ width:100%; padding:14px; margin:6px 0; border-radius:16px; border:none; font-size:15px; font-weight:600; cursor:pointer; transition:all .4s ease; }
 button:disabled{ opacity:0.1; cursor:not-allowed; }
@@ -27,7 +26,7 @@ button:disabled{ opacity:0.1; cursor:not-allowed; }
 .input-area{display:flex;gap:8px;margin-top:10px;}
 input{flex:1;padding:12px;border-radius:14px;border:1px solid var(--line);outline:none;font-size:16px;}
 .send{background:var(--accent);color:#fff;width:auto;padding:0 20px;}
-#debug-info{ font-size:10px; color:red; margin-top:10px; word-break: break-all; min-height: 12px; }
+#debug-log{ color:#d32f2f; font-size:10px; margin-top:10px; word-break: break-all; }
 </style>
 </head>
 <body>
@@ -50,8 +49,8 @@ input{flex:1;padding:12px;border-radius:14px;border:1px solid var(--line);outlin
     </div>
   </div>
   
-  <div id="debug-info"></div>
-  <p style="font-size: 10px; color: #aaa; margin-top: 20px; cursor:pointer;" onclick="location.reload()">REBOOT SYSTEM</p>
+  <div id="debug-log"></div>
+  <p style="font-size: 10px; color: #aaa; margin-top: 20px; cursor:pointer;" onclick="location.reload()">SYSTEM REBOOT</p>
 </div>
 
 <script>
@@ -71,12 +70,12 @@ const sendBtn = document.getElementById("send");
 const inputEl = document.getElementById("input");
 const volBar = document.getElementById("volume-bar");
 const volCont = document.getElementById("volume-container");
-const debugEl = document.getElementById("debug-info");
+const debugEl = document.getElementById("debug-log");
 
 let audioContext, recognition, conversation = false, isProcessing = false;
 
 enableBtn.onclick = async () => {
-  if (!config.endpoint) { alert("Endpointが設定されていません。"); return; }
+  if (!config.endpoint) { alert("Endpointがありません"); return; }
   try {
     const AC = window.AudioContext || window.webkitAudioContext;
     audioContext = new AC(); await audioContext.resume();
@@ -98,7 +97,7 @@ enableBtn.onclick = async () => {
     document.getElementById("ui-area").style.display = "block";
     responseEl.textContent = "同期完了。接続を維持しています。";
     statusEl.textContent = "SIGNAL: STABLE";
-  } catch(e) { debugEl.textContent = "Error: マイクへのアクセスを許可してください。"; }
+  } catch(e) { debugEl.textContent = "Error: マイクの使用を許可してください。"; }
 };
 
 async function chat(text) {
@@ -115,10 +114,10 @@ async function chat(text) {
     });
 
     const reply = res.headers.get("X-Reply");
-    const errorLog = res.headers.get("X-Error");
+    const debug = res.headers.get("X-Debug");
 
     if (reply) responseEl.textContent = decodeURIComponent(reply);
-    if (errorLog) debugEl.textContent = "Log: " + decodeURIComponent(errorLog);
+    if (debug) debugEl.textContent = "Log: " + decodeURIComponent(debug);
 
     if (res.status === 403) {
       appEl.classList.add("sleep-mode");
@@ -130,21 +129,23 @@ async function chat(text) {
       return;
     }
 
-    if (!res.ok) throw new Error("HTTP Error " + res.status);
-
     const blob = await res.blob();
-    const ab = await blob.arrayBuffer();
-    const buf = await audioContext.decodeAudioData(ab);
-    const src = audioContext.createBufferSource();
-    src.buffer = buf; src.connect(audioContext.destination);
-    
-    statusEl.textContent = "PLAYING";
-    src.onended = () => {
+    if (blob.type.includes("audio")) {
+      const ab = await blob.arrayBuffer();
+      const buf = await audioContext.decodeAudioData(ab);
+      const src = audioContext.createBufferSource();
+      src.buffer = buf; src.connect(audioContext.destination);
+      statusEl.textContent = "PLAYING";
+      src.onended = () => {
+        isProcessing = false;
+        if (conversation) { statusEl.textContent = "LISTENING"; try { recognition.start(); } catch(e){} }
+        else { statusEl.textContent = "SIGNAL: STABLE"; }
+      };
+      src.start(0);
+    } else {
       isProcessing = false;
-      if (conversation) { statusEl.textContent = "LISTENING"; try { recognition.start(); } catch(e){} }
-      else { statusEl.textContent = "SIGNAL: STABLE"; }
-    };
-    src.start(0);
+      statusEl.textContent = "SIGNAL: STABLE";
+    }
   } catch (e) {
     responseEl.textContent = "信号ロスト。";
     debugEl.textContent = "Detail: " + e.message;
