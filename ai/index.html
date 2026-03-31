@@ -9,7 +9,7 @@
 *{box-sizing:border-box}
 body{ margin:0; background:radial-gradient(circle at top,#fff,var(--bg1) 40%,var(--bg2)); font-family:-apple-system,sans-serif; display:flex; justify-content:center; align-items:center; min-height:100vh; padding:20px; transition: background 2s; }
 .app{ width:100%; max-width:420px; padding:24px; border-radius:28px; background:var(--card); backdrop-filter:blur(20px); box-shadow:0 30px 60px rgba(0,0,0,0.1); text-align:center; position:relative; overflow:hidden; transition: all 2s; }
-.sleep-mode { background: rgba(15, 15, 20, 0.98); color: #fff; }
+.sleep-mode { background: rgba(15, 15, 20, 0.98); color: #fff; border: 1px solid #333; }
 .sleep-mode .heart-svg { filter: grayscale(1) brightness(0.4); animation: pulse 6s infinite !important; }
 .core{ width:100px; height:100px; border-radius:50%; margin:auto; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle,#fff,#ddd); }
 .heart-svg{ width:34px; height:30px; animation:pulse 2s infinite; }
@@ -26,7 +26,7 @@ button:disabled{ opacity:0.1; cursor:not-allowed; }
 .input-area{display:flex;gap:8px;margin-top:10px;}
 input{flex:1;padding:12px;border-radius:14px;border:1px solid var(--line);outline:none;font-size:16px;}
 .send{background:var(--accent);color:#fff;width:auto;padding:0 20px;}
-#debug-log{ color:#d32f2f; font-size:10px; margin-top:10px; word-break: break-all; }
+#debug-log{ color:#ff4d4d; font-size:10px; margin-top:10px; word-break: break-all; min-height: 12px;}
 </style>
 </head>
 <body>
@@ -114,23 +114,23 @@ async function chat(text) {
     });
 
     const reply = res.headers.get("X-Reply");
-    const debug = res.headers.get("X-Debug");
+    const errorMsg = res.headers.get("X-Error");
 
     if (reply) responseEl.textContent = decodeURIComponent(reply);
-    if (debug) debugEl.textContent = "Log: " + decodeURIComponent(debug);
+    if (errorMsg) debugEl.textContent = "Log: " + decodeURIComponent(errorMsg);
 
     if (res.status === 403) {
       appEl.classList.add("sleep-mode");
       document.body.style.background = "#050507"; 
-      statusEl.textContent = "LOW BATTERY: SLEEP MODE";
       micBtn.style.display = "none";
       document.getElementById("ui-area").style.display = "none";
       document.getElementById("heart").style.animationDuration = "6s";
       return;
     }
 
-    const blob = await res.blob();
-    if (blob.type.includes("audio")) {
+    const contentType = res.headers.get("Content-Type");
+    if (contentType && contentType.includes("audio/wav")) {
+      const blob = await res.blob();
       const ab = await blob.arrayBuffer();
       const buf = await audioContext.decodeAudioData(ab);
       const src = audioContext.createBufferSource();
@@ -143,6 +143,7 @@ async function chat(text) {
       };
       src.start(0);
     } else {
+      // 音声がない場合（エラー時など）はテキスト表示だけで復帰
       isProcessing = false;
       statusEl.textContent = "SIGNAL: STABLE";
     }
