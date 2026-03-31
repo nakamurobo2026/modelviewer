@@ -6,692 +6,169 @@
 <title>NAKAMUROBO AI</title>
 
 <style>
-:root{
-  --bg1:#f5f5f7;
-  --bg2:#e9eaee;
-  --card:rgba(255,255,255,0.78);
-  --line:rgba(0,0,0,0.08);
-  --text:#111;
-  --accent:#0a84ff;
-  --accent-strong:#0066d6;
-  --danger-bg:#fff1f1;
-  --danger-border:#ffd1d1;
-  --danger-text:#b42318;
-}
-*{box-sizing:border-box}
-html,body{margin:0;padding:0}
 body{
-  min-height:100vh;
-  background:radial-gradient(circle at top,#fff,var(--bg1) 40%,var(--bg2));
-  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;
+  margin:0;
+  background:#000;
+  color:#fff;
+  font-family:sans-serif;
   display:flex;
   justify-content:center;
   align-items:center;
-  padding:20px;
-  color:var(--text);
+  height:100vh;
 }
 .app{
+  max-width:400px;
   width:100%;
-  max-width:430px;
   padding:20px;
-  border-radius:28px;
-  background:var(--card);
-  backdrop-filter:blur(20px);
-  -webkit-backdrop-filter:blur(20px);
-  box-shadow:0 30px 60px rgba(0,0,0,0.1);
   text-align:center;
-}
-.core{
-  width:120px;
-  height:120px;
-  border-radius:50%;
-  margin:0 auto;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background:radial-gradient(circle at 35% 30%, #ffffff 0%, #f1f1f3 55%, #dddddf 100%);
-  box-shadow:inset 0 2px 8px rgba(255,255,255,0.9),0 10px 30px rgba(0,0,0,0.1);
-}
-.heart-svg{
-  width:38px;
-  height:34px;
-  display:block;
-  animation:pulse 2.2s infinite ease-in-out;
-  filter:drop-shadow(0 0 8px rgba(255,213,74,0.28));
-}
-.heart-svg.talking{ animation:pulseTalk 0.72s infinite ease-in-out; }
-@keyframes pulse{
-  0%,100%{ transform:scale(1); }
-  50%{ transform:scale(1.12); }
-}
-@keyframes pulseTalk{
-  0%,100%{ transform:scale(1.02); }
-  50%{ transform:scale(1.2); }
-}
-h2{
-  margin:16px 0 8px;
-  font-size:24px;
-  letter-spacing:.02em;
-}
-.response{
-  margin:18px 0 12px;
-  font-size:20px;
-  min-height:84px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  text-align:center;
-  line-height:1.55;
-  padding:0 4px;
-}
-.heard-wrap{
-  min-height:40px;
-  display:flex;
-  justify-content:center;
-  margin-bottom:12px;
-}
-.heard{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  max-width:100%;
-  padding:8px 12px;
-  border-radius:999px;
-  background:rgba(255,255,255,0.78);
-  border:1px solid rgba(0,0,0,0.06);
-  color:#5f6470;
-  font-size:12px;
-  line-height:1.35;
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
-  opacity:0;
-  transform:translateY(6px);
-  transition:opacity .2s ease, transform .2s ease;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  box-shadow:0 6px 18px rgba(0,0,0,0.04);
-}
-.heard.show{
-  opacity:1;
-  transform:translateY(0);
-}
-.heard-dot{
-  width:7px;
-  height:7px;
-  border-radius:50%;
-  background:var(--accent);
-  flex:0 0 auto;
-}
-.heard-text{
-  overflow:hidden;
-  text-overflow:ellipsis;
 }
 button{
-  width:100%;
-  margin:6px 0;
-  padding:15px 14px;
-  border-radius:16px;
+  padding:15px;
+  margin:5px;
+  border-radius:10px;
   border:none;
-  font-size:15px;
-  font-weight:600;
-  transition:all .18s ease;
-  cursor:pointer;
+  width:100%;
 }
-button:active{ transform:scale(0.985); }
-.primary{
-  background:linear-gradient(180deg,var(--accent),var(--accent-strong));
-  color:#fff;
-  box-shadow:0 10px 24px rgba(10,132,255,0.22);
+.primary{ background:#0a84ff; color:#fff; }
+.secondary{ background:#333; color:#fff; }
+.stop{ background:#600; color:#fff; }
+
+.response{
+  font-size:22px;
+  margin:20px 0;
+  min-height:60px;
 }
-.secondary{
-  background:#fff;
-  border:1.5px solid rgba(0,0,0,0.12);
-  color:#111;
-  box-shadow:0 6px 16px rgba(0,0,0,0.05);
-}
-.enabled{
-  background:#eef6ff !important;
-  color:#0a84ff !important;
-  border:1.5px solid rgba(10,132,255,0.22) !important;
-  box-shadow:0 8px 20px rgba(10,132,255,0.08);
-  opacity:1;
-}
-.live{
-  background:linear-gradient(180deg,#0a84ff,#0057b8) !important;
-  color:#fff !important;
-  border:1.5px solid transparent !important;
-  box-shadow:0 12px 24px rgba(10,132,255,0.26) !important;
-}
-.stop{
-  background:var(--danger-bg);
-  color:var(--danger-text);
-  border:1px solid var(--danger-border);
-  box-shadow:0 6px 16px rgba(180,35,24,0.06);
-}
-.input-area{
-  display:flex;
-  gap:8px;
-  margin-top:10px;
-}
-input{
-  flex:1;
-  padding:12px;
-  border-radius:14px;
-  border:1px solid var(--line);
-  outline:none;
-  font-size:15px;
-  background:#fff;
-}
-input:focus{
-  border-color:rgba(10,132,255,0.38);
-  box-shadow:0 0 0 4px rgba(10,132,255,0.08);
-}
-.send{
-  background:linear-gradient(180deg,var(--accent),var(--accent-strong));
-  color:#fff;
-  width:auto;
-  min-width:84px;
-  box-shadow:0 10px 24px rgba(10,132,255,0.18);
-}
-.guide{
-  margin-top:14px;
+
+.heard{
   font-size:12px;
-  color:#8e8e93;
-  line-height:1.65;
+  color:#aaa;
+  margin-bottom:10px;
 }
-audio{display:none}
 </style>
 </head>
+
 <body>
 
 <div class="app">
-  <div class="core">
-    <svg id="heart" class="heart-svg" viewBox="0 0 24 22" aria-hidden="true">
-      <path fill="#FFD54A"
-        d="M12 21.2 10.55 19.88C5.4 15.22 2 12.14 2 8.35
-        2 5.27 4.42 3 7.5 3
-        c1.74 0 3.41.81 4.5 2.09
-        C13.09 3.81 14.76 3 16.5 3
-        19.58 3 22 5.27 22 8.35
-        c0 3.79-3.4 6.87-8.55 11.53
-        L12 21.2Z"/>
-    </svg>
-  </div>
-
   <h2 id="robotName">ナカムロボユニット01</h2>
-  <div id="response" class="response">音声を有効化してください。</div>
 
-  <div class="heard-wrap">
-    <div id="heard" class="heard" aria-live="polite">
-      <span class="heard-dot"></span>
-      <span id="heardText" class="heard-text">音声入力待機中</span>
-    </div>
-  </div>
+  <div id="response" class="response">音声を有効化してください。</div>
+  <div id="heard" class="heard"></div>
 
   <button id="enable" class="primary">音声を有効化</button>
   <button id="mic" class="secondary">会話開始</button>
   <button id="stop" class="stop">停止</button>
 
-  <div class="input-area">
-    <input id="input" placeholder="入力..." />
-    <button id="send" class="send">送信</button>
-  </div>
-
-  <div class="guide">音声を有効化後、会話開始を押してください</div>
-  <audio id="player" playsinline preload="auto"></audio>
+  <input id="input" placeholder="入力..." style="width:70%;padding:10px;">
+  <button id="send">送信</button>
 </div>
 
 <script>
-const qs = new URLSearchParams(location.search);
-
-const config = {
-  id: qs.get("id") || "robot01",
-  name: qs.get("name") || "ナカムロボユニット01",
-  endpoint: qs.get("endpoint") || "https://nakamurobo-ai.nakamura0407.workers.dev/"
-};
-
-document.getElementById("robotName").textContent = config.name;
+const endpoint = "https://nakamurobo-ai.nakamura0407.workers.dev/";
 
 const responseEl = document.getElementById("response");
-const inputEl = document.getElementById("input");
-const micBtn = document.getElementById("mic");
-const enableBtn = document.getElementById("enable");
-const stopBtn = document.getElementById("stop");
-const sendBtn = document.getElementById("send");
-const heartEl = document.getElementById("heart");
 const heardEl = document.getElementById("heard");
-const heardTextEl = document.getElementById("heardText");
-const playerEl = document.getElementById("player");
+const inputEl = document.getElementById("input");
 
 let audioEnabled = false;
 let recognition = null;
 let conversation = false;
-let firstTurn = true;
-let isPlaying = false;
 let isProcessing = false;
-let manuallyStopped = false;
-let history = [];
-let heardTimer = null;
-let currentObjectUrl = null;
 
-function setResponse(text){
-  responseEl.textContent = text;
-}
+/* ===== 音声有効化（超シンプル） ===== */
+document.getElementById("enable").onclick = () => {
+  audioEnabled = true;
 
-function setTalking(active){
-  heartEl.classList.toggle("talking", !!active);
-}
-
-function setConversationUI(active){
-  if(active){
-    micBtn.textContent = "会話中";
-    micBtn.classList.add("live");
-  }else{
-    micBtn.textContent = "会話開始";
-    micBtn.classList.remove("live");
-  }
-}
-
-function showHeard(text, keep = false){
-  if(!text) return;
-  heardTextEl.textContent = text;
-  heardEl.classList.add("show");
-  if(heardTimer) clearTimeout(heardTimer);
-  if(!keep){
-    heardTimer = setTimeout(() => heardEl.classList.remove("show"), 4200);
-  }
-}
-
-function pushHistory(role, content){
-  history.push({ role, content });
-  if(history.length > 8){
-    history = history.slice(-8);
-  }
-}
-
-async function fetchWithTimeout(url, options = {}, timeout = 20000){
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeout);
-  try{
-    return await fetch(url, { ...options, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-function getJapaneseVoice(){
-  if(!("speechSynthesis" in window)) return null;
-  const voices = window.speechSynthesis.getVoices() || [];
-  return voices.find(v => /ja-JP|ja_JP|Japanese|日本/.test(`${v.lang} ${v.name}`)) || null;
-}
-
-function stopFallbackSpeech(){
-  try{
-    if("speechSynthesis" in window){
-      window.speechSynthesis.cancel();
-    }
-  }catch(e){}
-}
-
-function speakFallback(text){
-  if(!("speechSynthesis" in window) || !text){
-    return Promise.resolve();
+  if("speechSynthesis" in window){
+    window.speechSynthesis.getVoices();
   }
 
-  return new Promise((resolve) => {
-    try{
-      stopFallbackSpeech();
-
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.lang = "ja-JP";
-      utter.rate = 0.92;
-      utter.pitch = 0.8;
-      utter.volume = 1.0;
-
-      const voice = getJapaneseVoice();
-      if(voice) utter.voice = voice;
-
-      isPlaying = true;
-      setTalking(true);
-
-      utter.onend = () => {
-        isPlaying = false;
-        setTalking(false);
-        if(conversation && !manuallyStopped){
-          setTimeout(() => safeRecognitionStart(), 450);
-        }
-        resolve();
-      };
-
-      utter.onerror = () => {
-        isPlaying = false;
-        setTalking(false);
-        resolve();
-      };
-
-      window.speechSynthesis.speak(utter);
-    }catch(e){
-      isPlaying = false;
-      setTalking(false);
-      resolve();
-    }
-  });
-}
-
-function cleanupAudioUrl(){
-  if(currentObjectUrl){
-    URL.revokeObjectURL(currentObjectUrl);
-    currentObjectUrl = null;
-  }
-}
-
-async function stopCurrentAudio(){
-  try{
-    playerEl.pause();
-    playerEl.removeAttribute("src");
-    playerEl.load();
-  }catch(e){}
-  cleanupAudioUrl();
-  stopFallbackSpeech();
-  isPlaying = false;
-  setTalking(false);
-}
-
-async function playAudio(blob, fallbackText = ""){
-  await stopCurrentAudio();
-
-  try{
-    const url = URL.createObjectURL(blob);
-    currentObjectUrl = url;
-    playerEl.src = url;
-
-    isPlaying = true;
-    setTalking(true);
-
-    playerEl.onended = () => {
-      isPlaying = false;
-      setTalking(false);
-      cleanupAudioUrl();
-      if(conversation && !manuallyStopped){
-        setTimeout(() => safeRecognitionStart(), 450);
-      }
-    };
-
-    playerEl.onerror = async () => {
-      isPlaying = false;
-      setTalking(false);
-      cleanupAudioUrl();
-      showHeard("代替音声に切り替えます", false);
-      await speakFallback(fallbackText || "応答を確認しました。");
-    };
-
-    await playerEl.play();
-  }catch(e){
-    console.error("audio play failed:", e);
-    isPlaying = false;
-    setTalking(false);
-    cleanupAudioUrl();
-    showHeard("代替音声に切り替えます", false);
-    await speakFallback(fallbackText || "応答を確認しました。");
-  }
-}
-
-function safeRecognitionStart(){
-  if(!recognition || !conversation || isProcessing || isPlaying || manuallyStopped) return;
-  try{
-    recognition.start();
-    showHeard("聞き取り中...", true);
-  }catch(e){}
-}
-
-function safeRecognitionStop(){
-  if(!recognition) return;
-  try{ recognition.stop(); }catch(e){}
-}
-
-enableBtn.onclick = async () => {
-  try{
-    audioEnabled = true;
-    try{
-      playerEl.muted = false;
-      await playerEl.play().catch(()=>{});
-      playerEl.pause();
-    }catch(e){}
-
-    if("speechSynthesis" in window){
-      try{ window.speechSynthesis.getVoices(); }catch(e){}
-    }
-
-    setResponse("会話開始ボタンで始まります。");
-    showHeard("会話準備完了", true);
-
-    enableBtn.textContent = "音声有効";
-    enableBtn.classList.remove("primary");
-    enableBtn.classList.add("enabled");
-    enableBtn.disabled = true;
-  }catch(e){
-    console.error(e);
-    setResponse("音声初期化に失敗しました");
-    showHeard("音声初期化失敗");
-  }
+  responseEl.textContent = "会話開始ボタンで始まります。";
 };
 
-async function chat(text){
-  const userText = String(text || "").trim();
-  if(!userText) return;
+/* ===== 音声再生（確実版） ===== */
+function speak(text){
+  if(!audioEnabled) return;
 
-  manuallyStopped = false;
-  isProcessing = true;
-  safeRecognitionStop();
+  if(!("speechSynthesis" in window)) return;
 
-  showHeard(`入力: ${userText}`, true);
-  pushHistory("user", userText);
-  setResponse("解析中...");
+  window.speechSynthesis.cancel();
 
-  let replyText = "";
+  const uttr = new SpeechSynthesisUtterance(text);
+  uttr.lang = "ja-JP";
+  uttr.rate = 0.9;
+  uttr.pitch = 0.8;
 
-  try{
-    const res = await fetchWithTimeout(config.endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        robotId: config.id,
-        robotName: config.name,
-        userText,
-        isFirstTurn: firstTurn,
-        history
-      })
-    }, 20000);
-
-    const replyHeader = res.headers.get("X-Reply");
-    if(replyHeader){
-      replyText = decodeURIComponent(replyHeader);
-      setResponse(replyText);
-    }
-
-    if(!res.ok){
-      let msg = "通信異常を確認しました。";
-      try{
-        const data = await res.json();
-        if(data?.reply) msg = data.reply;
-        else if(data?.error) msg = data.error;
-      }catch(e){}
-      setResponse(msg);
-      pushHistory("assistant", msg);
-      return;
-    }
-
-    const contentType = res.headers.get("Content-Type") || "";
-
-    if(contentType.includes("audio/")){
-      const blob = await res.blob();
-      firstTurn = false;
-      if(replyText) pushHistory("assistant", replyText);
-      await playAudio(blob, replyText);
-      return;
-    }
-
-    let data = null;
-    try{
-      data = await res.json();
-    }catch(e){}
-
-    if(data?.reply){
-      replyText = data.reply;
-      setResponse(replyText);
-    }else if(!replyText){
-      replyText = "応答を確認しました。";
-      setResponse(replyText);
-    }
-
-    pushHistory("assistant", replyText);
-    firstTurn = false;
-
-    showHeard("代替音声で応答します", false);
-    await speakFallback(replyText);
-    return;
-
-  }catch(e){
-    console.error(e);
-    let msg = "通信が不安定です。再接続してください。";
-    if(e.name === "AbortError"){
-      msg = "応答が遅延しています。もう一度話してください。";
-    }
-    setResponse(msg);
-    pushHistory("assistant", msg);
-  } finally {
-    isProcessing = false;
-    if(conversation && !manuallyStopped && !isPlaying){
-      setTimeout(() => safeRecognitionStart(), 500);
-    }
-  }
+  window.speechSynthesis.speak(uttr);
 }
 
+/* ===== AI通信 ===== */
+async function chat(text){
+  if(!text) return;
+
+  isProcessing = true;
+  heardEl.textContent = "入力: " + text;
+  responseEl.textContent = "解析中...";
+
+  try{
+    const res = await fetch(endpoint,{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        userText:text
+      })
+    });
+
+    const data = await res.json();
+
+    const reply = data.reply || "応答確認";
+    responseEl.textContent = reply;
+
+    speak(reply);
+
+  }catch(e){
+    responseEl.textContent = "通信エラー";
+  }
+
+  isProcessing = false;
+}
+
+/* ===== 音声認識 ===== */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 if(SR){
   recognition = new SR();
   recognition.lang = "ja-JP";
-  recognition.interimResults = true;
-  recognition.continuous = false;
 
-  recognition.onstart = () => {
-    if(!isProcessing && !isPlaying && conversation){
-      showHeard("聞き取り中...", true);
-    }
+  recognition.onresult = (e)=>{
+    const text = e.results[0][0].transcript;
+    chat(text);
   };
-
-  recognition.onresult = (e) => {
-    let interim = "";
-    let finalText = "";
-
-    for(let i = e.resultIndex; i < e.results.length; i++){
-      const transcript = e.results[i][0].transcript || "";
-      if(e.results[i].isFinal){
-        finalText += transcript;
-      }else{
-        interim += transcript;
-      }
-    }
-
-    const preview = (finalText || interim).trim();
-    if(preview){
-      showHeard(`入力: ${preview}`, true);
-    }
-
-    if(finalText.trim()){
-      chat(finalText.trim());
-    }
-  };
-
-  recognition.onerror = (e) => {
-    if(e.error === "not-allowed"){
-      showHeard("マイク権限が必要です");
-      setResponse("マイク権限が必要です");
-    }else if(e.error === "no-speech"){
-      if(conversation && !isProcessing && !isPlaying){
-        showHeard("音声を確認できませんでした");
-        setTimeout(() => safeRecognitionStart(), 350);
-      }
-    }else{
-      if(conversation && !isProcessing && !isPlaying){
-        showHeard("再接続中...");
-        setTimeout(() => safeRecognitionStart(), 500);
-      }
-    }
-  };
-
-  recognition.onend = () => {
-    if(conversation && !isProcessing && !isPlaying && !manuallyStopped){
-      setTimeout(() => {
-        if(conversation && !isProcessing && !isPlaying && !manuallyStopped){
-          safeRecognitionStart();
-        }
-      }, 500);
-    }
-  };
-}else{
-  micBtn.disabled = true;
-  setResponse("このブラウザは音声認識に対応していません");
 }
 
-micBtn.onclick = async () => {
+/* ===== ボタン ===== */
+document.getElementById("mic").onclick = ()=>{
   if(!audioEnabled){
-    setResponse("音声を有効化してください。");
-    showHeard("先に音声を有効化してください");
+    responseEl.textContent = "音声を有効化してください";
     return;
   }
 
-  conversation = !conversation;
-  manuallyStopped = !conversation;
-  setConversationUI(conversation);
-
-  if(conversation){
-    setResponse(firstTurn ? "会話を開始します。" : responseEl.textContent);
-    showHeard("会話モード開始", false);
-    safeRecognitionStart();
-  }else{
-    safeRecognitionStop();
-    await stopCurrentAudio();
-    showHeard("会話モード停止", false);
+  if(recognition){
+    recognition.start();
   }
 };
 
-stopBtn.onclick = async () => {
-  conversation = false;
-  manuallyStopped = true;
-  setConversationUI(false);
-  safeRecognitionStop();
-  await stopCurrentAudio();
-  isProcessing = false;
-  showHeard("停止しました", false);
-};
-
-sendBtn.onclick = async () => {
-  const text = inputEl.value.trim();
-  if(!text) return;
-  inputEl.value = "";
-  conversation = false;
-  manuallyStopped = true;
-  setConversationUI(false);
-  safeRecognitionStop();
-  await stopCurrentAudio();
-  await chat(text);
-};
-
-inputEl.addEventListener("keydown", (e) => {
-  if(e.key === "Enter"){
-    e.preventDefault();
-    sendBtn.click();
+document.getElementById("stop").onclick = ()=>{
+  if(recognition){
+    recognition.stop();
   }
-});
+};
 
-if("speechSynthesis" in window){
-  window.speechSynthesis.onvoiceschanged = () => {
-    try{ window.speechSynthesis.getVoices(); }catch(e){}
-  };
-}
+document.getElementById("send").onclick = ()=>{
+  chat(inputEl.value);
+  inputEl.value="";
+};
 </script>
+
 </body>
 </html>
