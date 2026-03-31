@@ -3,54 +3,50 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NAKAMUROBO MINIMUM</title>
+  <title>RESTART</title>
   <style>
-    body { background: #000; color: #fff; font-family: sans-serif; text-align: center; padding: 50px; }
-    button { padding: 20px; font-size: 18px; background: #ffd54a; border: none; border-radius: 10px; cursor: pointer; width: 100%; }
-    input { width: 100%; padding: 15px; margin-bottom: 20px; border-radius: 10px; border: 1px solid #333; background: #111; color: #fff; box-sizing: border-box; }
-    #res { margin: 30px 0; font-size: 20px; min-height: 50px; }
+    body { background: #000; color: #fff; text-align: center; padding: 40px; font-family: sans-serif; }
+    button { width: 100%; padding: 25px; background: #ffd54a; border: none; border-radius: 12px; font-weight: bold; font-size: 18px; cursor: pointer; }
+    input { width: 100%; padding: 15px; margin-bottom: 20px; background: #111; color: #fff; border: 1px solid #333; border-radius: 8px; box-sizing: border-box; }
+    #res { margin-top: 30px; font-size: 20px; }
   </style>
 </head>
 <body>
-  <input id="input" type="text" placeholder="何か入力...">
+  <input id="input" type="text" placeholder="テストメッセージ">
   <button id="btn">送信して再生</button>
-  <div id="res">...</div>
+  <div id="res">待機中</div>
 
   <script>
-    const audio = new Audio();
+    const player = new Audio();
+    const endpoint = new URLSearchParams(location.search).get("endpoint");
 
-    async function send() {
-      const txt = document.getElementById("input").value;
-      if (!txt) return;
-
+    document.getElementById("btn").onclick = async () => {
+      const val = document.getElementById("input").value;
+      if(!val) return;
       document.getElementById("res").textContent = "通信中...";
-      
-      // ★iPhone対策：クリックした瞬間に音声を「有効化」する
-      audio.src = "data:audio/wav;base64,UklGRigAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
-      await audio.play().catch(()=>{});
 
-      const endpoint = new URLSearchParams(location.search).get("endpoint");
+      // iPhoneのスピーカー予約
+      player.src = "data:audio/wav;base64,UklGRigAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
+      await player.play().catch(()=>{});
 
       try {
         const r = await fetch(endpoint, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userText: txt })
+          body: JSON.stringify({ userText: val })
         });
-        const d = await r.json();
 
-        document.getElementById("res").textContent = d.reply;
+        // テキストを表示
+        const reply = decodeURIComponent(r.headers.get("X-Reply") || "…");
+        document.getElementById("res").textContent = reply;
 
-        if (d.audioBase64) {
-          audio.src = "data:audio/mpeg;base64," + d.audioBase64;
-          await audio.play();
-        }
+        // バイナリをそのまま再生
+        const blob = await r.blob();
+        player.src = URL.createObjectURL(blob);
+        await player.play();
       } catch (e) {
-        document.getElementById("res").textContent = "エラー: " + e.message;
+        document.getElementById("res").textContent = "失敗: " + e.message;
       }
-    }
-
-    document.getElementById("btn").onclick = send;
+    };
   </script>
 </body>
 </html>
