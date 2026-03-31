@@ -12,6 +12,7 @@
   --sub:#9a9a9a;
   --accent:#ffd54a;
   --accent2:#7fd1ff;
+  --ok:#7dffb3;
 }
 *{box-sizing:border-box}
 html,body{
@@ -137,6 +138,12 @@ body{
   gap:12px;
   margin-top:16px;
 }
+.controls-3{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:12px;
+  margin-top:16px;
+}
 button{
   border:none;
   border-radius:16px;
@@ -144,6 +151,11 @@ button{
   font-size:16px;
   font-weight:700;
   cursor:pointer;
+}
+.enable-btn{
+  background:linear-gradient(180deg, #1d3325, #0b1710);
+  color:var(--ok);
+  border:1px solid #254431;
 }
 .mic-btn{
   background:linear-gradient(180deg, #222, #000);
@@ -195,10 +207,11 @@ input{
       <div id="statusText" class="status">待機中</div>
     </div>
 
-    <div id="responseText" class="response">…</div>
+    <div id="responseText" class="response">最初に「音声を有効化」を押してください</div>
     <div id="heardText" class="heard">待機中</div>
 
-    <div class="controls">
+    <div class="controls-3">
+      <button id="enableBtn" class="enable-btn">音声を有効化</button>
       <button id="micBtn" class="mic-btn">話しかける</button>
       <button id="stopBtn" class="stop-btn">停止</button>
     </div>
@@ -209,12 +222,12 @@ input{
     </div>
 
     <div class="note">
-      iPhoneのChromeは再生制限が強いです。<br>
-      まずは送信ボタンで確認してください。
+      1. まず「音声を有効化」<br>
+      2. そのあと送信 or 話しかける
     </div>
   </main>
 
-  <audio id="player" playsinline webkit-playsinline preload="auto"></audio>
+  <audio id="player" playsinline preload="auto"></audio>
 
 <script>
 const qs = new URLSearchParams(location.search);
@@ -236,6 +249,7 @@ const robotName = document.getElementById("robotName");
 const statusText = document.getElementById("statusText");
 const responseText = document.getElementById("responseText");
 const heardText = document.getElementById("heardText");
+const enableBtn = document.getElementById("enableBtn");
 const micBtn = document.getElementById("micBtn");
 const stopBtn = document.getElementById("stopBtn");
 const sendBtn = document.getElementById("sendBtn");
@@ -248,7 +262,7 @@ robotName.textContent = config.name;
 let currentAudioUrl = null;
 let isRecognizing = false;
 let rec = null;
-let audioReady = false;
+let audioEnabled = false;
 let audioContext = null;
 
 function setStatus(text) {
@@ -269,37 +283,36 @@ function stopPlayback() {
   cleanupAudioUrl();
 }
 
-async function unlockAudioSystem() {
-  if (audioReady) return true;
-
+async function enableAudio() {
   try {
-    if (!audioContext) {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (AC) {
-        audioContext = new AC();
-      }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC && !audioContext) {
+      audioContext = new AC();
     }
 
     if (audioContext && audioContext.state === "suspended") {
       await audioContext.resume();
     }
 
-    player.setAttribute("playsinline", "");
-    player.setAttribute("webkit-playsinline", "");
+    // 短い無音に近いバッファを直接鳴らす
+    if (audioContext) {
+      const buffer = audioContext.createBuffer(1, 1, 22050);
+      const source = audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioContext.destination);
+      source.start(0);
+    }
 
-    player.muted = true;
-    player.src = "data:audio/mp3;base64,SUQzAwAAAAAA";
-    await player.play();
-    player.pause();
-    player.currentTime = 0;
-    player.muted = false;
-    player.removeAttribute("src");
-    player.load();
-
-    audioReady = true;
+    audioEnabled = true;
+    setStatus("音声有効");
+    responseText.textContent = "音声が有効になりました";
+    enableBtn.textContent = "音声有効";
     return true;
   } catch (e) {
-    console.log("unlockAudioSystem failed:", e);
+    console.error("enableAudio failed:", e);
+    audioEnabled = false;
+    setStatus("音声有効化失敗");
+    responseText.textContent = "音声の有効化に失敗しました。もう一度押してください。";
     return false;
   }
 }
@@ -344,12 +357,12 @@ async function playAudioBlob(blob) {
   } catch (e) {
     const msg = String(e && e.message ? e.message : e).toLowerCase();
     if (
-      msg.includes("user denied permission") ||
       msg.includes("notallowederror") ||
       msg.includes("gesture") ||
+      msg.includes("user denied permission") ||
       msg.includes("play() failed")
     ) {
-      throw new Error("ブラウザが音声再生を止めています。iPhoneではSafariのほうが安定します。");
+      throw new Error("音声再生がまだ制限されています。先に『音声を有効化』を押してください。");
     }
     throw e;
   }
@@ -358,6 +371,12 @@ async function playAudioBlob(blob) {
 async function chat(txt) {
   const message = (txt || "").trim();
   if (!message) return;
+
+  if (!audioEnabled) {
+    setStatus("音声未有効");
+    responseText.textContent = "先に『音声を有効化』を押してください";
+    return;
+  }
 
   if (!config.endpoint) {
     setStatus("endpoint未設定");
@@ -422,14 +441,6 @@ async function chat(txt) {
 async function sendCurrentText() {
   const value = textInput.value;
   textInput.value = "";
-
-  const ok = await unlockAudioSystem();
-  if (!ok) {
-    setStatus("音声再生が許可されていません");
-    responseText.textContent = "iPhoneのChromeでは失敗することがあります。Safariで開くと安定しやすいです。";
-    return;
-  }
-
   await chat(value);
 }
 
@@ -450,14 +461,6 @@ if (SR) {
   rec.onresult = async (e) => {
     const transcript = e.results[0][0].transcript;
     isRecognizing = false;
-
-    const ok = await unlockAudioSystem();
-    if (!ok) {
-      setStatus("音声再生が許可されていません");
-      responseText.textContent = "まずSafariで試してください。";
-      return;
-    }
-
     await chat(transcript);
   };
 
@@ -494,10 +497,9 @@ if (SR) {
   };
 
   micBtn.onclick = async () => {
-    const ok = await unlockAudioSystem();
-    if (!ok) {
-      setStatus("音声再生が許可されていません");
-      responseText.textContent = "iPhoneのChromeでは制限が強いです。Safari推奨です。";
+    if (!audioEnabled) {
+      setStatus("音声未有効");
+      responseText.textContent = "先に『音声を有効化』を押してください";
       return;
     }
 
@@ -506,14 +508,6 @@ if (SR) {
       rec.start();
     } catch (e) {
       console.error(e);
-      const msg = String(e && e.message ? e.message : e).toLowerCase();
-
-      if (msg.includes("permission")) {
-        setStatus("マイク許可が必要");
-        responseText.textContent = "マイクの使用が許可されていません。";
-        return;
-      }
-
       setStatus("音声認識開始失敗");
       responseText.textContent = `エラー: ${e.message}`;
     }
@@ -523,6 +517,7 @@ if (SR) {
   micBtn.textContent = "音声非対応";
 }
 
+enableBtn.onclick = enableAudio;
 sendBtn.onclick = sendCurrentText;
 
 textInput.addEventListener("keydown", async (e) => {
