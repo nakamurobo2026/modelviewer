@@ -214,8 +214,8 @@ input{
     </div>
 
     <div class="note">
-      最初は送信ボタンで確認してください。<br>
-      話しかけるはマイク許可が必要です。
+      まずは送信ボタンで確認。<br>
+      話しかけるはマイク許可が必要。
     </div>
   </main>
 
@@ -251,6 +251,7 @@ let currentAudio = null;
 let currentAudioUrl = null;
 let audioUnlocked = false;
 let isRecognizing = false;
+let rec = null;
 
 function setStatus(text) {
   statusText.textContent = text;
@@ -263,27 +264,25 @@ function cleanupAudio() {
     try { currentAudio.load(); } catch (_) {}
     currentAudio = null;
   }
-
   if (currentAudioUrl) {
     try { URL.revokeObjectURL(currentAudioUrl); } catch (_) {}
     currentAudioUrl = null;
   }
 }
 
-async function unlockAudio() {
+async function forceUnlockNow() {
   if (audioUnlocked) return true;
 
   try {
-    const silentAudio = new Audio(
-      "data:audio/wav;base64,UklGRigAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=="
-    );
-    silentAudio.volume = 0;
-    await silentAudio.play();
-    silentAudio.pause();
+    const a = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==");
+    a.volume = 0;
+    await a.play();
+    a.pause();
+    a.currentTime = 0;
     audioUnlocked = true;
     return true;
   } catch (e) {
-    console.log("unlockAudio failed:", e);
+    console.log("force unlock failed:", e);
     return false;
   }
 }
@@ -305,9 +304,11 @@ async function playAudioBlob(blob) {
   cleanupAudio();
 
   currentAudioUrl = URL.createObjectURL(blob);
-  currentAudio = new Audio(currentAudioUrl);
+  currentAudio = new Audio();
+  currentAudio.src = currentAudioUrl;
   currentAudio.preload = "auto";
   currentAudio.playbackRate = 0.95;
+  currentAudio.crossOrigin = "anonymous";
 
   currentAudio.onplay = () => {
     setStatus("再生中");
@@ -320,7 +321,6 @@ async function playAudioBlob(blob) {
 
   currentAudio.onerror = () => {
     setStatus("音声再生エラー");
-    cleanupAudio();
   };
 
   try {
@@ -331,9 +331,10 @@ async function playAudioBlob(blob) {
     if (
       msg.includes("user denied permission") ||
       msg.includes("notallowederror") ||
-      msg.includes("gesture")
+      msg.includes("gesture") ||
+      msg.includes("play() failed")
     ) {
-      throw new Error("音声再生が許可されていません。Safariで開いて送信ボタンを押してください");
+      throw new Error("音声再生が許可されていません。送信ボタンをもう一度押してください");
     }
 
     throw e;
@@ -406,8 +407,21 @@ async function chat(txt) {
   }
 }
 
+async function sendCurrentText() {
+  const value = textInput.value;
+  textInput.value = "";
+
+  const ok = await forceUnlockNow();
+  if (!ok) {
+    setStatus("音声再生が許可されていません");
+    responseText.textContent = "Chromeのタブで直接開いて、もう一度送信してください";
+    return;
+  }
+
+  await chat(value);
+}
+
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let rec = null;
 
 if (SR) {
   rec = new SR();
@@ -424,6 +438,14 @@ if (SR) {
   rec.onresult = async (e) => {
     const transcript = e.results[0][0].transcript;
     isRecognizing = false;
+
+    const ok = await forceUnlockNow();
+    if (!ok) {
+      setStatus("音声再生が許可されていません");
+      responseText.textContent = "Chromeのタブで直接開いて、もう一度試してください";
+      return;
+    }
+
     await chat(transcript);
   };
 
@@ -433,7 +455,7 @@ if (SR) {
 
     if (e.error === "not-allowed" || e.error === "service-not-allowed") {
       setStatus("マイク許可が必要");
-      responseText.textContent = "マイク使用が拒否されています。Safariのサイト設定でマイクを許可してください。";
+      responseText.textContent = "Chromeのサイト設定でマイクを許可してください。";
       return;
     }
 
@@ -453,21 +475,22 @@ if (SR) {
   };
 
   rec.onend = () => {
-    if (isRecognizing) {
-      isRecognizing = false;
-      setStatus("待機中");
-    } else if (statusText.textContent === "聞き取り中...") {
+    if (statusText.textContent === "聞き取り中...") {
       setStatus("待機中");
     }
+    isRecognizing = false;
   };
 
   micBtn.onclick = async () => {
-    await unlockAudio();
+    const ok = await forceUnlockNow();
+    if (!ok) {
+      setStatus("音声再生が許可されていません");
+      responseText.textContent = "Chromeのタブで直接開いてから試してください";
+      return;
+    }
 
     try {
-      if (currentAudio) {
-        cleanupAudio();
-      }
+      cleanupAudio();
       rec.start();
     } catch (e) {
       console.error(e);
@@ -475,7 +498,7 @@ if (SR) {
 
       if (msg.includes("permission")) {
         setStatus("マイク許可が必要");
-        responseText.textContent = "マイクの使用が許可されていません。Safariのサイト設定を確認してください。";
+        responseText.textContent = "Chromeのサイト設定でマイクを許可してください。";
         return;
       }
 
@@ -488,20 +511,12 @@ if (SR) {
   micBtn.textContent = "音声非対応";
 }
 
-sendBtn.onclick = async () => {
-  await unlockAudio();
-  const value = textInput.value;
-  textInput.value = "";
-  await chat(value);
-};
+sendBtn.onclick = sendCurrentText;
 
 textInput.addEventListener("keydown", async (e) => {
   if (e.key === "Enter") {
     e.preventDefault();
-    await unlockAudio();
-    const value = textInput.value;
-    textInput.value = "";
-    await chat(value);
+    await sendCurrentText();
   }
 });
 
