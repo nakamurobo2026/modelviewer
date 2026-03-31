@@ -9,7 +9,7 @@
 :root{
   --bg1:#f5f5f7;
   --bg2:#e9eaee;
-  --card:rgba(255,255,255,0.75);
+  --card:rgba(255,255,255,0.78);
   --line:rgba(0,0,0,0.08);
   --text:#111;
   --sub:#6e6e73;
@@ -36,6 +36,7 @@ body{
   border-radius:28px;
   background:var(--card);
   backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
   box-shadow:0 30px 60px rgba(0,0,0,0.1);
   text-align:center;
 }
@@ -48,45 +49,18 @@ body{
   display:flex;
   align-items:center;
   justify-content:center;
-  background:radial-gradient(circle,#fff,#ddd);
-  box-shadow:0 10px 30px rgba(0,0,0,0.1);
+  background:radial-gradient(circle at 35% 30%, #ffffff 0%, #f1f1f3 55%, #dddddf 100%);
+  box-shadow:
+    inset 0 2px 8px rgba(255,255,255,0.9),
+    0 10px 30px rgba(0,0,0,0.1);
 }
 
-/* 崩れにくいハート */
-.heart-wrap{
-  position:relative;
-  width:42px;
-  height:38px;
+.heart-svg{
+  width:38px;
+  height:34px;
+  display:block;
   animation:pulse 2.2s infinite ease-in-out;
-}
-
-.heart-square{
-  position:absolute;
-  left:11px;
-  top:11px;
-  width:20px;
-  height:20px;
-  background:#ffd54a;
-  transform:rotate(45deg);
-  border-radius:4px;
-}
-
-.heart-circle{
-  position:absolute;
-  width:20px;
-  height:20px;
-  background:#ffd54a;
-  border-radius:50%;
-}
-
-.heart-circle.left{
-  left:0;
-  top:0;
-}
-
-.heart-circle.right{
-  left:22px;
-  top:0;
+  filter:drop-shadow(0 0 8px rgba(255,213,74,0.28));
 }
 
 @keyframes pulse{
@@ -97,6 +71,7 @@ body{
 h2{
   margin:16px 0 6px;
   font-size:24px;
+  color:var(--text);
 }
 
 .status{
@@ -109,6 +84,7 @@ h2{
   margin:20px 0;
   font-size:20px;
   min-height:70px;
+  color:var(--text);
 }
 
 button{
@@ -118,11 +94,32 @@ button{
   border-radius:16px;
   border:none;
   font-size:15px;
+  transition:all .18s ease;
 }
 
-.primary{ background:var(--accent); color:#fff; }
-.secondary{ background:#fff; border:1px solid var(--line); }
-.stop{ background:#ffe5e5; }
+.primary{
+  background:var(--accent);
+  color:#fff;
+}
+
+.secondary{
+  background:#fff;
+  border:1px solid var(--line);
+  color:var(--text);
+}
+
+.stop{
+  background:#ffe5e5;
+  color:#8a1f1f;
+}
+
+.enabled{
+  background:#fff !important;
+  color:#111 !important;
+  border:1px solid rgba(0,0,0,0.1) !important;
+  opacity:0.72;
+  cursor:default;
+}
 
 .input-area{
   display:flex;
@@ -135,9 +132,16 @@ input{
   padding:12px;
   border-radius:14px;
   border:1px solid var(--line);
+  min-width:0;
+  font-size:16px;
 }
 
-.send{ background:var(--accent); color:#fff; }
+.send{
+  background:var(--accent);
+  color:#fff;
+  width:auto;
+  min-width:84px;
+}
 
 .guide{
   margin-top:14px;
@@ -153,11 +157,11 @@ input{
 <div class="app">
 
   <div class="core">
-    <div class="heart-wrap">
-      <div class="heart-square"></div>
-      <div class="heart-circle left"></div>
-      <div class="heart-circle right"></div>
-    </div>
+    <svg class="heart-svg" viewBox="0 0 24 22" aria-hidden="true">
+      <path
+        fill="#FFD54A"
+        d="M12 21.2 10.55 19.88C5.4 15.22 2 12.14 2 8.35 2 5.27 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.27 22 8.35c0 3.79-3.4 6.87-8.55 11.53L12 21.2Z"/>
+    </svg>
   </div>
 
   <h2 id="robotName">ナカムロボユニット01</h2>
@@ -184,68 +188,82 @@ input{
 </div>
 
 <script>
-const qs=new URLSearchParams(location.search);
+const qs = new URLSearchParams(location.search);
 
-const config={
-  id:qs.get("id")||"robot01",
-  name:qs.get("name")||"ナカムロボユニット01",
-  endpoint:qs.get("endpoint")||"",
-  lang:"ja-JP"
+const config = {
+  id: qs.get("id") || "robot01",
+  name: qs.get("name") || "ナカムロボユニット01",
+  endpoint: qs.get("endpoint") || "",
+  lang: "ja-JP"
 };
 
-document.getElementById("robotName").textContent=config.name;
+document.getElementById("robotName").textContent = config.name;
 
-const responseEl=document.getElementById("response");
-const statusEl=document.getElementById("status");
-const inputEl=document.getElementById("input");
-const micBtn=document.getElementById("mic");
-const enableBtn=document.getElementById("enable");
+const responseEl = document.getElementById("response");
+const statusEl = document.getElementById("status");
+const inputEl = document.getElementById("input");
+const micBtn = document.getElementById("mic");
+const enableBtn = document.getElementById("enable");
 
 let audioContext;
-let audioEnabled=false;
+let audioEnabled = false;
 let recognition;
-let hasStarted=false;
-let conversation=false;
-let isSpeaking=false;
-let isRecognizing=false;
-let restartTimer=null;
+let hasStarted = false;
+let conversation = false;
+let isSpeaking = false;
+let isRecognizing = false;
+let restartTimer = null;
 
-function setStatus(t){statusEl.textContent=t;}
-
-function scheduleRestart(){
-  if(!conversation||isSpeaking||isRecognizing) return;
-  clearTimeout(restartTimer);
-  restartTimer=setTimeout(()=>{
-    try{recognition.start();}catch{}
-  },400);
+function setStatus(t){
+  statusEl.textContent = t;
 }
 
-enableBtn.onclick=async()=>{
+function scheduleRestart(){
+  if(!conversation || isSpeaking || isRecognizing) return;
+  clearTimeout(restartTimer);
+  restartTimer = setTimeout(() => {
+    try{ recognition.start(); }catch(e){}
+  }, 400);
+}
+
+enableBtn.onclick = async () => {
   try{
-    const AC=window.AudioContext||window.webkitAudioContext;
-    audioContext=new AC();
+    const AC = window.AudioContext || window.webkitAudioContext;
+    audioContext = new AC();
     await audioContext.resume();
-    audioEnabled=true;
+
+    const buf = audioContext.createBuffer(1, 1, 22050);
+    const src = audioContext.createBufferSource();
+    src.buffer = buf;
+    src.connect(audioContext.destination);
+    src.start(0);
+
+    audioEnabled = true;
     setStatus("音声有効");
-    responseEl.textContent="準備完了";
-    enableBtn.style.display="none";
+    responseEl.textContent = "準備完了";
+
+    enableBtn.textContent = "音声有効";
+    enableBtn.classList.remove("primary");
+    enableBtn.classList.add("enabled");
+    enableBtn.disabled = true;
+
   }catch(e){
     setStatus("音声有効化失敗");
   }
 };
 
 async function playAudio(blob){
-  const ab=await blob.arrayBuffer();
-  const buf=await audioContext.decodeAudioData(ab);
-  const src=audioContext.createBufferSource();
-  src.buffer=buf;
+  const ab = await blob.arrayBuffer();
+  const buf = await audioContext.decodeAudioData(ab);
+  const src = audioContext.createBufferSource();
+  src.buffer = buf;
   src.connect(audioContext.destination);
 
-  isSpeaking=true;
+  isSpeaking = true;
   setStatus("再生中");
 
-  src.onended=()=>{
-    isSpeaking=false;
+  src.onended = () => {
+    isSpeaking = false;
     if(conversation){
       setStatus("聞き取り待機中...");
       scheduleRestart();
@@ -258,65 +276,75 @@ async function playAudio(blob){
 }
 
 async function chat(text){
-  if(!audioEnabled){setStatus("音声未有効");return;}
-  if(!config.endpoint){setStatus("未接続");return;}
+  const message = (text || "").trim();
+  if(!message) return;
+
+  if(!audioEnabled){
+    setStatus("音声未有効");
+    responseEl.textContent = "先に音声を有効化してください。";
+    return;
+  }
+  if(!config.endpoint){
+    setStatus("未接続");
+    return;
+  }
 
   setStatus("接続中...");
-  responseEl.textContent="解析中...";
+  responseEl.textContent = "解析中...";
 
-  const res=await fetch(config.endpoint,{
+  const res = await fetch(config.endpoint,{
     method:"POST",
-    headers:{'Content-Type':'application/json'},
+    headers:{ "Content-Type":"application/json" },
     body:JSON.stringify({
       robotId:config.id,
       robotName:config.name,
-      userText:text,
+      userText:message,
       isFirstTurn:!hasStarted
     })
   });
 
-  const reply=res.headers.get("X-Reply");
+  const reply = res.headers.get("X-Reply");
   if(reply){
-    responseEl.textContent=decodeURIComponent(reply);
+    responseEl.textContent = decodeURIComponent(reply);
   }
 
   setStatus("応答生成中...");
 
-  const blob=await res.blob();
-  hasStarted=true;
+  const blob = await res.blob();
+  hasStarted = true;
 
   await playAudio(blob);
 }
 
-document.getElementById("send").onclick=()=>{
-  conversation=false;
-  micBtn.textContent="会話開始";
+document.getElementById("send").onclick = () => {
+  conversation = false;
+  micBtn.textContent = "会話開始";
   micBtn.classList.remove("primary");
   micBtn.classList.add("secondary");
   chat(inputEl.value);
-  inputEl.value="";
+  inputEl.value = "";
 };
 
-const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 if(SR){
-  recognition=new SR();
-  recognition.lang=config.lang;
+  recognition = new SR();
+  recognition.lang = config.lang;
 
-  recognition.onstart=()=>{
-    isRecognizing=true;
+  recognition.onstart = () => {
+    isRecognizing = true;
     setStatus("聞き取り中...");
-    responseEl.textContent="話してください";
+    responseEl.textContent = "話してください";
   };
 
-  recognition.onresult=e=>{
-    isRecognizing=false;
+  recognition.onresult = e => {
+    isRecognizing = false;
     chat(e.results[0][0].transcript);
   };
 
-  recognition.onend=()=>{
-    isRecognizing=false;
-    if(conversation&&!isSpeaking){
+  recognition.onend = () => {
+    isRecognizing = false;
+    if(conversation && !isSpeaking){
       setStatus("聞き取り待機中...");
       scheduleRestart();
     }else{
@@ -324,32 +352,37 @@ if(SR){
     }
   };
 
-  micBtn.onclick=()=>{
-    if(!audioEnabled){setStatus("音声未有効");return;}
+  micBtn.onclick = () => {
+    if(!audioEnabled){
+      setStatus("音声未有効");
+      return;
+    }
 
-    conversation=!conversation;
+    conversation = !conversation;
 
     if(conversation){
-      micBtn.textContent="会話中";
+      micBtn.textContent = "会話中";
       micBtn.classList.remove("secondary");
       micBtn.classList.add("primary");
       recognition.start();
     }else{
-      micBtn.textContent="会話開始";
+      micBtn.textContent = "会話開始";
       micBtn.classList.remove("primary");
       micBtn.classList.add("secondary");
-      try{recognition.abort();}catch(e){}
+      try{ recognition.abort(); }catch(e){}
       setStatus("待機中");
     }
   };
 }
 
-document.getElementById("stop").onclick=()=>{
-  conversation=false;
-  micBtn.textContent="会話開始";
+document.getElementById("stop").onclick = () => {
+  conversation = false;
+  micBtn.textContent = "会話開始";
   micBtn.classList.remove("primary");
   micBtn.classList.add("secondary");
-  if(recognition){try{recognition.abort();}catch(e){}}
+  if(recognition){
+    try{ recognition.abort(); }catch(e){}
+  }
   setStatus("停止");
 };
 </script>
