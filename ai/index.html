@@ -488,7 +488,7 @@ async function stopCurrentAudio(){
   setTalking(false);
 }
 
-async function playAudio(blob){
+async function playAudio(blob, fallbackText = ""){
   if(!audioEnabled){
     return;
   }
@@ -496,27 +496,38 @@ async function playAudio(blob){
   await ensureAudio();
   await stopCurrentAudio();
 
-  const ab = await blob.arrayBuffer();
-  const buf = await audioContext.decodeAudioData(ab);
+  try{
+    const ab = await blob.arrayBuffer();
+    const buf = await audioContext.decodeAudioData(ab);
 
-  const src = audioContext.createBufferSource();
-  src.buffer = buf;
-  src.connect(audioContext.destination);
-  currentSource = src;
-  isPlaying = true;
-  setTalking(true);
+    const src = audioContext.createBufferSource();
+    src.buffer = buf;
+    src.connect(audioContext.destination);
+    currentSource = src;
+    isPlaying = true;
+    setTalking(true);
 
-  src.onended = () => {
+    src.onended = () => {
+      isPlaying = false;
+      setTalking(false);
+      currentSource = null;
+
+      if(conversation && !manuallyStopped){
+        setTimeout(() => safeRecognitionStart(), 450);
+      }
+    };
+
+    src.start(0);
+
+  }catch(e){
+    console.error("decode/play failed:", e);
+    currentSource = null;
     isPlaying = false;
     setTalking(false);
-    currentSource = null;
 
-    if(conversation && !manuallyStopped){
-      setTimeout(() => safeRecognitionStart(), 450);
-    }
-  };
-
-  src.start(0);
+    showHeard("代替音声で応答します", false);
+    await speakFallback(fallbackText || "応答を確認しました。");
+  }
 }
 
 function safeRecognitionStart(){
@@ -590,7 +601,7 @@ async function chat(text){
       const blob = await res.blob();
       firstTurn = false;
       if(replyText) pushHistory("assistant", replyText);
-      await playAudio(blob);
+      await playAudio(blob, replyText);
       return;
     }
 
