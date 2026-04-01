@@ -20,10 +20,6 @@
   --start-border:rgba(0,0,0,0.12);
   --start-active:#0a84ff;
   --start-active-text:#fff;
-
-  --danger-bg:#fff1f1;
-  --danger-border:#ffd1d1;
-  --danger-text:#b42318;
 }
 
 *{box-sizing:border-box}
@@ -122,7 +118,7 @@ h2{
   min-height:40px;
   display:flex;
   justify-content:center;
-  margin-bottom:12px;
+  margin-bottom:8px;
 }
 
 .heard{
@@ -252,6 +248,14 @@ input:focus{
   line-height:1.65;
   white-space:pre-line;
 }
+
+#quota{
+  margin-top:4px;
+  margin-bottom:6px;
+  font-size:12px;
+  color:#8e8e93;
+  line-height:1.5;
+}
 </style>
 </head>
 
@@ -282,6 +286,8 @@ input:focus{
     </div>
   </div>
 
+  <div id="quota" class="guide">本日の接続残量：未接続</div>
+
   <button id="enable" class="primary">音声を有効化</button>
   <button id="mic" class="secondary">会話開始</button>
 
@@ -303,6 +309,24 @@ const config = {
   endpoint: qs.get("endpoint") || "https://nakamurobo-ai.nakamura0407.workers.dev/"
 };
 
+function getOrCreateClientId(){
+  const key = "nakamurobo_client_id";
+  let id = localStorage.getItem(key);
+
+  if(!id){
+    if(window.crypto && crypto.randomUUID){
+      id = crypto.randomUUID();
+    }else{
+      id = "client_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+    }
+    localStorage.setItem(key, id);
+  }
+
+  return id;
+}
+
+const clientId = getOrCreateClientId();
+
 document.getElementById("robotName").textContent = config.name;
 
 const responseEl = document.getElementById("response");
@@ -314,6 +338,7 @@ const heartEl = document.getElementById("heart");
 const heardEl = document.getElementById("heard");
 const heardTextEl = document.getElementById("heardText");
 const guideEl = document.getElementById("guide");
+const quotaEl = document.getElementById("quota");
 
 const ua = navigator.userAgent || "";
 const isLineInApp = /Line/i.test(ua);
@@ -372,6 +397,22 @@ function showHeard(text, keep = false){
 
 function setGuide(text){
   guideEl.textContent = text;
+}
+
+function updateQuota(remaining, limitReached = false){
+  if(!quotaEl) return;
+
+  if(typeof remaining !== "number"){
+    quotaEl.textContent = "本日の接続残量：未接続";
+    return;
+  }
+
+  if(limitReached || remaining <= 0){
+    quotaEl.textContent = "本日の接続残量はありません。";
+    return;
+  }
+
+  quotaEl.textContent = `本日の接続残量：あと${remaining}回`;
 }
 
 function pushHistory(role, content){
@@ -508,6 +549,7 @@ async function unlockAudio(){
 
     setResponse("会話開始をタップしてください。テキスト入力も使えます。");
     showHeard("音声準備完了", true);
+    updateQuota();
 
     enableBtn.textContent = "音声有効";
     enableBtn.classList.remove("primary");
@@ -581,6 +623,7 @@ async function chat(text){
       body: JSON.stringify({
         robotId: config.id,
         robotName: config.name,
+        clientId,
         userText,
         isFirstTurn: firstTurn,
         history
@@ -600,6 +643,17 @@ async function chat(text){
       replyText = data.error;
     }else{
       replyText = "応答を確認しました。";
+    }
+
+    if(typeof data?.remaining === "number"){
+      updateQuota(data.remaining, !!data.limitReached);
+    }
+
+    if(data?.limitReached){
+      conversation = false;
+      manuallyStopped = true;
+      setConversationUI(false);
+      stopRecognition();
     }
 
     setResponse(replyText);
