@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>NAKAMUROBO AI MINIMAL VOICE</title>
+<title>NAKAMUROBO AI MINIMAL STT + TTS</title>
 <style>
   body{
     margin:0;
@@ -37,6 +37,14 @@
     align-items:center;
     justify-content:center;
     text-align:center;
+    word-break:break-word;
+  }
+  #heard{
+    min-height:28px;
+    font-size:14px;
+    color:#666;
+    margin-bottom:10px;
+    word-break:break-word;
   }
   input{
     width:100%;
@@ -55,6 +63,10 @@
     border-radius:12px;
     cursor:pointer;
     margin-bottom:10px;
+  }
+  button:disabled{
+    opacity:.6;
+    cursor:default;
   }
   #unlock{
     background:#111;
@@ -76,22 +88,18 @@
     background:#ff3b30;
     color:#fff;
   }
-  #heard{
-    min-height:28px;
-    font-size:14px;
-    color:#666;
-    margin-bottom:10px;
-  }
   #status{
     font-size:13px;
     color:#666;
     margin-top:8px;
+    word-break:break-word;
   }
 </style>
 </head>
 <body>
   <div class="app">
     <h1 id="robotName">ナカムロボユニット01</h1>
+
     <div id="response">まず「音声を有効化」を押してください。</div>
     <div id="heard">待機中</div>
 
@@ -148,17 +156,23 @@ function setHeard(text){
 }
 
 function loadVoices(){
-  return window.speechSynthesis.getVoices();
+  try{
+    return window.speechSynthesis.getVoices() || [];
+  }catch(e){
+    return [];
+  }
 }
 
 function getJaVoice(){
   const voices = loadVoices();
-  return voices.find(v => v.lang && v.lang.toLowerCase().includes("ja")) || null;
+  return voices.find(v => (v.lang || "").toLowerCase().includes("ja")) || null;
 }
 
 function stopSpeech(){
   try{
-    window.speechSynthesis.cancel();
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
   }catch(e){}
   isSpeaking = false;
 }
@@ -171,6 +185,12 @@ function speak(text){
     }
 
     if (!("speechSynthesis" in window)) {
+      setStatus("speechSynthesis未対応");
+      resolve();
+      return;
+    }
+
+    if (!text) {
       resolve();
       return;
     }
@@ -178,7 +198,7 @@ function speak(text){
     try{
       stopSpeech();
 
-      const uttr = new SpeechSynthesisUtterance(text);
+      const uttr = new SpeechSynthesisUtterance(String(text));
       uttr.lang = "ja-JP";
       uttr.rate = 0.95;
       uttr.pitch = 0.9;
@@ -203,7 +223,9 @@ function speak(text){
         resolve();
       };
 
-      window.speechSynthesis.resume();
+      try{
+        window.speechSynthesis.resume();
+      }catch(e){}
 
       setTimeout(() => {
         try{
@@ -248,9 +270,11 @@ async function unlockAudio(){
     unlockBtn.textContent = "音声有効化済み";
     setResponse("音声を有効化しました。");
     setStatus("音声有効");
+    setHeard("準備完了");
   }catch(e){
     console.error(e);
     setStatus("音声有効化失敗");
+    setResponse("音声有効化に失敗しました。");
   }
 }
 
@@ -267,8 +291,18 @@ async function fetchReply(userText){
     })
   });
 
-  const data = await res.json();
-  return data.reply || "応答を確認しました。";
+  let data = null;
+  try{
+    data = await res.json();
+  }catch(e){
+    data = null;
+  }
+
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
+
+  return data?.reply || "応答を確認しました。";
 }
 
 async function handleUserText(text){
@@ -276,6 +310,8 @@ async function handleUserText(text){
   if (!userText || isProcessing) return;
 
   isProcessing = true;
+  isListening = false;
+
   setHeard("入力: " + userText);
   setResponse("応答取得中...");
   setStatus("通信中...");
@@ -293,10 +329,12 @@ async function handleUserText(text){
   }catch(e){
     console.error(e);
     setResponse("通信エラーです。");
-    setStatus("通信失敗");
+    setStatus("通信失敗: " + (e?.message || "unknown"));
   }finally{
     isProcessing = false;
-    isListening = false;
+    if (!isSpeaking) {
+      setStatus("待機中");
+    }
   }
 }
 
@@ -325,8 +363,9 @@ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (SR) {
   recognition = new SR();
   recognition.lang = "ja-JP";
-  recognition.interimResults = true;
+  recognition.interimResults = false;
   recognition.continuous = false;
+  recognition.maxAlternatives = 1;
 
   recognition.onstart = () => {
     isListening = true;
@@ -335,26 +374,18 @@ if (SR) {
   };
 
   recognition.onresult = async (e) => {
-    let interim = "";
-    let finalText = "";
+    const text = e?.results?.[0]?.[0]?.transcript?.trim() || "";
 
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      const transcript = e.results[i][0].transcript || "";
-      if (e.results[i].isFinal) {
-        finalText += transcript;
-      } else {
-        interim += transcript;
-      }
+    if (!text) {
+      isListening = false;
+      setStatus("認識結果なし");
+      setHeard("認識結果なし");
+      setResponse("音声を認識できませんでした。");
+      return;
     }
 
-    if (interim.trim()) {
-      setHeard("入力途中: " + interim.trim());
-    }
-
-    if (finalText.trim()) {
-      setHeard("入力: " + finalText.trim());
-      await handleUserText(finalText.trim());
-    }
+    setHeard("入力: " + text);
+    await handleUserText(text);
   };
 
   recognition.onerror = (e) => {
@@ -362,17 +393,23 @@ if (SR) {
 
     isListening = false;
 
-    if (e.error === "not-allowed") {
-      setResponse("マイクの許可が必要です。");
-      setStatus("マイク権限エラー");
-      setHeard("マイクを許可してください");
-    } else if (e.error === "no-speech") {
-      setStatus("音声なし");
-      setHeard("音声を確認できませんでした");
-    } else {
-      setStatus("音声認識エラー");
-      setHeard("認識に失敗しました");
-    }
+    const code = e?.error || "unknown";
+    const msgMap = {
+      "not-allowed": "マイク許可がありません",
+      "service-not-allowed": "音声認識サービスが使えません",
+      "network": "音声認識の通信エラーです",
+      "no-speech": "音声を検出できませんでした",
+      "audio-capture": "マイク入力を取得できません",
+      "aborted": "音声認識が中断されました",
+      "language-not-supported": "この言語は未対応です",
+      "bad-grammar": "音声認識設定エラーです"
+    };
+
+    const msg = msgMap[code] || ("音声認識エラー: " + code);
+
+    setStatus(msg);
+    setHeard(msg);
+    setResponse(msg);
   };
 
   recognition.onend = () => {
@@ -387,15 +424,32 @@ if (SR) {
   setHeard("このブラウザは音声認識に未対応です");
 }
 
-micBtn.addEventListener("click", () => {
+micBtn.addEventListener("click", async () => {
   if (!audioUnlocked) {
     setResponse("先に音声を有効化してください。");
     setStatus("音声未有効");
+    setHeard("先に音声を有効化してください");
     return;
   }
 
   if (!recognition) {
     setResponse("このブラウザは音声認識に対応していません。");
+    setStatus("未対応ブラウザ");
+    setHeard("音声認識未対応");
+    return;
+  }
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    setResponse("このブラウザはマイク取得に対応していません。");
+    setStatus("getUserMedia未対応");
+    setHeard("マイク取得未対応");
+    return;
+  }
+
+  if (location.protocol !== "https:" && location.hostname !== "localhost") {
+    setResponse("音声認識はHTTPSで開いてください。");
+    setStatus("HTTPS必須");
+    setHeard("HTTPSで開いてください");
     return;
   }
 
@@ -403,17 +457,32 @@ micBtn.addEventListener("click", () => {
     return;
   }
 
-  try{
-    recognition.start();
-  }catch(e){
-    console.error(e);
-    setStatus("認識開始失敗");
+  try {
+    setStatus("マイク確認中...");
+    setHeard("マイク確認中...");
+    await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    try{
+      recognition.start();
+    }catch(err){
+      console.error(err);
+      setResponse("音声認識の開始に失敗しました。");
+      setStatus("認識開始失敗");
+      setHeard("recognition.start 失敗");
+    }
+  } catch (err) {
+    console.error(err);
+    setResponse("マイクの使用が許可されていません。");
+    setStatus("マイク権限エラー");
+    setHeard("ブラウザでマイクを許可してください");
   }
 });
 
 stopBtn.addEventListener("click", () => {
   try{
-    if (recognition && isListening) recognition.stop();
+    if (recognition && isListening) {
+      recognition.stop();
+    }
   }catch(e){}
 
   stopSpeech();
