@@ -216,13 +216,6 @@ button:disabled{
   box-shadow:0 12px 24px rgba(10,132,255,0.26) !important;
 }
 
-.stop{
-  background:var(--danger-bg);
-  color:var(--danger-text);
-  border:1px solid var(--danger-border);
-  box-shadow:0 6px 16px rgba(180,35,24,0.06);
-}
-
 .input-area{
   display:flex;
   gap:8px;
@@ -259,10 +252,6 @@ input:focus{
   line-height:1.65;
   white-space:pre-line;
 }
-
-.hidden{
-  display:none !important;
-}
 </style>
 </head>
 
@@ -295,14 +284,14 @@ input:focus{
 
   <button id="enable" class="primary">音声を有効化</button>
   <button id="mic" class="secondary">会話開始</button>
-  <button id="stop" class="stop">停止</button>
 
   <div class="input-area">
     <input id="input" placeholder="入力..." />
     <button id="send" class="send">送信</button>
   </div>
 
-  <div id="guide" class="guide">音声を有効化後、会話開始を押してください</div>
+  <div id="guide" class="guide">音声を有効化後、「会話開始」を押してください。
+テキストで話したい場合は、下の入力欄に入れて「送信」を押してください。</div>
 </div>
 
 <script>
@@ -320,7 +309,6 @@ const responseEl = document.getElementById("response");
 const inputEl = document.getElementById("input");
 const micBtn = document.getElementById("mic");
 const enableBtn = document.getElementById("enable");
-const stopBtn = document.getElementById("stop");
 const sendBtn = document.getElementById("send");
 const heartEl = document.getElementById("heart");
 const heardEl = document.getElementById("heard");
@@ -359,11 +347,13 @@ function setListening(active){
 
 function setConversationUI(active){
   if(active){
-    micBtn.textContent = "会話中";
+    micBtn.textContent = "停止";
     micBtn.classList.add("live");
+    micBtn.classList.remove("secondary");
   }else{
     micBtn.textContent = sttBlocked ? "音声入力不可" : "会話開始";
     micBtn.classList.remove("live");
+    micBtn.classList.add("secondary");
   }
 }
 
@@ -516,7 +506,7 @@ async function unlockAudio(){
 
     audioEnabled = true;
 
-    setResponse("準備完了。");
+    setResponse("会話開始をタップしてください。テキスト入力も使えます。");
     showHeard("音声準備完了", true);
 
     enableBtn.textContent = "音声有効";
@@ -525,27 +515,27 @@ async function unlockAudio(){
     enableBtn.disabled = true;
 
     if(isLineInApp){
-      disableMicAsTextOnly("LINE内ブラウザでは音声入力が使えません。\n右上メニューからブラウザで開くと音声会話が使えます。");
+      disableMicAsTextOnly("LINE内ブラウザでは音声入力が使えません。\n右上メニューからブラウザで開くと音声会話が使えます。\nテキストで話したい場合は、下の入力欄に入れて「送信」を押してください。");
       setResponse("LINEでは音声入力は使えません。テキスト入力を使ってください。");
       showHeard("LINE内はテキスト専用", true);
       return;
     }
 
     if(!isSecure){
-      disableMicAsTextOnly("HTTPS で開くと音声入力が使えます。");
+      disableMicAsTextOnly("HTTPS で開くと音声入力が使えます。\nテキストで話したい場合は、下の入力欄に入れて「送信」を押してください。");
       setResponse("音声入力はHTTPSで開いてください。");
       showHeard("HTTPS必須", true);
       return;
     }
 
     if(!hasSpeechRecognition){
-      disableMicAsTextOnly("このブラウザは音声入力に未対応です。");
+      disableMicAsTextOnly("このブラウザは音声入力に未対応です。\nテキストで話したい場合は、下の入力欄に入れて「送信」を押してください。");
       setResponse("このブラウザは音声入力に未対応です。");
       showHeard("音声認識未対応", true);
       return;
     }
 
-    setGuide("音声を有効化後、会話開始を押してください");
+    setGuide("音声を有効化後、「会話開始」を押してください。\nテキストで話したい場合は、下の入力欄に入れて「送信」を押してください。");
   }catch(e){
     setResponse("音声有効化に失敗しました。");
     showHeard("音声有効化失敗", true);
@@ -678,7 +668,7 @@ function initRecognition(){
     const code = e?.error || "unknown";
 
     if(code === "service-not-allowed"){
-      disableMicAsTextOnly("この環境では音声入力サービスが使えません。\nChrome本体で開くと使える可能性があります。");
+      disableMicAsTextOnly("この環境では音声入力サービスが使えません。\nChrome本体で開くと使える可能性があります。\nテキストで話したい場合は、下の入力欄に入れて「送信」を押してください。");
       setResponse("この環境では音声入力が使えません。テキスト入力を使ってください。");
       showHeard("音声入力サービス不可", true);
       return;
@@ -740,39 +730,35 @@ micBtn.onclick = async () => {
     return;
   }
 
-  conversation = !conversation;
-  manuallyStopped = !conversation;
-  setConversationUI(conversation);
-
   if(conversation){
-    try{
-      await ensureMicPermission();
-      setResponse(firstTurn ? "会話を開始します。" : responseEl.textContent);
-      showHeard("会話モード開始", false);
-      safeRecognitionStart();
-    }catch(e){
-      console.error(e);
-      conversation = false;
-      manuallyStopped = true;
-      setConversationUI(false);
-      setResponse("マイクの使用が許可されていません。");
-      showHeard("ブラウザでマイクを許可してください", true);
-    }
-  }else{
+    conversation = false;
+    manuallyStopped = true;
+    setConversationUI(false);
     stopRecognition();
     stopSpeech();
-    showHeard("会話モード停止", false);
+    isProcessing = false;
+    showHeard("停止しました", false);
+    setResponse("会話を停止しました。再開するには会話開始をタップしてください。");
+    return;
   }
-};
 
-stopBtn.onclick = () => {
-  conversation = false;
-  manuallyStopped = true;
-  setConversationUI(false);
-  stopRecognition();
-  stopSpeech();
-  isProcessing = false;
-  showHeard("停止しました", false);
+  conversation = true;
+  manuallyStopped = false;
+  setConversationUI(true);
+
+  try{
+    await ensureMicPermission();
+    setResponse(firstTurn ? "話してください。" : "聞き取りを開始します。");
+    showHeard("会話モード開始", false);
+    safeRecognitionStart();
+  }catch(e){
+    console.error(e);
+    conversation = false;
+    manuallyStopped = true;
+    setConversationUI(false);
+    setResponse("マイクの使用が許可されていません。");
+    showHeard("ブラウザでマイクを許可してください", true);
+  }
 };
 
 sendBtn.onclick = async () => {
@@ -808,11 +794,11 @@ initRecognition();
 
 if(isLineInApp){
   setResponse("LINEでは音声入力は使えません。まず音声を有効化してください。");
-  setGuide("LINE内ブラウザでは音声入力が使えません。\n右上メニューからブラウザで開くと音声会話が使えます。");
+  setGuide("LINE内ブラウザでは音声入力が使えません。\n右上メニューからブラウザで開くと音声会話が使えます。\nテキストで話したい場合は、下の入力欄に入れて「送信」を押してください。");
 }else if(!isSecure){
-  setGuide("HTTPSで開くと音声入力が使えます。");
+  setGuide("HTTPSで開くと音声入力が使えます。\nテキストで話したい場合は、下の入力欄に入れて「送信」を押してください。");
 }else if(!hasSpeechRecognition){
-  setGuide("このブラウザでは音声入力が使えない場合があります。テキスト入力は利用できます。");
+  setGuide("このブラウザでは音声入力が使えない場合があります。\nテキストで話したい場合は、下の入力欄に入れて「送信」を押してください。");
 }
 </script>
 
