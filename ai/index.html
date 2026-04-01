@@ -341,6 +341,7 @@ const guideEl = document.getElementById("guide");
 const quotaEl = document.getElementById("quota");
 
 const ua = navigator.userAgent || "";
+const isAndroid = /Android/i.test(ua);
 const isLineInApp = /Line/i.test(ua);
 const isSecure = location.protocol === "https:" || location.hostname === "localhost";
 const hasSpeechSynthesis = "speechSynthesis" in window;
@@ -588,7 +589,20 @@ async function ensureMicPermission(){
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
     throw new Error("getUserMedia未対応");
   }
-  await navigator.mediaDevices.getUserMedia({ audio: true });
+
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
+    }
+  });
+
+  stream.getTracks().forEach(track => track.stop());
+
+  if(isAndroid){
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
 }
 
 function safeRecognitionStart(){
@@ -628,7 +642,7 @@ async function chat(text){
         isFirstTurn: firstTurn,
         history
       })
-    }, 20000);
+    }, 25000);
 
     let data = null;
     try{
@@ -734,6 +748,15 @@ function initRecognition(){
       return;
     }
 
+    if(code === "audio-capture"){
+      const msg = isAndroid
+        ? "マイクを使えません。AndroidのChromeでマイク権限を許可して、通話や録音アプリを閉じてからもう一度試してください。"
+        : "マイク入力を取得できません。ブラウザのマイク権限を確認してください。";
+      setResponse(msg);
+      showHeard(msg, true);
+      return;
+    }
+
     if(code === "no-speech"){
       showHeard("音声を確認できませんでした", false);
       if(conversation && !isProcessing && !isPlaying && !manuallyStopped && !sttBlocked){
@@ -744,7 +767,6 @@ function initRecognition(){
 
     const map = {
       "network": "音声認識の通信エラーです",
-      "audio-capture": "マイク入力を取得できません",
       "aborted": "音声認識が中断されました",
       "language-not-supported": "この言語は未対応です",
       "bad-grammar": "音声認識設定エラーです"
@@ -804,13 +826,23 @@ micBtn.onclick = async () => {
     await ensureMicPermission();
     setResponse(firstTurn ? "話してください。" : "聞き取りを開始します。");
     showHeard("会話モード開始", false);
-    safeRecognitionStart();
+
+    if(isAndroid){
+      setTimeout(() => safeRecognitionStart(), 250);
+    }else{
+      safeRecognitionStart();
+    }
   }catch(e){
     console.error(e);
     conversation = false;
     manuallyStopped = true;
     setConversationUI(false);
-    setResponse("マイクの使用が許可されていません。");
+
+    const msg = isAndroid
+      ? "Androidでマイクを使えません。Chromeのサイト設定でマイクを許可して、通話や録音アプリを閉じてからもう一度試してください。"
+      : "マイクの使用が許可されていません。";
+
+    setResponse(msg);
     showHeard("ブラウザでマイクを許可してください", true);
   }
 };
