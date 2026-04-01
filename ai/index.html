@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>NAKAMUROBO AI SIMPLE VOICE</title>
+<title>NAKAMUROBO AI MINIMAL VOICE</title>
 <style>
   body{
     margin:0;
@@ -29,13 +29,14 @@
     margin:0 0 12px;
   }
   #response{
-    min-height:80px;
+    min-height:88px;
     font-size:20px;
     line-height:1.6;
     margin:16px 0;
     display:flex;
     align-items:center;
     justify-content:center;
+    text-align:center;
   }
   input{
     width:100%;
@@ -59,13 +60,27 @@
     background:#111;
     color:#fff;
   }
-  #send{
-    background:#0a84ff;
-    color:#fff;
-  }
   #speakTest{
     background:#eee;
     color:#111;
+  }
+  #mic{
+    background:#0a84ff;
+    color:#fff;
+  }
+  #send{
+    background:#34c759;
+    color:#fff;
+  }
+  #stop{
+    background:#ff3b30;
+    color:#fff;
+  }
+  #heard{
+    min-height:28px;
+    font-size:14px;
+    color:#666;
+    margin-bottom:10px;
   }
   #status{
     font-size:13px;
@@ -78,9 +93,12 @@
   <div class="app">
     <h1 id="robotName">ナカムロボユニット01</h1>
     <div id="response">まず「音声を有効化」を押してください。</div>
+    <div id="heard">待機中</div>
 
     <button id="unlock">音声を有効化</button>
     <button id="speakTest">テスト音声を鳴らす</button>
+    <button id="mic">話す</button>
+    <button id="stop">停止</button>
 
     <input id="input" type="text" placeholder="入力してください" />
     <button id="send">送信</button>
@@ -100,16 +118,22 @@ const config = {
 document.getElementById("robotName").textContent = config.name;
 
 const responseEl = document.getElementById("response");
+const heardEl = document.getElementById("heard");
 const inputEl = document.getElementById("input");
 const unlockBtn = document.getElementById("unlock");
 const speakTestBtn = document.getElementById("speakTest");
+const micBtn = document.getElementById("mic");
+const stopBtn = document.getElementById("stop");
 const sendBtn = document.getElementById("send");
 const statusEl = document.getElementById("status");
 
 let audioUnlocked = false;
-let voicesLoaded = false;
 let firstTurn = true;
 let history = [];
+let recognition = null;
+let isListening = false;
+let isSpeaking = false;
+let isProcessing = false;
 
 function setStatus(text){
   statusEl.textContent = text;
@@ -119,12 +143,12 @@ function setResponse(text){
   responseEl.textContent = text;
 }
 
+function setHeard(text){
+  heardEl.textContent = text;
+}
+
 function loadVoices(){
-  const voices = window.speechSynthesis.getVoices();
-  if (voices && voices.length > 0) {
-    voicesLoaded = true;
-  }
-  return voices;
+  return window.speechSynthesis.getVoices();
 }
 
 function getJaVoice(){
@@ -136,6 +160,7 @@ function stopSpeech(){
   try{
     window.speechSynthesis.cancel();
   }catch(e){}
+  isSpeaking = false;
 }
 
 function speak(text){
@@ -159,18 +184,21 @@ function speak(text){
       uttr.pitch = 0.9;
       uttr.volume = 1.0;
 
-      const v = getJaVoice();
-      if (v) {
-        uttr.voice = v;
-      }
+      const voice = getJaVoice();
+      if (voice) uttr.voice = voice;
+
+      isSpeaking = true;
+      setStatus("再生中...");
 
       uttr.onend = () => {
+        isSpeaking = false;
         setStatus("再生完了");
         resolve();
       };
 
       uttr.onerror = (e) => {
         console.error("speech error", e);
+        isSpeaking = false;
         setStatus("音声再生エラー");
         resolve();
       };
@@ -180,9 +208,9 @@ function speak(text){
       setTimeout(() => {
         try{
           window.speechSynthesis.speak(uttr);
-          setStatus("再生中...");
         }catch(err){
           console.error(err);
+          isSpeaking = false;
           setStatus("音声再生失敗");
           resolve();
         }
@@ -190,6 +218,7 @@ function speak(text){
 
     }catch(e){
       console.error(e);
+      isSpeaking = false;
       setStatus("音声再生失敗");
       resolve();
     }
@@ -206,11 +235,8 @@ async function unlockAudio(){
   try{
     loadVoices();
 
-    // iPhone向けの音声アンロック
     const u = new SpeechSynthesisUtterance(" ");
     u.volume = 0;
-    u.rate = 1;
-    u.pitch = 1;
     u.lang = "ja-JP";
 
     window.speechSynthesis.cancel();
@@ -218,10 +244,10 @@ async function unlockAudio(){
     window.speechSynthesis.speak(u);
 
     audioUnlocked = true;
-    setResponse("音声を有効化しました。テスト音声を押してください。");
-    setStatus("音声有効");
     unlockBtn.disabled = true;
     unlockBtn.textContent = "音声有効化済み";
+    setResponse("音声を有効化しました。");
+    setStatus("音声有効");
   }catch(e){
     console.error(e);
     setStatus("音声有効化失敗");
@@ -245,6 +271,35 @@ async function fetchReply(userText){
   return data.reply || "応答を確認しました。";
 }
 
+async function handleUserText(text){
+  const userText = String(text || "").trim();
+  if (!userText || isProcessing) return;
+
+  isProcessing = true;
+  setHeard("入力: " + userText);
+  setResponse("応答取得中...");
+  setStatus("通信中...");
+
+  try{
+    const reply = await fetchReply(userText);
+
+    history.push({ role: "user", content: userText });
+    history.push({ role: "assistant", content: reply });
+    history = history.slice(-8);
+    firstTurn = false;
+
+    setResponse(reply);
+    await speak(reply);
+  }catch(e){
+    console.error(e);
+    setResponse("通信エラーです。");
+    setStatus("通信失敗");
+  }finally{
+    isProcessing = false;
+    isListening = false;
+  }
+}
+
 unlockBtn.addEventListener("click", unlockAudio);
 
 speakTestBtn.addEventListener("click", async () => {
@@ -254,24 +309,8 @@ speakTestBtn.addEventListener("click", async () => {
 sendBtn.addEventListener("click", async () => {
   const text = inputEl.value.trim();
   if (!text) return;
-
-  setStatus("通信中...");
-  setResponse("応答取得中...");
-
-  try{
-    const reply = await fetchReply(text);
-    firstTurn = false;
-    history.push({ role: "user", content: text });
-    history.push({ role: "assistant", content: reply });
-    history = history.slice(-8);
-
-    setResponse(reply);
-    await speak(reply);
-  }catch(e){
-    console.error(e);
-    setResponse("通信エラーです。");
-    setStatus("通信失敗");
-  }
+  inputEl.value = "";
+  await handleUserText(text);
 });
 
 inputEl.addEventListener("keydown", (e) => {
@@ -279,6 +318,109 @@ inputEl.addEventListener("keydown", (e) => {
     e.preventDefault();
     sendBtn.click();
   }
+});
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (SR) {
+  recognition = new SR();
+  recognition.lang = "ja-JP";
+  recognition.interimResults = true;
+  recognition.continuous = false;
+
+  recognition.onstart = () => {
+    isListening = true;
+    setStatus("聞き取り中...");
+    setHeard("聞き取り中...");
+  };
+
+  recognition.onresult = async (e) => {
+    let interim = "";
+    let finalText = "";
+
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const transcript = e.results[i][0].transcript || "";
+      if (e.results[i].isFinal) {
+        finalText += transcript;
+      } else {
+        interim += transcript;
+      }
+    }
+
+    if (interim.trim()) {
+      setHeard("入力途中: " + interim.trim());
+    }
+
+    if (finalText.trim()) {
+      setHeard("入力: " + finalText.trim());
+      await handleUserText(finalText.trim());
+    }
+  };
+
+  recognition.onerror = (e) => {
+    console.error("recognition error", e);
+
+    isListening = false;
+
+    if (e.error === "not-allowed") {
+      setResponse("マイクの許可が必要です。");
+      setStatus("マイク権限エラー");
+      setHeard("マイクを許可してください");
+    } else if (e.error === "no-speech") {
+      setStatus("音声なし");
+      setHeard("音声を確認できませんでした");
+    } else {
+      setStatus("音声認識エラー");
+      setHeard("認識に失敗しました");
+    }
+  };
+
+  recognition.onend = () => {
+    isListening = false;
+    if (!isProcessing && !isSpeaking) {
+      setStatus("待機中");
+    }
+  };
+} else {
+  micBtn.disabled = true;
+  setStatus("音声認識未対応");
+  setHeard("このブラウザは音声認識に未対応です");
+}
+
+micBtn.addEventListener("click", () => {
+  if (!audioUnlocked) {
+    setResponse("先に音声を有効化してください。");
+    setStatus("音声未有効");
+    return;
+  }
+
+  if (!recognition) {
+    setResponse("このブラウザは音声認識に対応していません。");
+    return;
+  }
+
+  if (isProcessing || isSpeaking || isListening) {
+    return;
+  }
+
+  try{
+    recognition.start();
+  }catch(e){
+    console.error(e);
+    setStatus("認識開始失敗");
+  }
+});
+
+stopBtn.addEventListener("click", () => {
+  try{
+    if (recognition && isListening) recognition.stop();
+  }catch(e){}
+
+  stopSpeech();
+  isListening = false;
+  isProcessing = false;
+  setStatus("停止しました");
+  setHeard("停止しました");
 });
 
 if ("speechSynthesis" in window) {
