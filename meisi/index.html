@@ -1,100 +1,105 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ナカムラボエンジニアリング | NFC名刺</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ナカムラボエンジニアリング</title>
 
-  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.2.0/model-viewer.min.js"></script>
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.2.0/model-viewer.min.js"></script>
 
-  <style>
-    body{
-      margin:0;
-      background:#0b0f14;
-      color:#fff;
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;
-    }
+<style>
+body{
+  margin:0;
+  background:#0b0f14;
+  color:#fff;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;
+}
 
-    .container{
-      max-width:600px;
-      margin:auto;
-      padding:16px;
-    }
+.container{
+  max-width:600px;
+  margin:auto;
+  padding:16px;
+}
 
-    model-viewer{
-      width:100%;
-      height:60vh;
-      background:#000;
-      border-radius:20px;
-    }
+model-viewer{
+  width:100%;
+  height:60vh;
+  background:#000;
+  border-radius:20px;
+}
 
-    h1{
-      margin:16px 0 4px;
-      font-size:22px;
-    }
+h1{
+  margin:16px 0 4px;
+  font-size:22px;
+}
 
-    p{
-      color:#aaa;
-      margin:0 0 16px;
-      font-size:14px;
-    }
+p{
+  color:#aaa;
+  margin:0 0 16px;
+  font-size:14px;
+}
 
-    .btn{
-      display:block;
-      width:100%;
-      padding:16px;
-      margin-bottom:12px;
-      border-radius:16px;
-      text-decoration:none;
-      color:#fff;
-      background:#111;
-      border:1px solid #333;
-      font-size:16px;
-      font-weight:bold;
-    }
+.btn{
+  display:block;
+  width:100%;
+  padding:16px;
+  margin-bottom:12px;
+  border-radius:16px;
+  text-decoration:none;
+  color:#fff;
+  background:#111;
+  border:1px solid #333;
+  font-size:16px;
+  font-weight:bold;
+  text-align:center;
+}
 
-    .btn:hover{
-      background:#1a1a1a;
-    }
-  </style>
+.btn:hover{
+  background:#1a1a1a;
+}
+</style>
 </head>
 
 <body>
 <div class="container">
 
-  <model-viewer
-    src="./nakamurobo.glb"
-    ios-src="./nakamurobo.usdz"
-    ar
-    ar-modes="webxr scene-viewer quick-look"
-    camera-controls
-    auto-rotate>
-  </model-viewer>
+<model-viewer
+  src="./nakamurobo.glb"
+  ios-src="./nakamurobo.usdz"
+  ar
+  ar-modes="webxr scene-viewer quick-look"
+  camera-controls
+  auto-rotate>
+</model-viewer>
 
-  <h1>ナカムラボエンジニアリング</h1>
-  <p>CNC / 木工加工 / 3Dプリント</p>
+<h1>ナカムラボエンジニアリング</h1>
+<p>CNC / 木工加工 / 3Dプリント</p>
 
-  <!-- 作品 -->
-  <a class="btn" href="https://www.instagram.com/nakamulabengineering/" target="_blank">
-    作品を見る（Instagram）
-  </a>
+<!-- 作品 -->
+<a class="btn" href="https://www.instagram.com/nakamulabengineering/" target="_blank">
+作品を見る（Instagram）
+</a>
 
-  <!-- 相談 -->
-  <a class="btn" href="mailto:nakamura0407@gmail.com?subject=ご相談（ナカムラボ）">
-    相談する（メール）
-  </a>
+<!-- LINE -->
+<a class="btn" href="https://line.me/ti/p/_D-n7NJxMd" target="_blank">
+LINEで相談する
+</a>
 
-  <!-- 保存 -->
-  <a class="btn" href="#" onclick="saveContact()">
-    保存する（連絡先）
-  </a>
+<!-- メール -->
+<a class="btn" href="mailto:nakamura0407@gmail.com?subject=ご相談（ナカムラボ）">
+メールで相談する
+</a>
+
+<!-- 保存 -->
+<a class="btn" href="#" onclick="saveContact()">
+連絡先を保存
+</a>
 
 </div>
 
 <script>
 function saveContact(){
-  const vcard = `
+const vcard = `
 BEGIN:VCARD
 VERSION:3.0
 FN:中村健太
@@ -104,11 +109,11 @@ EMAIL:nakamura0407@gmail.com
 URL:https://www.instagram.com/nakamulabengineering/
 END:VCARD`;
 
-  const blob = new Blob([vcard], { type: "text/vcard" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = "nakamura.vcf";
-  link.click();
+const blob = new Blob([vcard], { type: "text/vcard" });
+const link = document.createElement("a");
+link.href = URL.createObjectURL(blob);
+link.download = "nakamura.vcf";
+link.click();
 }
 </script>
 
