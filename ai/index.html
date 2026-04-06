@@ -1,57 +1,80 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ナカムロボ</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NAKAMUROBO AI</title>
+
 <style>
 body{
   font-family:sans-serif;
   text-align:center;
-  padding:40px;
+  padding:30px;
 }
-#response{
+.response{
   font-size:22px;
-  margin:20px;
+  margin:20px 0;
 }
 input{
   padding:10px;
   font-size:16px;
+  width:70%;
 }
 button{
   padding:10px 20px;
 }
 </style>
 </head>
+
 <body>
 
 <h2>ナカムロボユニット01</h2>
 
-<div id="response">準備完了</div>
+<div id="response" class="response">準備完了</div>
 
-<input id="input" placeholder="入力...">
+<input id="input" placeholder="入力..." />
 <button onclick="send()">送信</button>
 
 <script>
 const API = "https://nakamurobo-ai.nakamura0407.workers.dev/";
 
+function setResponse(text){
+  document.getElementById("response").textContent = text;
+}
+
 async function send(){
-  const text = document.getElementById("input").value;
+  const text = document.getElementById("input").value.trim();
   if(!text) return;
 
-  document.getElementById("response").textContent = "考え中...";
+  setResponse("解析中...");
 
-  const res = await fetch(API,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({ userText:text })
-  });
+  try{
+    const res = await fetch(API,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        userText:text
+      })
+    });
 
-  const data = await res.json();
+    const data = await res.json();
 
-  // 🔥 ここが重要
-  document.getElementById("response").textContent =
-    data.reply || "エラー";
+    let replyText = data?.reply || "応答なし";
+
+    // 🔥 二重JSON対策（これが核心）
+    if (typeof replyText === "string" && replyText.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(replyText);
+        if (parsed.reply) replyText = parsed.reply;
+      } catch (_) {}
+    }
+
+    setResponse(replyText);
+
+  }catch(e){
+    console.error(e);
+    setResponse("通信が不安定です。再度お試しください。");
+  }
 }
 </script>
 
