@@ -11,23 +11,17 @@
     :root{
       --bg1:#f7fbff;
       --bg2:#eef8ff;
-      --card:#ffffff;
       --text:#18354d;
       --sub:#647f96;
       --line:#d8e9f6;
       --accent:#59bfff;
-      --accent-soft:#dff4ff;
-      --yellow:#ffe27a;
       --btn:#ffffff;
       --btnHover:#f4fbff;
       --shadow:0 12px 30px rgba(67, 148, 201, 0.10);
       --shadow-soft:0 6px 18px rgba(24, 53, 77, 0.08);
-      --radius:24px;
     }
 
-    *{
-      box-sizing:border-box;
-    }
+    *{box-sizing:border-box;}
 
     body{
       margin:0;
@@ -48,11 +42,9 @@
 
     .hero{
       background:rgba(255,255,255,0.84);
-      border:1px solid rgba(255,255,255,0.72);
       border-radius:30px;
       box-shadow:var(--shadow);
       backdrop-filter:blur(10px);
-      -webkit-backdrop-filter:blur(10px);
       overflow:hidden;
     }
 
@@ -61,43 +53,13 @@
       padding:14px 14px 0;
     }
 
-    .badge{
-      position:absolute;
-      top:26px;
-      left:26px;
-      z-index:3;
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:8px 12px;
-      background:rgba(255,255,255,0.95);
-      border:1px solid var(--line);
-      border-radius:999px;
-      color:var(--text);
-      font-size:12px;
-      font-weight:800;
-      box-shadow:var(--shadow-soft);
-      letter-spacing:.04em;
-    }
-
-    .dot{
-      width:8px;
-      height:8px;
-      border-radius:50%;
-      background:var(--yellow);
-      box-shadow:0 0 12px rgba(255, 215, 83, 0.8);
-    }
-
     .ar-chip{
       position:absolute;
       top:26px;
       right:26px;
-      z-index:3;
-      appearance:none;
       border:none;
-      background:rgba(255,255,255,0.95);
+      background:#ffffff;
       border:1px solid var(--line);
-      color:var(--text);
       border-radius:999px;
       padding:10px 14px;
       font-size:12px;
@@ -111,69 +73,34 @@
       height:58vh;
       min-height:400px;
       background:linear-gradient(180deg, #fbfeff 0%, #e8f5ff 100%);
-      border:1px solid var(--line);
       border-radius:24px;
-      --poster-color: transparent;
     }
 
     .content{
       padding:20px 18px 22px;
     }
 
-    .eyebrow{
-      display:inline-block;
-      margin-bottom:8px;
-      padding:6px 10px;
-      font-size:11px;
-      font-weight:800;
-      letter-spacing:.08em;
-      color:#39749c;
-      background:var(--accent-soft);
-      border:1px solid #cde9fb;
-      border-radius:999px;
-    }
-
     h1{
       margin:0 0 6px;
-      font-size:29px;
-      line-height:1.2;
-      letter-spacing:0.01em;
+      font-size:28px;
     }
 
     .lead{
-      margin:0;
+      margin:0 0 18px;
       color:var(--sub);
       font-size:15px;
-      line-height:1.75;
-    }
-
-    .system-line{
-      margin:14px 0 0;
-      padding:12px 14px;
-      background:linear-gradient(180deg, #f8fcff 0%, #eef8ff 100%);
-      border:1px solid var(--line);
-      border-radius:16px;
-      color:#4d6980;
-      font-size:13px;
       line-height:1.7;
-      box-shadow:var(--shadow-soft);
-    }
-
-    .system-line strong{
-      color:var(--text);
     }
 
     .buttons{
       display:grid;
       gap:12px;
-      margin-top:16px;
     }
 
     .btn{
       display:flex;
-      align-items:center;
       justify-content:space-between;
-      width:100%;
+      align-items:center;
       padding:16px 18px;
       border-radius:18px;
       text-decoration:none;
@@ -183,13 +110,10 @@
       font-size:16px;
       font-weight:800;
       box-shadow:var(--shadow-soft);
-      transition:.18s ease;
     }
 
-    .btn:hover,
-    .btn:active{
+    .btn:hover{
       background:var(--btnHover);
-      transform:translateY(-1px);
     }
 
     .btn small{
@@ -200,44 +124,9 @@
       font-weight:600;
     }
 
-    .btn-left{
-      text-align:left;
-    }
-
     .arrow{
       font-size:18px;
       color:#7aa8c7;
-      margin-left:12px;
-      flex-shrink:0;
-    }
-
-    .info-grid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:12px;
-      margin-top:14px;
-    }
-
-    .info-card{
-      background:rgba(255,255,255,0.78);
-      border:1px solid var(--line);
-      border-radius:18px;
-      padding:14px;
-      box-shadow:var(--shadow-soft);
-    }
-
-    .info-card strong{
-      display:block;
-      margin-bottom:6px;
-      font-size:14px;
-      color:var(--text);
-    }
-
-    .info-card p{
-      margin:0;
-      font-size:13px;
-      line-height:1.7;
-      color:var(--sub);
     }
 
     .footer{
@@ -245,37 +134,8 @@
       color:#7c96aa;
       font-size:12px;
       margin-top:14px;
-      line-height:1.7;
     }
 
-    @media (max-width:640px){
-      .container{
-        padding:12px 12px 24px;
-      }
-
-      .badge{
-        top:22px;
-        left:22px;
-      }
-
-      .ar-chip{
-        top:22px;
-        right:22px;
-      }
-
-      h1{
-        font-size:24px;
-      }
-
-      model-viewer{
-        height:50vh;
-        min-height:340px;
-      }
-
-      .info-grid{
-        grid-template-columns:1fr;
-      }
-    }
   </style>
 </head>
 
@@ -283,12 +143,8 @@
   <div class="container">
     <section class="hero">
       <div class="viewer-wrap">
-        <div class="badge">
-          <span class="dot"></span>
-          CONNECTED
-        </div>
 
-        <button class="ar-chip" id="arButton" type="button">ARで表示</button>
+        <button class="ar-chip" id="arButton">ARで表示</button>
 
         <model-viewer
           id="mv"
@@ -297,70 +153,51 @@
           ar
           ar-modes="webxr scene-viewer quick-look"
           camera-controls
-          auto-rotate
-          shadow-intensity="1"
-          exposure="1"
-          environment-image="neutral"
-          camera-orbit="0deg 75deg 110%">
+          auto-rotate>
         </model-viewer>
       </div>
 
       <div class="content">
-        <span class="eyebrow">NAKAMURALAB ENGINEERING</span>
         <h1>ナカムラボエンジニアリング</h1>
         <p class="lead">
           CNC / 木工加工 / 3Dプリント<br>
           作品確認・ご相談・連絡先追加ができます。
         </p>
 
-        <div class="system-line">
-          <strong>接続完了。</strong><br>
-          ナカムロボ経由で、作品確認や相談に進めます。
-        </div>
-
         <div class="buttons">
-          <a class="btn" href="https://www.instagram.com/nakamulabengineering/" target="_blank" rel="noopener noreferrer">
-            <div class="btn-left">
+
+          <a class="btn" href="https://www.instagram.com/nakamulabengineering/" target="_blank">
+            <div>
               作品を見る
               <small>Instagramで制作事例を見る</small>
             </div>
             <span class="arrow">↗</span>
           </a>
 
-          <a class="btn" href="https://line.me/ti/p/_D-n7NJxMd" target="_blank" rel="noopener noreferrer">
-            <div class="btn-left">
+          <a class="btn" href="https://line.me/ti/p/_D-n7NJxMd" target="_blank">
+            <div>
               LINEで相談する
-              <small>気軽に相談・問い合わせ</small>
+              <small>気軽に問い合わせ</small>
             </div>
             <span class="arrow">↗</span>
           </a>
 
-          <a class="btn" href="mailto:nakamura0407@gmail.com?subject=ご相談（ナカムラボエンジニアリング）" target="_blank" rel="noopener noreferrer">
-            <div class="btn-left">
+          <a class="btn" href="mailto:nakamura0407@gmail.com?subject=ご相談（ナカムラボ）">
+            <div>
               メールで相談する
-              <small>図面や詳細を送りたい場合はこちら</small>
+              <small>図面や詳細を送りたい場合</small>
             </div>
             <span class="arrow">↗</span>
           </a>
 
           <a class="btn" href="#" onclick="saveContact(); return false;">
-            <div class="btn-left">
+            <div>
               連絡先を追加
-              <small>スマホの連絡先に登録する</small>
+              <small>スマホに保存</small>
             </div>
             <span class="arrow">＋</span>
           </a>
-        </div>
 
-        <div class="info-grid">
-          <div class="info-card">
-            <strong>電話番号</strong>
-            <p>070-5671-9763</p>
-          </div>
-          <div class="info-card">
-            <strong>所在地</strong>
-            <p>広島県福山市南本庄3丁目14-6</p>
-          </div>
         </div>
       </div>
     </section>
@@ -370,41 +207,40 @@
     </p>
   </div>
 
-  <script>
-    const mv = document.getElementById('mv');
-    const arButton = document.getElementById('arButton');
+<script>
+const mv = document.getElementById('mv');
+const arButton = document.getElementById('arButton');
 
-    arButton.addEventListener('click', async () => {
-      try {
-        if (mv && typeof mv.activateAR === 'function') {
-          await mv.activateAR();
-        }
-      } catch (e) {
-        alert('この端末・ブラウザではARが起動できない場合があります。Safari または Chrome でお試しください。');
-      }
-    });
+arButton.addEventListener('click', async () => {
+  try {
+    await mv.activateAR();
+  } catch {
+    alert("SafariまたはChromeでお試しください");
+  }
+});
 
-    function saveContact() {
-      const vcard = [
-        'BEGIN:VCARD',
-        'VERSION:3.0',
-        'N:中村;健太;;;',
-        'FN:中村健太',
-        'ORG:ナカムラボエンジニアリング',
-        'TITLE:CNC・木工加工・3Dプリント',
-        'TEL;TYPE=CELL:07056719763',
-        'EMAIL;TYPE=INTERNET,WORK:nakamura0407@gmail.com',
-        'ADR;TYPE=WORK:;;広島県福山市南本庄3丁目14-6;;;;',
-        'URL:https://www.instagram.com/nakamulabengineering/',
-        'URL:https://line.me/ti/p/_D-n7NJxMd',
-        'NOTE:CNC加工・木工・3Dプリントのご相談承ります。お気軽にご連絡ください。',
-        'END:VCARD'
-      ].join('\n');
+function saveContact() {
+  const vcard = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    'N:中村;健太;;;',
+    'FN:中村健太',
+    'ORG:ナカムラボエンジニアリング',
+    'TITLE:CNC・木工加工・3Dプリント',
+    'TEL:07056719763',
+    'EMAIL:nakamura0407@gmail.com',
+    'ADR:;;広島県福山市南本庄3丁目14-6;;;;',
+    'URL:https://www.instagram.com/nakamulabengineering/',
+    'URL:https://line.me/ti/p/_D-n7NJxMd',
+    'NOTE:CNC加工・木工・3Dプリントのご相談承ります。',
+    'END:VCARD'
+  ].join('\n');
 
-      const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
-    }
-  </script>
+  const blob = new Blob([vcard], { type: 'text/vcard' });
+  const url = URL.createObjectURL(blob);
+  window.open(url);
+}
+</script>
+
 </body>
 </html>
