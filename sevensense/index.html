@@ -1,221 +1,173 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>株式会社セブンセンス | WEB名刺</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SEVENSENSE | WEB名刺</title>
 
-  <style>
-    :root{
-      --bg1:#0f0f10;
-      --bg2:#1a1a1c;
-      --card:#ffffff;
-      --text:#111111;
-      --sub:#5f6368;
-      --line:#e7e7e7;
-      --accent:#111111;
-      --btn:#ffffff;
-      --btnHover:#f7f7f7;
-      --shadow:0 16px 40px rgba(0,0,0,0.18);
-      --shadow-soft:0 8px 20px rgba(0,0,0,0.08);
-    }
+<style>
+:root{
+  --bg:#0b0b0c;
+  --card:#ffffff;
+  --text:#111;
+  --sub:#777;
+  --line:#e5e5e5;
+}
 
-    *{box-sizing:border-box;}
+*{box-sizing:border-box;}
 
-    body{
-      margin:0;
-      min-height:100vh;
-      color:#ffffff;
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;
-      background:
-        radial-gradient(circle at top left, rgba(255,255,255,0.06) 0%, transparent 28%),
-        radial-gradient(circle at bottom right, rgba(255,255,255,0.04) 0%, transparent 24%),
-        linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 100%);
-    }
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;
+  background:var(--bg);
+  color:#fff;
+}
 
-    .container{
-      max-width:660px;
-      margin:0 auto;
-      padding:18px 16px 28px;
-    }
+.container{
+  max-width:600px;
+  margin:0 auto;
+  padding:20px 16px;
+}
 
-    .hero{
-      background:rgba(255,255,255,0.96);
-      border-radius:30px;
-      box-shadow:var(--shadow);
-      overflow:hidden;
-    }
+.card{
+  background:var(--card);
+  border-radius:26px;
+  overflow:hidden;
+  box-shadow:0 20px 60px rgba(0,0,0,0.4);
+}
 
-    .viewer-wrap{
-      position:relative;
-      padding:18px 18px 0;
-    }
+.logo{
+  padding:40px 20px;
+  text-align:center;
+  border-bottom:1px solid var(--line);
+}
 
-    .logo-panel{
-      width:100%;
-      min-height:360px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background:linear-gradient(180deg, #f6f6f6 0%, #ececec 100%);
-      border-radius:24px;
-      padding:32px;
-      border:1px solid #e5e5e5;
-    }
+.logo img{
+  max-width:180px;
+}
 
-    .logo-panel img{
-      max-width:100%;
-      max-height:240px;
-      object-fit:contain;
-      display:block;
-    }
+.content{
+  padding:26px 20px;
+}
 
-    .content{
-      padding:24px 20px 24px;
-    }
+h1{
+  margin:0;
+  font-size:26px;
+  color:var(--text);
+}
 
-    h1{
-      margin:0 0 8px;
-      color:var(--text);
-      font-size:29px;
-      line-height:1.35;
-      letter-spacing:0.02em;
-    }
+.lead{
+  margin-top:10px;
+  color:var(--sub);
+  font-size:14px;
+  line-height:1.8;
+}
 
-    .lead{
-      margin:0 0 20px;
-      color:var(--sub);
-      font-size:15px;
-      line-height:1.8;
-    }
+.buttons{
+  margin-top:22px;
+  display:grid;
+  gap:12px;
+}
 
-    .buttons{
-      display:grid;
-      gap:12px;
-    }
+.btn{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:16px;
+  border-radius:16px;
+  border:1px solid var(--line);
+  text-decoration:none;
+  color:var(--text);
+  font-weight:700;
+  background:#fff;
+}
 
-    .btn{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:16px;
-      padding:16px 18px;
-      border-radius:18px;
-      text-decoration:none;
-      color:var(--text);
-      background:var(--btn);
-      border:1px solid var(--line);
-      font-size:16px;
-      font-weight:800;
-      box-shadow:var(--shadow-soft);
-      transition:all 0.2s ease;
-    }
+.btn small{
+  display:block;
+  font-size:11px;
+  color:var(--sub);
+  margin-top:4px;
+}
 
-    .btn:hover{
-      background:var(--btnHover);
-      transform:translateY(-1px);
-    }
+.btn:hover{
+  background:#f7f7f7;
+}
 
-    .btn small{
-      display:block;
-      margin-top:4px;
-      color:var(--sub);
-      font-size:12px;
-      font-weight:600;
-      line-height:1.5;
-    }
+.arrow{
+  font-size:16px;
+  color:#999;
+}
 
-    .arrow{
-      flex-shrink:0;
-      font-size:18px;
-      color:#7a7a7a;
-    }
-
-    .footer{
-      text-align:center;
-      color:rgba(255,255,255,0.72);
-      font-size:12px;
-      margin-top:14px;
-      line-height:1.7;
-    }
-
-    @media (max-width: 640px){
-      .logo-panel{
-        min-height:280px;
-        padding:24px;
-      }
-
-      .logo-panel img{
-        max-height:180px;
-      }
-
-      h1{
-        font-size:25px;
-      }
-    }
-  </style>
+.footer{
+  text-align:center;
+  margin-top:14px;
+  font-size:11px;
+  color:#aaa;
+}
+</style>
 </head>
 
 <body>
-  <div class="container">
-    <section class="hero">
-      <div class="viewer-wrap">
-        <div class="logo-panel">
-          <img src="./seven.png" alt="SEVENSENSE ロゴ" />
-        </div>
+
+<div class="container">
+  <div class="card">
+
+    <div class="logo">
+      <img src="./seven.png">
+    </div>
+
+    <div class="content">
+      <h1>株式会社セブンセンス</h1>
+
+      <p class="lead">
+        店舗家具<br>
+        オーダー家具製造施工
+      </p>
+
+      <div class="buttons">
+
+        <a class="btn" href="https://www.seven-sense.biz/" target="_blank">
+          <div>
+            ホームページを見る
+            <small>公式サイト</small>
+          </div>
+          <span class="arrow">↗</span>
+        </a>
+
+        <a class="btn" href="https://www.instagram.com/sevensense_official/" target="_blank">
+          <div>
+            インスタグラム
+            <small>@sevensense_official</small>
+          </div>
+          <span class="arrow">↗</span>
+        </a>
+
+        <a class="btn" href="mailto:hay19730826@gmail.com">
+          <div>
+            メールで問い合わせ
+            <small>図面・相談OK</small>
+          </div>
+          <span class="arrow">↗</span>
+        </a>
+
+        <a class="btn" href="#" onclick="saveContact(); return false;">
+          <div>
+            連絡先を追加
+            <small>スマホに保存</small>
+          </div>
+          <span class="arrow">＋</span>
+        </a>
+
       </div>
+    </div>
 
-      <div class="content">
-        <h1>株式会社セブンセンス</h1>
-        <p class="lead">
-          店舗家具<br>
-          オーダー家具製造施工
-        </p>
-
-        <div class="buttons">
-          <a class="btn" href="https://www.seven-sense.biz/" target="_blank" rel="noopener noreferrer">
-            <div>
-              ホームページを見る
-              <small>弊社ホームページになります。</small>
-            </div>
-            <span class="arrow">↗</span>
-          </a>
-
-          <a class="btn" href="https://www.instagram.com/sevensense_official/" target="_blank" rel="noopener noreferrer">
-            <div>
-              インスタグラム
-              <small>オフィシャルインスタグラム</small>
-            </div>
-            <span class="arrow">↗</span>
-          </a>
-
-          <a class="btn" href="mailto:hay19730826@gmail.com?subject=お問い合わせ（株式会社セブンセンス）">
-            <div>
-              メールで問い合わせ
-              <small>図面や寸法などをお送りください。</small>
-            </div>
-            <span class="arrow">↗</span>
-          </a>
-
-          <a class="btn" href="#" onclick="saveContact(); return false;">
-            <div>
-              連絡先を追加
-              <small>スマホに保存</small>
-            </div>
-            <span class="arrow">＋</span>
-          </a>
-        </div>
-      </div>
-    </section>
-
-    <p class="footer">
-      © SEVEN SENSE CO.,LTD.<br>
-      <a href="https://nakamurobo2026.github.io/modelviewer/sevensense" target="_blank" rel="noopener noreferrer" style="color:rgba(255,255,255,0.72); text-decoration:none;">
-        https://nakamurobo2026.github.io/modelviewer/sevensense
-      </a>
-    </p>
   </div>
+
+  <div class="footer">
+    © SEVEN SENSE CO.,LTD.<br>
+    https://nakamurobo2026.github.io/modelviewer/sevensense
+  </div>
+</div>
 
 <script>
 function saveContact() {
@@ -235,17 +187,13 @@ function saveContact() {
     'END:VCARD'
   ].join('\n');
 
-  const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
+  const blob = new Blob([vcard], { type: 'text/vcard' });
   const url = URL.createObjectURL(blob);
 
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'sevensense_contact.vcf';
-  document.body.appendChild(a);
+  a.download = 'sevensense.vcf';
   a.click();
-  document.body.removeChild(a);
-
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 </script>
 
