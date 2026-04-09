@@ -1,1 +1,312 @@
 
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>株式会社ソゴウ | NFC名刺</title>
+
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.2.0/model-viewer.min.js"></script>
+
+  <style>
+    :root{
+      --bg1:#eaf2fb;
+      --bg2:#dce8f6;
+      --bg3:#f8fbff;
+      --text:#12263a;
+      --sub:#4f6478;
+      --line:#d3deea;
+      --accent:#1f5fa8;
+      --accent-dark:#174a82;
+      --btn:#ffffff;
+      --btnHover:#f5f9fe;
+      --shadow:0 14px 36px rgba(18, 38, 58, 0.12);
+      --shadow-soft:0 6px 18px rgba(18, 38, 58, 0.08);
+    }
+
+    *{
+      box-sizing:border-box;
+    }
+
+    body{
+      margin:0;
+      min-height:100vh;
+      color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(31,95,168,0.12) 0%, transparent 30%),
+        radial-gradient(circle at top right, rgba(255,255,255,0.75) 0%, transparent 24%),
+        linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 52%, var(--bg3) 100%);
+    }
+
+    .container{
+      max-width:680px;
+      margin:0 auto;
+      padding:18px 16px 28px;
+    }
+
+    .hero{
+      background:rgba(255,255,255,0.86);
+      border:1px solid rgba(255,255,255,0.8);
+      border-radius:30px;
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(10px);
+      overflow:hidden;
+    }
+
+    .viewer-wrap{
+      position:relative;
+      padding:14px 14px 0;
+    }
+
+    .ar-chip{
+      position:absolute;
+      top:26px;
+      right:26px;
+      z-index:2;
+      border:none;
+      background:rgba(255,255,255,0.96);
+      color:var(--accent-dark);
+      border:1px solid var(--line);
+      border-radius:999px;
+      padding:11px 16px;
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:0.02em;
+      box-shadow:var(--shadow-soft);
+      cursor:pointer;
+      transition:transform 0.18s ease, background 0.18s ease;
+    }
+
+    .ar-chip:hover{
+      transform:translateY(-1px);
+      background:#ffffff;
+    }
+
+    model-viewer{
+      width:100%;
+      height:58vh;
+      min-height:400px;
+      background:
+        radial-gradient(circle at 50% 24%, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.65) 18%, transparent 42%),
+        linear-gradient(180deg, #f8fbff 0%, #dfeaf6 100%);
+      border-radius:24px;
+    }
+
+    .content{
+      padding:22px 18px 24px;
+    }
+
+    .eyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 12px;
+      margin-bottom:14px;
+      border-radius:999px;
+      background:rgba(31,95,168,0.08);
+      border:1px solid rgba(31,95,168,0.12);
+      color:var(--accent-dark);
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:0.06em;
+    }
+
+    h1{
+      margin:0 0 8px;
+      font-size:30px;
+      line-height:1.25;
+      letter-spacing:0.01em;
+    }
+
+    .lead{
+      margin:0 0 20px;
+      color:var(--sub);
+      font-size:15px;
+      line-height:1.8;
+    }
+
+    .buttons{
+      display:grid;
+      gap:12px;
+    }
+
+    .btn{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:16px;
+      padding:16px 18px;
+      border-radius:18px;
+      text-decoration:none;
+      color:var(--text);
+      background:var(--btn);
+      border:1px solid var(--line);
+      font-size:16px;
+      font-weight:800;
+      box-shadow:var(--shadow-soft);
+      transition:transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+    }
+
+    .btn:hover{
+      background:var(--btnHover);
+      border-color:#bdd0e3;
+      transform:translateY(-1px);
+    }
+
+    .btn small{
+      display:block;
+      margin-top:4px;
+      color:var(--sub);
+      font-size:12px;
+      font-weight:600;
+      line-height:1.5;
+    }
+
+    .arrow{
+      flex-shrink:0;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:34px;
+      height:34px;
+      border-radius:999px;
+      background:rgba(31,95,168,0.08);
+      color:var(--accent);
+      font-size:18px;
+      font-weight:900;
+    }
+
+    .footer{
+      text-align:center;
+      color:#6f8599;
+      font-size:12px;
+      margin-top:14px;
+    }
+
+    @media (max-width: 640px){
+      model-viewer{
+        min-height:360px;
+        height:52vh;
+      }
+
+      h1{
+        font-size:26px;
+      }
+
+      .lead{
+        font-size:14px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <section class="hero">
+      <div class="viewer-wrap">
+        <button class="ar-chip" id="arButton">ARで表示</button>
+
+        <model-viewer
+          id="mv"
+          src="./sogou.glb"
+          ios-src="./sogou.usdz"
+          ar
+          ar-modes="webxr scene-viewer quick-look"
+          camera-controls
+          auto-rotate>
+        </model-viewer>
+      </div>
+
+      <div class="content">
+        <div class="eyebrow">NFC BUSINESS CARD</div>
+
+        <h1>株式会社ソゴウ</h1>
+
+        <p class="lead">
+          化粧板販売<br>
+          建材販売
+        </p>
+
+        <div class="buttons">
+          <a class="btn" href="https://sogou.co.jp/" target="_blank" rel="noopener noreferrer">
+            <div>
+              ソゴウHP
+              <small>弊社ホームページ</small>
+            </div>
+            <span class="arrow">↗</span>
+          </a>
+
+          <a class="btn" href="https://lu-ogo.jp/" target="_blank" rel="noopener noreferrer">
+            <div>
+              ル・オーゴHP
+              <small>AICAショールーム</small>
+            </div>
+            <span class="arrow">↗</span>
+          </a>
+
+          <a class="btn" href="mailto:sogou1@sogou.co.jp?subject=お問い合わせ（株式会社ソゴウ）">
+            <div>
+              メールで問い合わせ
+              <small>お気軽にお問合せください</small>
+            </div>
+            <span class="arrow">↗</span>
+          </a>
+
+          <a class="btn" href="#" onclick="saveContact(); return false;">
+            <div>
+              連絡先を追加
+              <small>服部晋作さんの連絡先を保存</small>
+            </div>
+            <span class="arrow">＋</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <p class="footer">
+      © SOGOU Co., Ltd.
+    </p>
+  </div>
+
+  <script>
+    const mv = document.getElementById('mv');
+    const arButton = document.getElementById('arButton');
+
+    arButton.addEventListener('click', async () => {
+      try {
+        await mv.activateAR();
+      } catch (e) {
+        alert('SafariまたはChromeでお試しください');
+      }
+    });
+
+    function saveContact() {
+      const vcard = [
+        'BEGIN:VCARD',
+        'VERSION:3.0',
+        'N:服部;晋作;;;',
+        'FN:服部晋作',
+        'ORG:株式会社ソゴウ',
+        'TEL;TYPE=CELL:08019319310',
+        'EMAIL;TYPE=INTERNET:sogou1@sogou.co.jp',
+        'ADR;TYPE=WORK:;;広島県福山市千田町千田2007-1;;720-0013;日本',
+        'URL:https://sogou.co.jp/',
+        'END:VCARD'
+      ].join('\n');
+
+      const blob = new Blob([vcard], { type: 'text/vcard' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'sogou_hattori.vcf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+  </script>
+</body>
+</html>
