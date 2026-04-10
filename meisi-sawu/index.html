@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>SAWU | ARカード</title>
+  <title>ナカムラボエンジニアリング | NFC名刺</title>
 
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.2.0/model-viewer.min.js"></script>
 
   <style>
     :root{
-      /* 🌿 SAWU仕様（木・やさしいトーン） */
+      /* SAWUカラー */
       --bg1:#f6efe7;
       --bg2:#efe4d6;
       --text:#4a3728;
@@ -83,14 +83,13 @@
 
     h1{
       margin:0 0 6px;
-      font-size:26px;
-      letter-spacing:0.05em;
+      font-size:28px;
     }
 
     .lead{
       margin:0 0 18px;
       color:var(--sub);
-      font-size:14px;
+      font-size:15px;
       line-height:1.7;
     }
 
@@ -109,8 +108,8 @@
       color:var(--text);
       background:var(--btn);
       border:1px solid var(--line);
-      font-size:15px;
-      font-weight:700;
+      font-size:16px;
+      font-weight:800;
       box-shadow:var(--shadow-soft);
     }
 
@@ -146,9 +145,9 @@
     <section class="hero">
       <div class="viewer-wrap">
 
-        <button class="ar-chip" id="arButton">AR</button>
+        <button class="ar-chip" id="arButton">ARで表示</button>
 
-        <!-- 🔥 ここ変更 -->
+        <!-- 🔥 ARファイルだけ変更 -->
         <model-viewer
           id="mv"
           src="./sawu.glb"
@@ -158,22 +157,38 @@
           camera-controls
           auto-rotate>
         </model-viewer>
-
       </div>
 
       <div class="content">
-        <h1>SAWU</h1>
+        <h1>ナカムラボエンジニアリング</h1>
         <p class="lead">
-          木から生まれる、小さな物語。<br>
-          ARで体験できます。
+          CNC / 木工加工 / 3Dプリント<br>
+          作品確認・ご相談・連絡先追加ができます。
         </p>
 
         <div class="buttons">
 
-          <a class="btn" href="#">
+          <!-- 🔥 元のリンクそのまま復元 -->
+          <a class="btn" href="https://www.instagram.com/nakamulabengineering/" target="_blank">
             <div>
               作品を見る
-              <small>Instagram</small>
+              <small>Instagramで制作事例を見る</small>
+            </div>
+            <span class="arrow">↗</span>
+          </a>
+
+          <a class="btn" href="https://line.me/ti/p/_D-n7NJxMd" target="_blank">
+            <div>
+              LINEで相談する
+              <small>気軽に問い合わせ</small>
+            </div>
+            <span class="arrow">↗</span>
+          </a>
+
+          <a class="btn" href="mailto:nakamura0407@gmail.com?subject=ご相談（ナカムラボ）">
+            <div>
+              メールで相談する
+              <small>図面や詳細を送りたい場合</small>
             </div>
             <span class="arrow">↗</span>
           </a>
@@ -191,7 +206,7 @@
     </section>
 
     <p class="footer">
-      © SAWU
+      © Nakamuralab Engineering
     </p>
   </div>
 
@@ -203,7 +218,7 @@ arButton.addEventListener('click', async () => {
   try {
     await mv.activateAR();
   } catch {
-    alert("SafariまたはChromeで開いてください");
+    alert("SafariまたはChromeでお試しください");
   }
 });
 
@@ -211,9 +226,16 @@ function saveContact() {
   const vcard = [
     'BEGIN:VCARD',
     'VERSION:3.0',
-    'FN:SAWU',
-    'ORG:SAWU',
-    'NOTE:木製フィギュア・AR体験',
+    'N:中村;健太;;;',
+    'FN:中村健太',
+    'ORG:ナカムラボエンジニアリング',
+    'TITLE:CNC・木工加工・3Dプリント',
+    'TEL:07056719763',
+    'EMAIL:nakamura0407@gmail.com',
+    'ADR:;;広島県福山市南本庄3丁目14-6;;;;',
+    'URL:https://www.instagram.com/nakamulabengineering/',
+    'URL:https://line.me/ti/p/_D-n7NJxMd',
+    'NOTE:CNC加工・木工・3Dプリントのご相談承ります。',
     'END:VCARD'
   ].join('\n');
 
