@@ -1,1 +1,227 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>SAWU | ARカード</title>
 
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.2.0/model-viewer.min.js"></script>
+
+  <style>
+    :root{
+      /* 🌿 SAWU仕様（木・やさしいトーン） */
+      --bg1:#f6efe7;
+      --bg2:#efe4d6;
+      --text:#4a3728;
+      --sub:#8a6f5a;
+      --line:#e2d2bf;
+      --accent:#c89b6d;
+      --btn:#ffffff;
+      --btnHover:#f9f3ec;
+      --shadow:0 12px 30px rgba(120, 80, 40, 0.12);
+      --shadow-soft:0 6px 18px rgba(80, 50, 20, 0.08);
+    }
+
+    *{box-sizing:border-box;}
+
+    body{
+      margin:0;
+      min-height:100vh;
+      color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;
+      background:
+        radial-gradient(circle at top left, #f3e6d7 0%, transparent 30%),
+        radial-gradient(circle at top right, #fff4e8 0%, transparent 22%),
+        linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 100%);
+    }
+
+    .container{
+      max-width:660px;
+      margin:0 auto;
+      padding:18px 16px 28px;
+    }
+
+    .hero{
+      background:rgba(255,255,255,0.82);
+      border-radius:30px;
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(10px);
+      overflow:hidden;
+    }
+
+    .viewer-wrap{
+      position:relative;
+      padding:14px 14px 0;
+    }
+
+    .ar-chip{
+      position:absolute;
+      top:26px;
+      right:26px;
+      border:none;
+      background:#ffffff;
+      border:1px solid var(--line);
+      border-radius:999px;
+      padding:10px 14px;
+      font-size:12px;
+      font-weight:800;
+      box-shadow:var(--shadow-soft);
+      cursor:pointer;
+    }
+
+    model-viewer{
+      width:100%;
+      height:58vh;
+      min-height:400px;
+      background:linear-gradient(180deg, #fdf8f2 0%, #f1e4d6 100%);
+      border-radius:24px;
+    }
+
+    .content{
+      padding:20px 18px 22px;
+    }
+
+    h1{
+      margin:0 0 6px;
+      font-size:26px;
+      letter-spacing:0.05em;
+    }
+
+    .lead{
+      margin:0 0 18px;
+      color:var(--sub);
+      font-size:14px;
+      line-height:1.7;
+    }
+
+    .buttons{
+      display:grid;
+      gap:12px;
+    }
+
+    .btn{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:16px 18px;
+      border-radius:18px;
+      text-decoration:none;
+      color:var(--text);
+      background:var(--btn);
+      border:1px solid var(--line);
+      font-size:15px;
+      font-weight:700;
+      box-shadow:var(--shadow-soft);
+    }
+
+    .btn:hover{
+      background:var(--btnHover);
+    }
+
+    .btn small{
+      display:block;
+      margin-top:4px;
+      color:var(--sub);
+      font-size:12px;
+      font-weight:600;
+    }
+
+    .arrow{
+      font-size:18px;
+      color:#b58b63;
+    }
+
+    .footer{
+      text-align:center;
+      color:#9b7f68;
+      font-size:12px;
+      margin-top:14px;
+    }
+
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <section class="hero">
+      <div class="viewer-wrap">
+
+        <button class="ar-chip" id="arButton">AR</button>
+
+        <!-- 🔥 ここ変更 -->
+        <model-viewer
+          id="mv"
+          src="./sawu.glb"
+          ios-src="./sawu.usdz"
+          ar
+          ar-modes="webxr scene-viewer quick-look"
+          camera-controls
+          auto-rotate>
+        </model-viewer>
+
+      </div>
+
+      <div class="content">
+        <h1>SAWU</h1>
+        <p class="lead">
+          木から生まれる、小さな物語。<br>
+          ARで体験できます。
+        </p>
+
+        <div class="buttons">
+
+          <a class="btn" href="#">
+            <div>
+              作品を見る
+              <small>Instagram</small>
+            </div>
+            <span class="arrow">↗</span>
+          </a>
+
+          <a class="btn" href="#" onclick="saveContact(); return false;">
+            <div>
+              連絡先を追加
+              <small>スマホに保存</small>
+            </div>
+            <span class="arrow">＋</span>
+          </a>
+
+        </div>
+      </div>
+    </section>
+
+    <p class="footer">
+      © SAWU
+    </p>
+  </div>
+
+<script>
+const mv = document.getElementById('mv');
+const arButton = document.getElementById('arButton');
+
+arButton.addEventListener('click', async () => {
+  try {
+    await mv.activateAR();
+  } catch {
+    alert("SafariまたはChromeで開いてください");
+  }
+});
+
+function saveContact() {
+  const vcard = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    'FN:SAWU',
+    'ORG:SAWU',
+    'NOTE:木製フィギュア・AR体験',
+    'END:VCARD'
+  ].join('\n');
+
+  const blob = new Blob([vcard], { type: 'text/vcard' });
+  const url = URL.createObjectURL(blob);
+  window.open(url);
+}
+</script>
+
+</body>
+</html>
