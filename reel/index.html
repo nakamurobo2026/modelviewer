@@ -78,6 +78,7 @@
         <input id="importFile" type="file" accept="application/json" style="display:none" onchange="importJSON(event)">
       </div>
       <div class="hint">動画・スクショ本体はブラウザ保存しません。分析時にプレビューして、内容はメモやプロンプトに反映してください。</div>
+      <div id="statusBar" style="margin-top:10px;padding:10px 12px;border-radius:12px;background:#0b131d;border:1px solid var(--line);font-size:12px;color:var(--muted)">待機中</div>
       <hr style="border-color:var(--line);border-style:solid;border-width:1px 0 0;margin:14px 0">
       <div id="reelList" class="list"></div>
     </div>
@@ -252,7 +253,15 @@ function setWorkerUrl(){
   localStorage.setItem('reel_story_worker_url', url.trim().replace(/\/$/,''));
   alert('Worker URLを保存しました');
 }
+function setStatus(text,color='var(--muted)'){
+  const el=document.getElementById('statusBar');
+  if(!el) return;
+  el.textContent=text;
+  el.style.color=color;
+}
+
 async function fetchInstagramReels(){
+  setStatus('Instagram APIへ接続中...', 'var(--warn)');
   const base = localStorage.getItem('reel_story_worker_url');
   if(!base){ setWorkerUrl(); return; }
   try{
@@ -294,10 +303,12 @@ async function fetchInstagramReels(){
     });
     currentId = reels[0]?.id || null;
     persist(); loadEditor();
+    setStatus(`取得成功｜追加:${added}件 / 更新:${updated}件`, 'var(--accent)');
     alert(`Instagramから取得しました
 追加：${added}件
 更新：${updated}件`);
   }catch(err){
+    setStatus('取得失敗｜'+err.message, 'var(--bad)');
     alert('取得失敗：' + err.message + '
 Worker URLやトークン設定を確認してください');
   }
