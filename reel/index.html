@@ -56,26 +56,31 @@
     .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
     @media(max-width:700px){.kpi{grid-template-columns:1fr 1fr}}
     .kpi div{background:#0b131d;border:1px solid var(--line);border-radius:14px;padding:10px}.kpi span{display:block;color:var(--muted);font-size:11px}.kpi b{font-size:18px}
+    .thumb{margin-top:10px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#000;max-width:240px}
+    .thumb img{width:100%;display:block}
   </style>
 </head>
 <body>
 <header>
   <div class="wrap">
     <h1>Reel Story Analyzer <span class="pill">個人用MVP</span></h1>
-    <div class="sub">自分のリールを「文脈・構造・ジャンル別勝ち筋」で分析するためのローカル保存ツール。データはこのブラウザ内に保存されます。</div>
+    <div class="sub">Instagram API取得＋手入力＋ChatGPT分析用プロンプト生成。データはこのブラウザ内に保存されます。</div>
   </div>
 </header>
+
 <main class="wrap grid">
   <aside class="card">
     <h2>リール一覧</h2>
     <div class="body">
       <div class="btns" style="margin-top:0">
         <button onclick="newReel()">＋ 新規</button>
+        <button class="warn" onclick="fetchInstagramReels()">Instagramから取得</button>
+        <button class="secondary" onclick="setWorkerUrl()">Worker URL設定</button>
         <button class="secondary" onclick="exportJSON()">JSON書出</button>
         <label class="btn secondary" for="importFile">JSON読込</label>
         <input id="importFile" type="file" accept="application/json" style="display:none" onchange="importJSON(event)">
       </div>
-      <div class="hint">動画・スクショ本体はブラウザ保存しません。分析時にプレビューして、内容はメモやプロンプトに反映してください。</div>
+      <div class="hint">Worker URL例：<br>https://reelanalyzer.nakamura0407.workers.dev</div>
       <hr style="border-color:var(--line);border-style:solid;border-width:1px 0 0;margin:14px 0">
       <div id="reelList" class="list"></div>
     </div>
@@ -91,7 +96,7 @@
       <div class="tab" onclick="showTab('result')">分析結果</div>
     </div>
 
-    <div id="emptyState" class="empty">左の「＋ 新規」からリールを登録してください。</div>
+    <div id="emptyState" class="empty">左の「＋ 新規」または「Instagramから取得」からリールを登録してください。</div>
 
     <div id="editor" style="display:none">
       <div id="basic" class="section active body">
@@ -109,6 +114,12 @@
           <div><label>動画尺（秒）</label><input id="duration" type="number" oninput="saveField('duration',this.value)" /></div>
           <div><label>投稿目的</label><select id="purpose" onchange="saveField('purpose',this.value)"><option>再生数</option><option>フォロー増</option><option>仕事依頼</option><option>地域認知</option><option>保存/シェア</option><option>物語の継続視聴</option></select></div>
         </div>
+        <div class="row">
+          <div><label>Instagram Media ID</label><input id="instagramId" oninput="saveField('instagramId',this.value)" /></div>
+          <div><label>メディア種別</label><input id="mediaProductType" oninput="saveField('mediaProductType',this.value)" /></div>
+        </div>
+        <label>サムネURL</label><input id="thumbnailUrl" oninput="saveField('thumbnailUrl',this.value);renderThumb()" />
+        <div id="thumbBox"></div>
         <label>サムネ文字</label><input id="thumbnailText" oninput="saveField('thumbnailText',this.value)" placeholder="例：ボロ倉庫、工場にします">
         <label>キャプション全文</label><textarea id="caption" oninput="saveField('caption',this.value)" placeholder="投稿文をコピペ"></textarea>
         <label>自分の感覚・仮説</label><textarea id="memo" oninput="saveField('memo',this.value)" placeholder="例：冒頭は弱いかも。地元感は刺さった。コメントは多かった。"></textarea>
@@ -117,10 +128,13 @@
 
       <div id="insight" class="section body">
         <div class="kpi">
-          <div><span>再生数</span><b id="kViews">0</b></div><div><span>フォロー増</span><b id="kFollows">0</b></div><div><span>保存</span><b id="kSaves">0</b></div><div><span>シェア</span><b id="kShares">0</b></div>
+          <div><span>再生数/views</span><b id="kViews">0</b></div>
+          <div><span>リーチ</span><b id="kReach">0</b></div>
+          <div><span>保存</span><b id="kSaves">0</b></div>
+          <div><span>シェア</span><b id="kShares">0</b></div>
         </div>
         <div class="row">
-          <div><label>再生数</label><input id="views" type="number" oninput="saveField('views',this.value)"></div>
+          <div><label>再生数 / views</label><input id="views" type="number" oninput="saveField('views',this.value)"></div>
           <div><label>リーチ</label><input id="reach" type="number" oninput="saveField('reach',this.value)"></div>
         </div>
         <div class="row">
@@ -139,13 +153,17 @@
           <div><label>フォロー増加</label><input id="follows" type="number" oninput="saveField('follows',this.value)"></div>
           <div><label>プロフィールアクセス</label><input id="profileAccess" type="number" oninput="saveField('profileAccess',this.value)"></div>
         </div>
+        <div class="row">
+          <div><label>総インタラクション</label><input id="totalInteractions" type="number" oninput="saveField('totalInteractions',this.value)"></div>
+          <div><label>保存率/リーチ（自動計算目安）</label><input id="saveRate" readonly></div>
+        </div>
         <label>コメント・反応メモ</label><textarea id="reactionMemo" oninput="saveField('reactionMemo',this.value)" placeholder="印象的なコメント、荒れた点、質問が多かった点など"></textarea>
       </div>
 
       <div id="story" class="section body">
         <p class="hint">ど素人ホテル式＝ホテル再建のコピーではなく、「投稿者の文脈」「未完成」「問題発生」「視聴者参加」「ジャンル別変換」を読むための採点です。</p>
         <div class="score-grid" id="scoreGrid"></div>
-        <label>参考にしたい公開投稿者・投稿URL</label><textarea id="referencePosts" oninput="saveField('referencePosts',this.value)" placeholder="例：ど素人ホテルさんのこの投稿URL、Threadsの投稿URL、気づいた傾向など"></textarea>
+        <label>参考にしたい公開投稿者・投稿URL</label><textarea id="referencePosts" oninput="saveField('referencePosts',this.value)" placeholder="例：ど素人ホテルさんの投稿URL、Threadsの投稿URL、気づいた傾向など"></textarea>
         <label>この投稿の“文脈”</label><textarea id="contextNote" oninput="saveField('contextNote',this.value)" placeholder="例：ボロ倉庫を工場に変える途中。搬入できない問題がある。地元のリアルがある。"></textarea>
         <label>ジャンル別に置き換えた勝ち筋</label><textarea id="genreNote" oninput="saveField('genreNote',this.value)" placeholder="例：工場化ジャンルなら、完成ではなく問題発生→判断→途中経過が強い。"></textarea>
       </div>
@@ -158,7 +176,7 @@
 
       <div id="prompt" class="section body">
         <div class="btns" style="margin-top:0"><button onclick="buildPrompt()">プロンプト生成</button><button class="secondary" onclick="copyPrompt()">コピー</button></div>
-        <p class="hint">このプロンプトをChatGPTに貼ると、AI APIなしで分析できます。参考投稿URLやスクショ内容メモを入れるほど精度が上がります。</p>
+        <p class="hint">このプロンプトをChatGPTに貼り、動画とインサイトスクショも一緒に添付すると、動画内容まで含めて分析できます。</p>
         <div id="promptOut" class="prompt"></div>
       </div>
 
@@ -169,8 +187,9 @@
     </div>
   </section>
 </main>
+
 <script>
-const KEY='reel_story_analyzer_v1';
+const KEY='reel_story_analyzer_v2';
 const scoreItems=[
   ['hook','冒頭2秒の強さ'],['context','投稿者の文脈'],['problem','問題のわかりやすさ'],['unfinished','未完成・続き'],['real','リアル感'],['participation','コメント余白'],['emotion','応援したくなる度'],['business','仕事につながる度'],['genreFit','ジャンル変換力']
 ];
@@ -182,76 +201,107 @@ function uid(){return 'r_'+Date.now().toString(36)+'_'+Math.random().toString(36
 function newReel(){const r={id:uid(),title:'新規リール',genre:'工場化/再建',purpose:'再生数',scores:{}};scoreItems.forEach(([k])=>r.scores[k]=5);reels.unshift(r);currentId=r.id;persist();loadEditor();}
 function renderList(){const el=document.getElementById('reelList'); if(!reels.length){el.innerHTML='<div class="empty">まだ登録がありません</div>';return;} el.innerHTML=reels.map(r=>`<div class="item ${r.id===currentId?'active':''}" onclick="selectReel('${r.id}')"><div class="item-title">${esc(r.title||'無題')}</div><div class="item-meta">${esc(r.genre||'')}｜再生 ${num(r.views)}｜${esc(r.date||'日付未設定')}</div></div>`).join('')}
 function selectReel(id){currentId=id;renderList();loadEditor();}
-function loadEditor(){const r=current();document.getElementById('emptyState').style.display=r?'none':'block';document.getElementById('editor').style.display=r?'block':'none'; if(!r)return; const ids=['title','genre','url','date','duration','purpose','thumbnailText','caption','memo','views','reach','avgWatch','skipRate','likes','comments','saves','shares','follows','profileAccess','reactionMemo','referencePosts','contextNote','genreNote','screenshotMemo','analysisResult','nextIdea']; ids.forEach(id=>{const e=document.getElementById(id); if(e)e.value=r[id]||''}); buildScoreGrid(); updateKpi(); buildPrompt();}
-function saveField(k,v){const r=current(); if(!r)return; r[k]=v; if(k==='title'||k==='genre'||k==='views'||k==='date')renderList(); updateKpi(); persist();}
+function loadEditor(){const r=current();document.getElementById('emptyState').style.display=r?'none':'block';document.getElementById('editor').style.display=r?'block':'none'; if(!r)return; const ids=['title','genre','url','date','duration','purpose','instagramId','mediaProductType','thumbnailUrl','thumbnailText','caption','memo','views','reach','avgWatch','skipRate','likes','comments','saves','shares','follows','profileAccess','totalInteractions','reactionMemo','referencePosts','contextNote','genreNote','screenshotMemo','analysisResult','nextIdea']; ids.forEach(id=>{const e=document.getElementById(id); if(e)e.value=r[id]||''}); buildScoreGrid(); updateKpi(); renderThumb(); buildPrompt();}
+function saveField(k,v){const r=current(); if(!r)return; r[k]=v; if(['title','genre','views','reach','date'].includes(k))renderList(); updateKpi(); renderThumb(); persist();}
 function saveScore(k,v){const r=current(); if(!r)return; r.scores=r.scores||{}; r.scores[k]=Number(v||0); persist();}
 function saveCurrent(){persist(); alert('保存しました');}
 function deleteCurrent(){if(!current())return; if(!confirm('このリールを削除しますか？'))return; reels=reels.filter(r=>r.id!==currentId); currentId=reels[0]?.id||null; persist(); loadEditor();}
 function buildScoreGrid(){const r=current(); const el=document.getElementById('scoreGrid'); el.innerHTML=scoreItems.map(([k,label])=>`<div class="scorebox"><b>${label}</b><input type="range" min="0" max="10" value="${r.scores?.[k]??5}" oninput="this.nextElementSibling.textContent=this.value;saveScore('${k}',this.value)"><div style="color:var(--accent);font-weight:900;margin-top:6px">${r.scores?.[k]??5}</div></div>`).join('')}
 function showTab(id){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));[...document.querySelectorAll('.tab')].find(t=>t.textContent.includes(tabLabel(id)))?.classList.add('active');document.getElementById(id).classList.add('active'); if(id==='prompt')buildPrompt();}
 function tabLabel(id){return {basic:'基本',insight:'インサイト',story:'文脈分析',media:'動画/スクショ',prompt:'AIプロンプト',result:'分析結果'}[id]}
-function updateKpi(){const r=current()||{}; document.getElementById('kViews').textContent=num(r.views);document.getElementById('kFollows').textContent=num(r.follows);document.getElementById('kSaves').textContent=num(r.saves);document.getElementById('kShares').textContent=num(r.shares);}
-function buildPrompt(){const r=current(); if(!r)return; const scores=scoreItems.map(([k,l])=>`- ${l}: ${r.scores?.[k]??''}/10`).join('\n'); const p=`あなたはInstagramリールの分析者です。\n以下のリールを、単なる数値分析ではなく「投稿者の文脈」「ジャンル別の勝ち筋」「視聴者が反応する余白」まで深堀して分析してください。\n\n重要：\n- ど素人ホテルさんの公開投稿のような「未完成・問題発生・視聴者参加・文脈の積み上げ」という考え方を参考にしてください。\n- ただしホテル再建のコピーにせず、この投稿者のジャンルに翻訳してください。\n- 参考投稿URLがある場合は、その投稿の構造・言葉選び・余白・コメントしたくなる要素を抽象化して比較してください。\n- 著作権上、他者投稿の長い引用は避け、構造と傾向として扱ってください。\n\n【分析対象リール】\nタイトル：${r.title||''}\nジャンル：${r.genre||''}\n投稿目的：${r.purpose||''}\n投稿日：${r.date||''}\n投稿URL：${r.url||''}\n動画尺：${r.duration||''}秒\nサムネ文字：${r.thumbnailText||''}\n\n【インサイト】\n再生数：${r.views||''}\nリーチ：${r.reach||''}\n平均再生時間：${r.avgWatch||''}\nスキップ率：${r.skipRate||''}%\nいいね：${r.likes||''}\nコメント：${r.comments||''}\n保存：${r.saves||''}\nシェア：${r.shares||''}\nフォロー増加：${r.follows||''}\nプロフィールアクセス：${r.profileAccess||''}\n\n【キャプション】\n${r.caption||''}\n\n【自分の感覚】\n${r.memo||''}\n\n【コメント・反応メモ】\n${r.reactionMemo||''}\n\n【スクショから読み取った内容】\n${r.screenshotMemo||''}\n\n【参考にしたい公開投稿・傾向】\n${r.referencePosts||''}\n\n【この投稿の文脈メモ】\n${r.contextNote||''}\n\n【ジャンル別勝ち筋メモ】\n${r.genreNote||''}\n\n【自己採点】\n${scores}\n\n出力してほしい内容：\n1. この投稿の一言診断\n2. 伸びた/伸びなかった理由\n3. 冒頭2秒の評価\n4. 投稿者の文脈が伝わっているか\n5. コメントしたくなる余白があるか\n6. ど素人ホテル式の考え方から見た強み・弱み\n7. このジャンルに翻訳した場合の改善点\n8. 次回リールのタイトル案10個\n9. 次回リールの0〜3秒フック案10個\n10. 15秒以内のカット構成案\n11. フォローにつなげる締め方\n12. 今後シリーズ化するなら何を追うべきか\n\n厳しめで、実行できる形で出してください。`; document.getElementById('promptOut').textContent=p; return p;}
+function updateKpi(){const r=current()||{}; document.getElementById('kViews').textContent=num(r.views);document.getElementById('kReach').textContent=num(r.reach);document.getElementById('kSaves').textContent=num(r.saves);document.getElementById('kShares').textContent=num(r.shares); const reach=Number(r.reach||0), saves=Number(r.saves||0); const el=document.getElementById('saveRate'); if(el) el.value=reach?((saves/reach)*100).toFixed(2)+'%':'';}
+function renderThumb(){const r=current()||{}; const box=document.getElementById('thumbBox'); if(!box)return; box.innerHTML=r.thumbnailUrl?`<div class="thumb"><img src="${esc(r.thumbnailUrl)}" alt="thumbnail"></div>`:'';}
+function setWorkerUrl(){const current=localStorage.getItem('reel_story_worker_url')||'https://reelanalyzer.nakamura0407.workers.dev'; const url=prompt('Cloudflare WorkerのURLを入力してください\n例：https://reelanalyzer.nakamura0407.workers.dev',current); if(url===null)return; localStorage.setItem('reel_story_worker_url',url.trim().replace(/\/$/,'')); alert('Worker URLを保存しました');}
+async function fetchInstagramReels(){let base=localStorage.getItem('reel_story_worker_url'); if(!base){base='https://reelanalyzer.nakamura0407.workers.dev'; localStorage.setItem('reel_story_worker_url',base);} try{const res=await fetch(base+'/reels'); if(!res.ok)throw new Error('HTTP '+res.status); const json=await res.json(); const data=Array.isArray(json)?json:(json.data||[]); if(!data.length){alert('取得できる投稿がありませんでした'); return;} let added=0,updated=0; data.forEach(m=>{const existing=reels.find(r=>r.instagramId===m.id||r.url===m.permalink); const mapped={instagramId:m.id||'',title:makeTitleFromCaption(m.caption)||'Instagram投稿',genre:guessGenre(m.caption),purpose:'再生数',url:m.permalink||'',date:m.timestamp?String(m.timestamp).slice(0,10):'',caption:m.caption||'',likes:m.like_count??'',comments:m.comments_count??'',mediaType:m.media_type||'',mediaProductType:m.media_product_type||'',thumbnailUrl:m.thumbnail_url||'',views:m.views??'',reach:m.reach??'',saves:m.saved??m.saves??'',shares:m.shares??'',totalInteractions:m.total_interactions??'',follows:existing?.follows||'',avgWatch:existing?.avgWatch||'',skipRate:existing?.skipRate||'',profileAccess:existing?.profileAccess||'',memo:existing?.memo||'Instagram APIから自動取得',scores:existing?.scores||{}}; scoreItems.forEach(([k])=>{if(mapped.scores[k]===undefined)mapped.scores[k]=5;}); if(existing){Object.assign(existing,mapped); updated++;}else{reels.unshift({id:uid(),...mapped}); added++;}}); currentId=reels[0]?.id||null; persist(); loadEditor(); alert(`Instagramから取得しました\n追加：${added}件\n更新：${updated}件`);}catch(err){alert('取得失敗：'+err.message+'\nWorker URLやトークン設定を確認してください');}}
+function makeTitleFromCaption(caption){if(!caption)return ''; const first=caption.split('\n').map(s=>s.trim()).find(Boolean)||''; return first.length>34?first.slice(0,34)+'…':first;}
+function guessGenre(caption=''){const c=caption.toLowerCase(); if(c.includes('工場')||c.includes('倉庫')||c.includes('cnc')||c.includes('機械')||c.includes('搬入'))return '工場化/再建'; if(c.includes('府中')||c.includes('福山')||c.includes('地元'))return '地域ネタ'; if(c.includes('ナカムロボ')||c.includes('episode')||c.includes('第'))return 'ナカムロボ物語'; if(c.includes('ai')||c.includes('生成')||c.includes('ar')||c.includes('3d'))return 'AI/制作裏側'; if(c.includes('買取')||c.includes('査定')||c.includes('不動産')||c.includes('固定資産'))return '買取/お金/不動産'; return 'その他';}
+function buildPrompt(){const r=current(); if(!r)return; const scores=scoreItems.map(([k,l])=>`- ${l}: ${r.scores?.[k]??''}/10`).join('\n'); const saveRate=Number(r.reach||0)?((Number(r.saves||0)/Number(r.reach||0))*100).toFixed(2)+'%':''; const p=`このリール動画を実際に見て分析してください。
+動画ファイルとインサイトスクショも添付します。
+
+あなたはInstagramリールの分析者です。
+以下のリールを、単なる数値分析ではなく「動画内容」「投稿者の文脈」「ジャンル別の勝ち筋」「視聴者が反応する余白」まで深堀して分析してください。
+
+重要：
+- まず動画そのものを見て、冒頭0〜2秒、画角、テロップ、カットテンポ、無音視聴で伝わるかを分析してください。
+- ど素人ホテルさんの公開投稿のような「未完成・問題発生・視聴者参加・文脈の積み上げ」という考え方を参考にしてください。
+- ただしホテル再建のコピーにせず、この投稿者のジャンルに翻訳してください。
+- 参考投稿URLがある場合は、その投稿の構造・言葉選び・余白・コメントしたくなる要素を抽象化して比較してください。
+- 著作権上、他者投稿の長い引用は避け、構造と傾向として扱ってください。
+
+【分析対象リール】
+タイトル：${r.title||''}
+ジャンル：${r.genre||''}
+投稿目的：${r.purpose||''}
+投稿日：${r.date||''}
+投稿URL：${r.url||''}
+Instagram Media ID：${r.instagramId||''}
+動画尺：${r.duration||''}秒
+サムネ文字：${r.thumbnailText||''}
+
+【Instagram API取得インサイト】
+再生数/views：${r.views||''}
+リーチ：${r.reach||''}
+保存：${r.saves||''}
+シェア：${r.shares||''}
+いいね：${r.likes||''}
+コメント：${r.comments||''}
+総インタラクション：${r.totalInteractions||''}
+保存率/リーチ：${saveRate}
+
+【手動補完インサイト】
+平均再生時間：${r.avgWatch||''}
+スキップ率：${r.skipRate||''}%
+フォロー増加：${r.follows||''}
+プロフィールアクセス：${r.profileAccess||''}
+
+【キャプション】
+${r.caption||''}
+
+【自分の感覚】
+${r.memo||''}
+
+【コメント・反応メモ】
+${r.reactionMemo||''}
+
+【スクショから読み取った内容】
+${r.screenshotMemo||''}
+
+【参考にしたい公開投稿・傾向】
+${r.referencePosts||''}
+
+【この投稿の文脈メモ】
+${r.contextNote||''}
+
+【ジャンル別勝ち筋メモ】
+${r.genreNote||''}
+
+【自己採点】
+${scores}
+
+出力してほしい内容：
+1. この投稿の一言診断
+2. 動画内容から見た強み/弱み
+3. 冒頭0〜2秒の評価
+4. 伸びた/伸びなかった理由
+5. 投稿者の文脈が伝わっているか
+6. コメントしたくなる余白があるか
+7. ど素人ホテル式の考え方から見た強み・弱み
+8. このジャンルに翻訳した場合の改善点
+9. 次回リールのタイトル案10個
+10. 次回リールの0〜3秒フック案10個
+11. 15秒以内のカット構成案
+12. フォローにつなげる締め方
+13. 今後シリーズ化するなら何を追うべきか
+
+厳しめで、実行できる形で出してください。`; document.getElementById('promptOut').textContent=p; return p;}
 async function copyPrompt(){const p=buildPrompt(); await navigator.clipboard.writeText(p); alert('コピーしました');}
 function exportJSON(){const blob=new Blob([JSON.stringify(reels,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='reel_story_analyzer_data.json';a.click();URL.revokeObjectURL(a.href)}
 function importJSON(e){const file=e.target.files[0]; if(!file)return; const reader=new FileReader(); reader.onload=()=>{try{const data=JSON.parse(reader.result); if(!Array.isArray(data))throw new Error('配列ではありません'); reels=data; currentId=reels[0]?.id||null; persist(); loadEditor(); alert('読み込みました');}catch(err){alert('読み込み失敗: '+err.message)}}; reader.readAsText(file)}
 function loadVideo(e){const file=e.target.files[0]; const box=document.getElementById('videoBox'); if(!file){box.textContent='動画を選ぶとここに表示されます。';return;} const url=URL.createObjectURL(file); box.innerHTML=`<video src="${url}" controls></video><div class="hint">ファイル名：${esc(file.name)} / この動画本体は保存されません。</div>`;}
 function loadScreens(e){const files=[...e.target.files]; const el=document.getElementById('shots'); el.innerHTML=''; files.forEach(f=>{const url=URL.createObjectURL(f); const img=document.createElement('img'); img.src=url; img.title=f.name; el.appendChild(img);});}
-function num(v){return v?Number(v).toLocaleString():'0'}
+function num(v){return v!==undefined&&v!==null&&v!==''?Number(v).toLocaleString():'0'}
 function esc(s){return String(s||'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
 renderList();loadEditor();
 </script>
-
-<!--
-追加設計メモ：参考投稿DBモード
-
-次に入れる機能：
-1. 参考投稿タブ
-2. 投稿者名 / SNS種別 / URL / 投稿本文 / スクショメモ / なぜ気になったか を入力
-3. 「参考投稿分析プロンプト生成」ボタン
-4. ChatGPTにコピペ
-5. 返ってきた分析結果を保存
-6. 勝ち筋DBへ変換
-
-人間がやること：
-・URLを貼る
-・投稿文をコピペ
-・スクショから気づいたことを書く
-・分析結果を保存する
-
-AIがやること：
-・投稿者文脈の分析
-・冒頭構造の分析
-・言葉選びの分析
-・コメント誘導の分析
-・なぜ反応されるかの分析
-・自分のジャンルへ変換
-・勝ち筋テンプレ化
-
-参考投稿分析用プロンプト雛形：
-
-あなたはSNS投稿の構造分析者です。
-以下の参考投稿を、単なる感想ではなく「投稿者の文脈」「投稿構造」「視聴者心理」「コメントしたくなる余白」「自分の投稿に応用できる型」に分解してください。
-
-重要：
-- 投稿内容をそのまま真似るのではなく、構造を抽象化してください。
-- 投稿者のジャンルに依存しすぎず、工場化・職人・地域・AI制作・物語投稿にも転用できる形にしてください。
-- ど素人ホテルさんのような、未完成・問題発生・視聴者参加・リアル感・文脈蓄積の強さがある場合は、その要素を明確にしてください。
-- 長い引用は避け、要点と構造で分析してください。
-
-出力：
-1. この投稿の一言診断
-2. 投稿者の文脈
-3. 冒頭の入り方
-4. 問題提起の仕方
-5. 感情導線
-6. コメントしたくなる理由
-7. 未完成性・続きが気になる要素
-8. 投稿が伸びる可能性がある理由
-9. 他ジャンルへ転用できる型
-10. 中村さんの投稿に置き換えるならどう使うか
-11. 勝ち筋テンプレ名
-12. 次に試せるリール案5つ
--->
 </body>
 </html>
