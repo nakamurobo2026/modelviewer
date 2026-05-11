@@ -321,8 +321,17 @@ ${r.translate||''}
 チェックリスト:
 ${r.checklist||''}
 
-元資料 / 商材本文 / 参考メモ:
-${r.material||''}`).join('\n\n');
+元資料 / 商材本文:
+${r.material||''}
+
+ChatGPT解析全文:
+${r.aiAnalysis||r.structure||''}
+
+自分メモ:
+${r.memo||''}
+
+タグ:
+${r.tags||''}`).join('\n\n');
 
   const prompt=`あなたはSNS投稿の照合検証AIです。
 
