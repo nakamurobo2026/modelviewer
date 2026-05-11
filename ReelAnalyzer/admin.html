@@ -61,7 +61,7 @@ main.wrap.layout > section{min-width:0} main.wrap.layout > aside{min-width:0}
 
 <label>動画ファイル</label>
 <input type="file" id="cardVideo" accept="video/*" onchange="previewCardVideo(event)">
-<div id="cardVideoPreview" class="preview">動画未登録</div>
+<div id="cardVideoPreview" class="preview">動画未登録（動画本体は保存せず、ファイル名のみ記録）</div>
 
 <label>ChatGPT解析結果</label>
 <textarea id="cardAnalysis" style="min-height:180px"></textarea>
@@ -73,6 +73,7 @@ main.wrap.layout > section{min-width:0} main.wrap.layout > aside{min-width:0}
 <button onclick="savePostCard()">投稿カルテ保存</button>
 <button class="secondary" onclick="exportPostCard()">カルテJSON書出</button>
 </div>
+<div id="saveStatus" class="preview">未保存</div>
 </div>
 
 </section>
@@ -125,7 +126,7 @@ function loadPostCard(){
   document.getElementById('cardVideoPreview').innerHTML=
     card.videoName
       ? `<div>${card.videoName}</div>`
-      : '動画未登録';
+      : '動画未登録（動画本体は保存せず、ファイル名のみ記録）';
 }
 
 function previewCardScreens(e){
@@ -139,7 +140,7 @@ function previewCardScreens(e){
 function previewCardVideo(e){
   const file=e.target.files[0];
   document.getElementById('cardVideoPreview').innerHTML=
-    file ? `<div>${file.name}</div>` : '動画未登録';
+    file ? `<div>${file.name}</div>` : '動画未登録（動画本体は保存せず、ファイル名のみ記録）';
 }
 
 async function fileToDataUrl(file){
@@ -154,36 +155,53 @@ async function fileToDataUrl(file){
   });
 }
 
+
 async function savePostCard(){
+  const status=document.getElementById('saveStatus');
+  status.innerHTML='保存中...';
+
   const id=document.getElementById('cardPostSelect').value;
-  if(!id){alert('投稿を選択してください');return;}
-
-  const screenFiles=[...document.getElementById('cardScreens').files];
-  const videoFile=document.getElementById('cardVideo').files[0];
-
-  const screens=[];
-  for(const f of screenFiles){
-    screens.push(await fileToDataUrl(f));
+  if(!id){
+    status.innerHTML='投稿を選択してください';
+    return;
   }
 
-  let video=null;
-  if(videoFile){
-    video=await fileToDataUrl(videoFile);
+  try{
+    const screenFiles=[...document.getElementById('cardScreens').files];
+    const videoFile=document.getElementById('cardVideo').files[0];
+
+    const screens=[];
+    for(const f of screenFiles){
+      screens.push(await fileToDataUrl(f));
+    }
+
+    // 動画本体は保存しない（重すぎるため）
+    postCards[id]={
+      tags:document.getElementById('cardTags').value,
+      type:document.getElementById('cardType').value,
+      analysis:document.getElementById('cardAnalysis').value,
+      memo:document.getElementById('cardMemo').value,
+      screens:screens.length?screens:(postCards[id]?.screens||[]),
+
+      videoName:videoFile?.name||postCards[id]?.videoName||'',
+      videoSize:videoFile?.size||postCards[id]?.videoSize||0,
+
+      savedAt:new Date().toISOString()
+    };
+
+    localStorage.setItem(CARD_KEY,JSON.stringify(postCards));
+
+    status.innerHTML=
+      '保存完了<br>' +
+      'スクショ:' + (screens.length||0) + '枚<br>' +
+      '動画:' + (videoFile?.name || '未登録');
+
+  }catch(err){
+    console.error(err);
+    status.innerHTML='保存失敗: localStorage容量オーバーの可能性';
   }
-
-  postCards[id]={
-    tags:document.getElementById('cardTags').value,
-    type:document.getElementById('cardType').value,
-    analysis:document.getElementById('cardAnalysis').value,
-    memo:document.getElementById('cardMemo').value,
-    screens:screens.length?screens:(postCards[id]?.screens||[]),
-    video:video||postCards[id]?.video||null,
-    videoName:videoFile?.name||postCards[id]?.videoName||''
-  };
-
-  localStorage.setItem(CARD_KEY,JSON.stringify(postCards));
-  alert('投稿カルテ保存しました');
 }
+
 
 function exportPostCard(){
   const id=document.getElementById('cardPostSelect').value;
