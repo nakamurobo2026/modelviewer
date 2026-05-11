@@ -31,7 +31,7 @@ button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px 
 <body>
 <header>
   <h1>過去投稿×参考DB検証</h1>
-  <div class="sub">1つの過去投稿を、参考DB/ノウハウDBの勝ち構造と照合して検証します。</div>
+  <div class="sub">選んだ投稿を、蓄積したDB・商材・勝ち筋・過去成功例と照合してAIが改善案を生成します。</div>
   <nav>
     <a href="./index.html">TOP</a>
     <a href="./check.html">投稿前チェック</a>
@@ -65,44 +65,7 @@ button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px 
   </aside>
 
   <section>
-    <div class="card">
-      <h2>照合条件</h2>
-      <div class="grid2">
-        <div>
-          <label>検証目的</label>
-          <select id="goal">
-            <option>参考DBとの一致度を見たい</option>
-            <option>伸びた理由を参考構造で説明したい</option>
-            <option>伸びなかった投稿に何が足りないか知りたい</option>
-            <option>ど素人ホテル式を中村さん投稿に翻訳したい</option>
-            <option>次回投稿に使える勝ち筋を抽出したい</option>
-          </select>
-        </div>
-        <div>
-          <label>重視する軸</label>
-          <select id="axis">
-            <option>未完成性・問題発生・続き感</option>
-            <option>冒頭2秒・問題提起</option>
-            <option>コメント余白・視聴者参加</option>
-            <option>リアル感・地域性</option>
-            <option>世界観/IP育成</option>
-            <option>仕事依頼につながる構造</option>
-          </select>
-        </div>
-      </div>
-
-      <label>追加メモ</label>
-      <textarea id="memo" placeholder="例：この投稿が参考構造に対して何が足りないか見たい"></textarea>
-
-      <div class="btns">
-        <button onclick="buildPrompt()">照合プロンプト生成</button>
-        <button class="secondary" onclick="copyPrompt()">コピー</button>
-        <button class="warn" onclick="downloadPack()">検証パックZIP生成</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>選択中</h2>
+    <div class="card"><h2>選択中</h2>
       <div id="selectedSummary" class="output">未選択</div>
     </div>
 
@@ -228,13 +191,7 @@ ${r.material||''}`).join('\n\n');
 1つの【中村さんの過去投稿】を、【参考DB/ノウハウDBの勝ち構造】に照らして検証してください。
 
 【検証目的】
-${v('goal')}
 
-【重視する軸】
-${v('axis')}
-
-【追加メモ】
-${v('memo')}
 
 【検証する中村さんの過去投稿】
 ${postText}
