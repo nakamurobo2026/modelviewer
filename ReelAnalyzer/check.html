@@ -1,42 +1,356 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>投稿前チェック</title><style>
-:root{--bg:#0b1016;--panel:#121922;--line:#263445;--text:#eef4ff;--muted:#94a7bc;--accent:#57e0aa;--warn:#ffd166;--bad:#ff6b6b;--r:18px}
-*{box-sizing:border-box}body{margin:0;background:#0b1016;color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.55}
-header{padding:20px 22px;border-bottom:1px solid var(--line);background:#0f151d;position:sticky;top:0;z-index:10}
-h1{margin:0;font-size:24px}.sub{color:var(--muted);font-size:13px;margin-top:4px}
-nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}nav a{color:var(--text);text-decoration:none;background:#1b2734;border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:13px;font-weight:800}nav a.active{background:var(--accent);color:#06130f}
-.wrap{max-width:1180px;margin:0 auto;padding:22px}.clean{max-width:920px}
-.layout{display:grid;grid-template-columns:340px 1fr;gap:18px}@media(max-width:900px){.layout{grid-template-columns:1fr}}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:18px}
-.homegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}@media(max-width:900px){.homegrid{grid-template-columns:1fr}}
-.homecard{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:22px;text-decoration:none;color:var(--text);display:block;min-height:190px}
-.homecard:hover{border-color:var(--accent)}.homecard b{font-size:20px}.homecard p{color:var(--muted);font-size:14px}.tag{display:inline-block;background:#0b1118;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:4px 9px;font-size:12px;margin-top:10px}
-input,textarea,select{width:100%;background:#0b1118;border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:12px;font-size:14px}
-textarea{min-height:120px;resize:vertical}label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
-button,.btn{border:0;background:var(--accent);padding:10px 14px;border-radius:999px;font-weight:800;cursor:pointer;color:#06130f;text-decoration:none;display:inline-flex;font-size:13px}
-button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px solid var(--line)}button.warn{background:var(--warn);color:#221700}button.danger{background:#40242a;color:#ffd4d4;border:1px solid #67323b}
-.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.grid2{grid-template-columns:1fr}}
-.item{padding:12px;border:1px solid var(--line);border-radius:14px;background:#101721;cursor:pointer;margin-bottom:8px}.item.active{border-color:var(--accent)}
-.small{font-size:12px;color:var(--muted)}.status,.note,.preview{padding:12px;border-radius:12px;background:#0b1118;border:1px solid var(--line);color:var(--muted);font-size:13px;margin-top:10px}
-.output{white-space:pre-wrap;background:#0b1118;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;line-height:1.7;max-height:560px;overflow:auto}
-.hidden{display:none}
-</style><script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script></head><body>
-<header><h1>投稿前チェック</h1><div class="sub">未来を見る。動画・キャプション・目的を入れて、投稿前にブラッシュアップ。</div><nav><a class="" href="./index.html">TOP</a><a class="active" href="./check.html">投稿前チェック</a><a class="" href="./compare.html">過去投稿比較</a><a class="" href="./admin.html">Admin</a></nav></header>
-<main class="wrap clean">
-<div class="card"><h2>次回投稿をブラッシュアップ</h2>
-<div class="grid2"><div><label>投稿タイトル / 仮テーマ</label><input id="nextTitle"></div><div><label>投稿目的</label><select id="goal"><option>再生数</option><option>フォロー増</option><option>仕事依頼</option><option>世界観/IP育成</option><option>保存/シェア</option></select></div></div>
-<label>キャプション案</label><textarea id="nextCaption"></textarea>
-<label>サムネ文字 / 冒頭テロップ案</label><input id="hookText">
-<label>動画ファイル（ZIPには入れません。ChatGPTへ別添付）</label><input id="videoInput" type="file" accept="video/*" onchange="previewVideo(event)"><div id="videoPreview" class="preview">動画をアップしてください</div>
-<div class="note">投稿前チェックは未来の改善用なので、インサイトスクショは不要です。過去投稿の検証は「過去投稿比較」で行います。</div>
-<label>補足メモ</label><textarea id="extraMemo"></textarea>
-<div class="btns"><button onclick="buildPrompt()">診断プロンプト生成</button><button class="secondary" onclick="copyPrompt()">コピー</button><button class="warn" onclick="downloadPack()">解析パックZIP生成</button></div></div>
-<div class="card"><h2>ChatGPTへ渡す内容</h2><div class="note">動画ファイルと analysis_pack.zip を同時に添付。</div><div id="promptOutput" class="output">ここに生成されます。</div></div>
+```html
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>投稿前チェック</title>
+
+<style>
+:root{
+--bg:#0b1016;
+--panel:#121922;
+--line:#263445;
+--text:#eef4ff;
+--muted:#94a7bc;
+--accent:#57e0aa;
+--warn:#ffd166;
+--bad:#ff6b6b;
+--r:18px
+}
+
+*{box-sizing:border-box}
+
+body{
+margin:0;
+background:var(--bg);
+color:var(--text);
+font-family:system-ui,sans-serif;
+line-height:1.6
+}
+
+header{
+padding:20px;
+border-bottom:1px solid var(--line);
+background:#0f151d
+}
+
+h1{
+margin:0;
+font-size:28px
+}
+
+.sub{
+color:var(--muted);
+font-size:13px;
+margin-top:6px
+}
+
+.wrap{
+max-width:980px;
+margin:0 auto;
+padding:22px
+}
+
+.card{
+background:var(--panel);
+border:1px solid var(--line);
+border-radius:var(--r);
+padding:18px;
+margin-bottom:18px
+}
+
+.grid2{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:12px
+}
+
+@media(max-width:700px){
+.grid2{
+grid-template-columns:1fr
+}
+}
+
+label{
+display:block;
+font-size:12px;
+color:var(--muted);
+margin:12px 0 6px
+}
+
+input,textarea,select{
+width:100%;
+background:#0b1118;
+border:1px solid var(--line);
+color:var(--text);
+padding:12px;
+border-radius:12px;
+font-size:14px
+}
+
+textarea{
+min-height:120px;
+resize:vertical
+}
+
+button{
+border:0;
+background:var(--accent);
+padding:10px 14px;
+border-radius:999px;
+font-weight:700;
+cursor:pointer;
+color:#06130f
+}
+
+button.secondary{
+background:#1b2734;
+color:#fff;
+border:1px solid var(--line)
+}
+
+.btns{
+display:flex;
+gap:8px;
+flex-wrap:wrap;
+margin-top:14px
+}
+
+.output{
+white-space:pre-wrap;
+background:#0b1118;
+border:1px solid var(--line);
+border-radius:14px;
+padding:16px;
+font-size:13px;
+line-height:1.7;
+max-height:700px;
+overflow:auto
+}
+
+.preview{
+padding:12px;
+border-radius:12px;
+background:#0b1118;
+border:1px solid var(--line);
+color:var(--muted);
+font-size:13px;
+margin-top:10px
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>投稿前チェック</h1>
+<div class="sub">
+動画・フック・キャプションを入れて、ChatGPT用の診断プロンプトを生成。
+</div>
+</header>
+
+<main class="wrap">
+
+<div class="card">
+
+<h2>次回投稿をブラッシュアップ</h2>
+
+<div class="grid2">
+
+<div>
+<label>投稿タイトル / 仮テーマ</label>
+<input id="nextTitle">
+</div>
+
+<div>
+<label>投稿目的</label>
+<select id="goal">
+<option>再生数</option>
+<option>フォロー増</option>
+<option>仕事依頼</option>
+<option>世界観/IP育成</option>
+<option>保存/シェア</option>
+</select>
+</div>
+
+</div>
+
+<label>キャプション案</label>
+<textarea id="nextCaption"></textarea>
+
+<label>サムネ文字 / 冒頭テロップ案</label>
+<input id="hookText">
+
+<label>動画ファイル</label>
+<input id="videoInput" type="file" accept="video/*" onchange="previewVideo(event)">
+
+<div id="videoPreview" class="preview">
+動画をアップしてください
+</div>
+
+<label>補足メモ</label>
+<textarea id="extraMemo"></textarea>
+
+<div class="btns">
+<button onclick="buildPrompt()">診断プロンプト生成</button>
+<button class="secondary" onclick="copyPrompt()">コピー</button>
+</div>
+
+</div>
+
+<div class="card">
+<h2>ChatGPTへ渡す内容</h2>
+
+<div id="promptOutput" class="output">
+ここに生成されます。
+</div>
+
+</div>
+
 </main>
+
 <script>
-const POST_KEY='rso_posts_v1',REF_KEY='rso_refs_v1';let posts=JSON.parse(localStorage.getItem(POST_KEY)||'[]'),refs=JSON.parse(localStorage.getItem(REF_KEY)||'[]'),videoName='';
-function v(id){return document.getElementById(id).value||''}function esc(s=''){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
-function previewVideo(e){const f=e.target.files[0];if(!f)return;videoName=f.name;const u=URL.createObjectURL(f);document.getElementById('videoPreview').innerHTML=`<video src="${u}" controls style="width:100%;border-radius:12px"></video><div class="small">${esc(f.name)}｜動画は別添付</div>`}
-function buildPrompt(){const top=[...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0)).slice(0,8).map(p=>`・${p.title}｜再生:${p.views}｜保存:${p.saves}｜コメント:${p.comments}`).join('\n');const ref=refs.slice(0,12).map(r=>`【${r.template||r.title}】\n構造:${r.structure}\n翻訳:${r.translate}\nチェック:${r.checklist}`).join('\n\n');const p=`この投稿予定動画を、実際に動画を見たうえで投稿前診断してください。動画ファイルと analysis_pack.zip を添付しています。\n\n【投稿目的】\n${v('goal')}\n\n【投稿タイトル/仮テーマ】\n${v('nextTitle')}\n\n【サムネ文字/冒頭テロップ案】\n${v('hookText')}\n\n【キャプション案】\n${v('nextCaption')}\n\n【補足メモ】\n${v('extraMemo')}\n\n【動画ファイル名】\n${videoName||'別添付動画を参照'}\n\n【過去投稿DB】\n${top||'まだDBなし'}\n\n【参考構造DB】\n${ref||'まだ参考構造なし'}\n\n重要：参考構造DBをそのままコピーせず、中村さんのジャンルへ翻訳。動画の冒頭0〜2秒、テンポ、テロップ、無音視聴を必ず分析。\n\n出力：一言診断、冒頭0〜2秒の弱点、リスク、強み、キャプション修正案、サムネ文字10個、冒頭フック10個、15秒構成、コメント余白、締め方、投稿前チェックリスト。`;document.getElementById('promptOutput').textContent=p;return p}
-async function copyPrompt(){await navigator.clipboard.writeText(document.getElementById('promptOutput').textContent);alert('コピーしました')}
-async function downloadPack(){const z=new JSZip();const p=buildPrompt();const title=v('nextTitle')||'untitled';z.file('prompt.txt',p);z.file('readme.txt','動画はZIPに入っていません。ChatGPTへ別添付してください。インサイトは投稿前チェックでは不要です。');z.file('next_post.json',JSON.stringify({title,goal:v('goal'),caption:v('nextCaption'),hook:v('hookText'),memo:v('extraMemo'),videoFile:videoName},null,2));z.file('db_summary.json',JSON.stringify({postCount:posts.length,topPosts:[...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0)).slice(0,10)},null,2));z.file('reference_digest.json',JSON.stringify(refs.map(r=>({title:r.title,template:r.template,structure:r.structure,translate:r.translate,checklist:r.checklist})),null,2));z.file('caption.txt',v('nextCaption'));z.file('memo.txt',v('extraMemo'));const blob=await z.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='analysis_pack_'+title.replace(/[\\/:*?"<>|\s]+/g,'_').slice(0,40)+'.zip';a.click();URL.revokeObjectURL(a.href)}
-</script></body></html>
+
+const POST_KEY='rso_posts_v1';
+const REF_KEY='rso_refs_v1';
+
+let posts=JSON.parse(localStorage.getItem(POST_KEY)||'[]');
+let refs=JSON.parse(localStorage.getItem(REF_KEY)||'[]');
+
+let videoName='';
+
+function v(id){
+return document.getElementById(id).value||''
+}
+
+function previewVideo(e){
+
+const f=e.target.files[0];
+
+if(!f)return;
+
+videoName=f.name;
+
+const u=URL.createObjectURL(f);
+
+document.getElementById('videoPreview').innerHTML=
+`
+<video src="${u}" controls style="width:100%;border-radius:12px"></video>
+<div style="margin-top:8px">${f.name}</div>
+`;
+
+}
+
+function buildPrompt(){
+
+const top=[...posts]
+.sort((a,b)=>Number(b.views||0)-Number(a.views||0))
+.slice(0,8)
+.map(p=>`・${p.title}｜再生:${p.views}｜保存:${p.saves}｜コメント:${p.comments}`)
+.join('\n');
+
+const ref=refs.map(r=>`
+【参考DB】
+
+タイトル:
+${r.title||''}
+
+テンプレ:
+${r.template||''}
+
+出典:
+${r.creator||''}
+
+種別:
+${r.type||''}
+
+なぜ気になったか:
+${r.why||''}
+
+構造:
+${r.structure||''}
+
+翻訳:
+${r.translate||''}
+
+チェックリスト:
+${r.checklist||''}
+
+商材本文 / メモ / 参考資料:
+${r.material||''}
+`).join('\n\n');
+
+
+const p=`
+この投稿予定動画を、実際に動画を見たうえで投稿前診断してください。
+動画ファイルを添付しています。
+
+【投稿目的】
+${v('goal')}
+
+【投稿タイトル/仮テーマ】
+${v('nextTitle')}
+
+【サムネ文字/冒頭テロップ案】
+${v('hookText')}
+
+【キャプション案】
+${v('nextCaption')}
+
+【補足メモ】
+${v('extraMemo')}
+
+【動画ファイル名】
+${videoName||'別添付動画を参照'}
+
+【過去投稿DB】
+${top||'まだDBなし'}
+
+【参考DB全文】
+${ref||'まだ参考DBなし'}
+
+重要:
+- 参考DBは整理前の生データです。
+- 不要部分は無視し、SNS改善に必要な部分だけ抽出してください。
+- 他者の文章をコピーせず、構造・考え方・空気感として抽象化してください。
+- 中村さんの工場化・職人・地域・AI制作・ナカムロボ物語へ翻訳してください。
+- 動画の冒頭0〜2秒、テンポ、無音視聴、未完成感、問題提起、コメント余白を重視してください。
+
+出力:
+1. 一言診断
+2. 冒頭0〜2秒の弱点
+3. 強み
+4. リスク
+5. 伸びる理由
+6. キャプション改善案
+7. サムネ文字10案
+8. 冒頭フック10案
+9. 15秒構成
+10. コメント余白
+11. CTA改善
+12. バズ構成案
+13. 投稿前チェックリスト
+`;
+
+document.getElementById('promptOutput').textContent=p;
+
+return p;
+
+}
+
+async function copyPrompt(){
+
+await navigator.clipboard.writeText(
+document.getElementById('promptOutput').textContent
+);
+
+alert('コピーしました');
+
+}
+
+</script>
+
+</body>
+</html>
+```
