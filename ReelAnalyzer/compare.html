@@ -31,7 +31,7 @@ button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px 
 <body>
 <header>
   <h1>過去投稿×参考DB検証</h1>
-  <div class="sub">過去投稿同士ではなく、自分の投稿を参考DB/ノウハウDBと照合して検証します。</div>
+  <div class="sub">1つの過去投稿を、参考DB/ノウハウDBの勝ち構造と照合して検証します。</div>
   <nav>
     <a href="./index.html">TOP</a>
     <a href="./check.html">投稿前チェック</a>
@@ -44,18 +44,18 @@ button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px 
   <aside>
     <div class="card">
       <h2>検証する過去投稿</h2>
-      <div class="note">ここで選ぶのは「自分の過去投稿」です。選んだ投稿を、右側の参考DBと照合します。</div>
+      <div class="note">ここでは投稿同士を比較しません。1投稿を選び、参考DBと照合します。</div>
       <div class="btns">
         <button class="secondary" onclick="selectTop()">上位投稿を選択</button>
         <button class="secondary" onclick="selectBottom()">下位投稿を選択</button>
-        <button class="secondary" onclick="clearPosts()">選択解除</button>
+        <button class="secondary" onclick="clearPost()">選択解除</button>
       </div>
       <div id="postList" style="margin-top:14px"></div>
     </div>
 
     <div class="card">
       <h2>照合する参考DB</h2>
-      <div class="note">ど素人ホテルさんの構造、商材から抽出した勝ち筋、参考投稿DBなどを選択。</div>
+      <div class="note">プロンプトには元資料の全文は入れません。保存済みの構造・翻訳・チェックリストだけを使います。</div>
       <div class="btns">
         <button class="secondary" onclick="selectAllRefs()">全選択</button>
         <button class="secondary" onclick="clearRefs()">選択解除</button>
@@ -66,13 +66,13 @@ button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px 
 
   <section>
     <div class="card">
-      <h2>検証条件</h2>
+      <h2>照合条件</h2>
       <div class="grid2">
         <div>
           <label>検証目的</label>
           <select id="goal">
             <option>参考DBとの一致度を見たい</option>
-            <option>伸びた投稿がなぜ伸びたかを参考構造で説明したい</option>
+            <option>伸びた理由を参考構造で説明したい</option>
             <option>伸びなかった投稿に何が足りないか知りたい</option>
             <option>ど素人ホテル式を中村さん投稿に翻訳したい</option>
             <option>次回投稿に使える勝ち筋を抽出したい</option>
@@ -92,7 +92,7 @@ button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px 
       </div>
 
       <label>追加メモ</label>
-      <textarea id="memo" placeholder="例：工場系が伸びた理由を、ど素人ホテル式の構造で説明できるか見たい"></textarea>
+      <textarea id="memo" placeholder="例：この投稿が参考構造に対して何が足りないか見たい"></textarea>
 
       <div class="btns">
         <button onclick="buildPrompt()">照合プロンプト生成</button>
@@ -118,7 +118,7 @@ const POST_KEY='rso_posts_v1';
 const REF_KEY='rso_refs_v1';
 let posts=JSON.parse(localStorage.getItem(POST_KEY)||'[]');
 let refs=JSON.parse(localStorage.getItem(REF_KEY)||'[]');
-let selectedPosts=new Set();
+let selectedPostId=null;
 let selectedRefs=new Set();
 
 function v(id){return document.getElementById(id).value||''}
@@ -133,7 +133,7 @@ function renderPosts(){
   }
   const sorted=[...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0));
   el.innerHTML=sorted.map(p=>`
-    <div class="item ${selectedPosts.has(p.id)?'active':''}" onclick="togglePost('${p.id}')">
+    <div class="item ${selectedPostId===p.id?'active':''}" onclick="selectPost('${p.id}')">
       <b>${esc(p.title)}</b>
       <div class="small">再生:${num(p.views)} / 保存:${num(p.saves)} / コメント:${num(p.comments)}</div>
     </div>
@@ -156,42 +156,42 @@ function renderRefs(){
   renderSummary();
 }
 
-function togglePost(id){selectedPosts.has(id)?selectedPosts.delete(id):selectedPosts.add(id);renderPosts();}
+function selectPost(id){selectedPostId=id;renderPosts();}
+function clearPost(){selectedPostId=null;renderPosts();}
+function selectedPostData(){return posts.find(p=>p.id===selectedPostId)||null;}
+
 function toggleRef(id){id=String(id);selectedRefs.has(id)?selectedRefs.delete(id):selectedRefs.add(id);renderRefs();}
-
-function selectedPostData(){return posts.filter(p=>selectedPosts.has(p.id));}
 function selectedRefData(){return refs.filter(r=>selectedRefs.has(String(r.id)));}
-
-function selectTop(){
-  selectedPosts.clear();
-  [...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0)).slice(0,5).forEach(p=>selectedPosts.add(p.id));
-  renderPosts();
-}
-function selectBottom(){
-  selectedPosts.clear();
-  [...posts].sort((a,b)=>Number(a.views||0)-Number(b.views||0)).slice(0,5).forEach(p=>selectedPosts.add(p.id));
-  renderPosts();
-}
-function clearPosts(){selectedPosts.clear();renderPosts();}
 function selectAllRefs(){selectedRefs=new Set(refs.map(r=>String(r.id)));renderRefs();}
 function clearRefs(){selectedRefs.clear();renderRefs();}
 
+function selectTop(){
+  const sorted=[...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0));
+  selectedPostId=sorted[0]?.id||null;
+  renderPosts();
+}
+function selectBottom(){
+  const sorted=[...posts].sort((a,b)=>Number(a.views||0)-Number(b.views||0));
+  selectedPostId=sorted[0]?.id||null;
+  renderPosts();
+}
+
 function renderSummary(){
-  const ps=selectedPostData();
+  const p=selectedPostData();
   const rs=selectedRefData();
   document.getElementById('selectedSummary').textContent =
-`【検証する過去投稿】 
-${ps.length ? ps.map(p=>`・${p.title}｜再生:${p.views}｜保存:${p.saves}｜コメント:${p.comments}`).join('\n') : '未選択'}
+`【検証する過去投稿】
+${p ? `・${p.title}｜再生:${p.views}｜保存:${p.saves}｜コメント:${p.comments}` : '未選択'}
 
 【照合する参考DB】
 ${rs.length ? rs.map(r=>`・${r.template||r.title}｜${r.creator||r.type||''}`).join('\n') : '未選択'}`;
 }
 
 function buildPrompt(){
-  const ps=selectedPostData();
+  const p=selectedPostData();
   const rs=selectedRefData();
 
-  const postText=ps.map(p=>`【自分の過去投稿】
+  const postText=p ? `【中村さんの過去投稿】
 タイトル:${p.title}
 URL:${p.url||''}
 日付:${p.date||''}
@@ -202,16 +202,13 @@ URL:${p.url||''}
 いいね:${p.likes||0}
 コメント:${p.comments||0}
 キャプション:
-${p.caption||''}`).join('\n\n');
+${p.caption||''}` : '未選択';
 
-  const refText=rs.map(r=>`【参考DB / ノウハウ】
+  const refText=rs.map(r=>`【参考DB / 勝ち構造】
 タイトル:${r.title||''}
 テンプレ名:${r.template||''}
 出典:${r.creator||''}
 種別:${r.type||''}
-URL:${r.url||''}
-なぜ気になったか:
-${r.why||''}
 
 抽象化した構造:
 ${r.structure||''}
@@ -222,16 +219,13 @@ ${r.translate||''}
 チェックリスト:
 ${r.checklist||''}
 
-元資料メモ:
-${(r.material||'').slice(0,1000)}`).join('\n\n');
+元資料 / 商材本文 / 参考メモ:
+${r.material||''}`).join('\n\n');
 
-  const prompt=`あなたはSNS投稿の比較検証AIです。
+  const prompt=`あなたはSNS投稿の照合検証AIです。
+
 これは「過去投稿同士の比較」ではありません。
-
-目的は、
-【中村さんの過去投稿】が、
-【参考DB/ノウハウDB、例：ど素人ホテル式の構造】と
-どれだけ一致しているか、何が足りないかを検証することです。
+1つの【中村さんの過去投稿】を、【参考DB/ノウハウDBの勝ち構造】に照らして検証してください。
 
 【検証目的】
 ${v('goal')}
@@ -243,17 +237,19 @@ ${v('axis')}
 ${v('memo')}
 
 【検証する中村さんの過去投稿】
-${postText || '未選択'}
+${postText}
 
 【照合する参考DB / ノウハウDB】
 ${refText || '未選択'}
 
 重要：
-- 過去投稿同士を比べるのではなく、過去投稿を参考DBに照らして評価してください。
-- 参考DBの文章をそのままコピーせず、構造として使ってください。
+- 投稿同士を比較しないでください。
+- 選択した過去投稿が、参考DBの勝ち構造にどれだけ近いかを評価してください。
+- 参考DBの元資料や商材本文も読み込んだうえで、重要部分と不要部分を選別してください。
+- ただし他者の文章や商材内容をそのままコピーせず、構造・考え方・判断基準として抽象化してください。
+- 商材本文の中にどうでもいい情報が含まれていても、SNS改善に関係ある部分だけを抜き出してください。
 - ど素人ホテル式が含まれる場合は、「ホテル再建」ではなく、中村さんの工場化・職人・地域・AI制作・ナカムロボ物語へ翻訳してください。
 - 数字だけでなく、文脈・問題提起・未完成感・リアル感・コメント余白・続き感・地域性を見てください。
-- 最後に、次回投稿前チェックで使える「勝ち筋」として保存できる形式にしてください。
 
 出力：
 1. 照合結果の一言結論
@@ -280,19 +276,27 @@ async function downloadPack(){
   if(typeof JSZip==='undefined'){alert('ZIP生成ライブラリが読み込めません');return;}
   const z=new JSZip();
   const prompt=buildPrompt();
-  z.file('reference_comparison_prompt.txt',prompt);
-  z.file('reference_comparison_data.json',JSON.stringify({
+  z.file('reference_alignment_prompt.txt',prompt);
+  z.file('reference_alignment_data.json',JSON.stringify({
     generatedAt:new Date().toISOString(),
     goal:v('goal'),
     axis:v('axis'),
     memo:v('memo'),
-    selectedPosts:selectedPostData(),
-    selectedReferences:selectedRefData()
+    selectedPost:selectedPostData(),
+    selectedReferences:selectedRefData().map(r=>({
+      title:r.title,
+      template:r.template,
+      creator:r.creator,
+      type:r.type,
+      structure:r.structure,
+      translate:r.translate,
+      checklist:r.checklist
+    }))
   },null,2));
   const blob=await z.generateAsync({type:'blob'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
-  a.download='reference_comparison_pack.zip';
+  a.download='reference_alignment_pack.zip';
   a.click();
   URL.revokeObjectURL(a.href);
 }
