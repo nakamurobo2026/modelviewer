@@ -81,9 +81,16 @@ label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
 <label>自分ジャンルへ翻訳</label>
 <textarea id="refTranslate" placeholder="工場化なら『搬入できない問題』を見せる"></textarea>
 
+<label>ChatGPTに渡す解析資料</label>
+<textarea id="refMaterial" placeholder="ここに、教材の要点・投稿URL・投稿本文・スクショから読める内容・自分のメモをまとめて貼る"></textarea>
+
 <div class="btns">
 <button onclick="saveReference()">参考構造保存</button>
+<button class="secondary" onclick="buildReferencePrompt()">構造分析プロンプト生成</button>
 </div>
+
+<label>構造分析プロンプト</label>
+<div id="referencePrompt" class="analysis">ここに生成されます。</div>
 
 <div id="referenceList" style="margin-top:14px"></div>
 </div>
@@ -175,7 +182,8 @@ const data=json.data||[];
 
 posts=data.map(p=>({
 id:p.id,
-title:(p.caption||'').split('\n')[0]?.slice(0,40)||'無題',
+title:(p.caption||'').split('
+')[0]?.slice(0,40)||'無題',
 caption:p.caption||'',
 views:p.views||0,
 reach:p.reach||0,
@@ -214,7 +222,13 @@ renderPosts();
 const post=posts.find(p=>p.id===id);
 if(!post)return;
 
-const txt=`【過去投稿】\n${post.title}\n\n再生:${post.views}\nリーチ:${post.reach}\n保存:${post.saves}\nシェア:${post.shares}`;
+const txt=`【過去投稿】
+${post.title}
+
+再生:${post.views}
+リーチ:${post.reach}
+保存:${post.saves}
+シェア:${post.shares}`;
 
 document.getElementById('analysisOutput').textContent=txt;
 }
@@ -224,7 +238,8 @@ const ref={
 id:Date.now(),
 title:document.getElementById('refTitle').value,
 structure:document.getElementById('refStructure').value,
-translate:document.getElementById('refTranslate').value
+translate:document.getElementById('refTranslate').value,
+material:document.getElementById('refMaterial').value
 };
 
 refs.unshift(ref);
@@ -241,10 +256,78 @@ return;
 }
 
 el.innerHTML=refs.map(r=>`
-<div class="post">
+<div class="post" onclick="loadReference(${r.id})">
 <div><b>${escapeHtml(r.title)}</b></div>
-<div class="small">${escapeHtml(r.structure.slice(0,80))}</div>
+<div class="small">${escapeHtml((r.structure||'').slice(0,80))}</div>
 </div>`).join('');
+}
+
+function loadReference(id){
+const r=refs.find(x=>x.id===id);
+if(!r)return;
+document.getElementById('refTitle').value=r.title||'';
+document.getElementById('refStructure').value=r.structure||'';
+document.getElementById('refTranslate').value=r.translate||'';
+document.getElementById('refMaterial').value=r.material||'';
+}
+
+function buildReferencePrompt(){
+const title=document.getElementById('refTitle').value;
+const structure=document.getElementById('refStructure').value;
+const translate=document.getElementById('refTranslate').value;
+const material=document.getElementById('refMaterial').value;
+
+const prompt=`あなたはSNS投稿の構造分析者です。
+以下の資料を、単なる要約ではなく「投稿者の考え方」「投稿構造」「視聴者心理」「自分の投稿に応用できる型」に分解してください。
+
+重要：
+- 元テキストや投稿をそのままコピーしないでください。
+- 表現ではなく、考え方と構造を抽象化してください。
+- 他者の商材・投稿の内容を再配布する目的ではなく、個人の検証用として構造化してください。
+- 中村さんのジャンル、つまり工場化・職人・地域・AI制作・ナカムロボ物語に翻訳してください。
+
+【参考タイトル】
+${title}
+
+【資料】
+${material}
+
+【すでに気づいている構造】
+${structure}
+
+【自分ジャンルへの仮翻訳】
+${translate}
+
+出力してほしい内容：
+1. この資料の一言診断
+2. 投稿者/発信者の根本思想
+3. 伸びる構造
+4. 冒頭の作り方
+5. 問題提起の作り方
+6. コメント余白の作り方
+7. 未完成性・続き感の作り方
+8. 視聴者が応援したくなる理由
+9. 中村さんの投稿ジャンルへの翻訳
+10. 勝ち筋テンプレ名
+11. 使えるチェックリスト
+12. 次回投稿に使える具体案5つ
+
+最後に、保存用として以下の形式で出してください。
+
+【抽象化した構造】
+・
+・
+・
+
+【自分ジャンルへの翻訳】
+・
+・
+・
+
+【勝ち筋テンプレ名】
+`;
+
+document.getElementById('referencePrompt').textContent=prompt;
 }
 
 function previewVideo(e){
@@ -268,9 +351,12 @@ const goal=document.getElementById('goal').value;
 const refText=refs.map(r=>`
 参考:${r.title}
 構造:${r.structure}
-翻訳:${r.translate}`).join('\n\n');
+翻訳:${r.translate}`).join('
 
-const past=posts.slice(0,5).map(p=>`${p.title}｜再生:${p.views}`).join('\n');
+');
+
+const past=posts.slice(0,5).map(p=>`${p.title}｜再生:${p.views}`).join('
+');
 
 const prompt=`あなたはSNS戦略AIです。
 
@@ -309,7 +395,8 @@ document.getElementById('promptOutput').textContent=prompt;
 
 function runAnalysis(){
 buildPrompt();
-document.getElementById('analysisOutput').textContent='プロンプト生成完了。\nChatGPTへ動画・スクショと一緒に投入してください。';
+document.getElementById('analysisOutput').textContent='プロンプト生成完了。
+ChatGPTへ動画・スクショと一緒に投入してください。';
 }
 
 function escapeHtml(str=''){
