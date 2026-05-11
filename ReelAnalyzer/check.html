@@ -35,6 +35,17 @@ top:0;
 z-index:10
 }
 
+h1{
+margin:0;
+font-size:28px
+}
+
+.sub{
+color:var(--muted);
+font-size:13px;
+margin-top:6px
+}
+
 nav{
 display:flex;
 gap:8px;
@@ -58,17 +69,6 @@ background:var(--accent);
 color:#06130f
 }
 
-h1{
-margin:0;
-font-size:28px
-}
-
-.sub{
-color:var(--muted);
-font-size:13px;
-margin-top:6px
-}
-
 .wrap{
 max-width:980px;
 margin:0 auto;
@@ -87,6 +87,10 @@ margin-bottom:18px
 display:grid;
 grid-template-columns:1fr 1fr;
 gap:12px
+}
+
+@media(max-width:700px){
+.grid2{grid-template-columns:1fr}
 }
 
 label{
@@ -142,7 +146,7 @@ border-radius:14px;
 padding:16px;
 font-size:13px;
 line-height:1.7;
-max-height:700px;
+max-height:760px;
 overflow:auto
 }
 
@@ -162,10 +166,7 @@ margin-top:10px
 
 <header>
 <h1>投稿前チェック</h1>
-
-<div class="sub">
-動画・フック・キャプションを入れて、ChatGPT用の診断プロンプトを生成。
-</div>
+<div class="sub">動画・フック・キャプションを入れて、ChatGPT用の診断プロンプトを生成。</div>
 
 <nav>
 <a href="./index.html">TOP</a>
@@ -173,17 +174,14 @@ margin-top:10px
 <a href="./compare.html">過去投稿比較</a>
 <a href="./admin.html">Admin</a>
 </nav>
-
 </header>
 
 <main class="wrap">
 
 <div class="card">
-
 <h2>次回投稿をブラッシュアップ</h2>
 
 <div class="grid2">
-
 <div>
 <label>投稿タイトル / 仮テーマ</label>
 <input id="nextTitle">
@@ -199,7 +197,6 @@ margin-top:10px
 <option>保存/シェア</option>
 </select>
 </div>
-
 </div>
 
 <label>キャプション案</label>
@@ -211,9 +208,7 @@ margin-top:10px
 <label>動画ファイル</label>
 <input id="videoInput" type="file" accept="video/*" onchange="previewVideo(event)">
 
-<div id="videoPreview" class="preview">
-動画をアップしてください
-</div>
+<div id="videoPreview" class="preview">動画をアップしてください</div>
 
 <label>補足メモ</label>
 <textarea id="extraMemo"></textarea>
@@ -222,29 +217,21 @@ margin-top:10px
 <button onclick="buildPrompt()">診断プロンプト生成</button>
 <button class="secondary" onclick="copyPrompt()">コピー</button>
 </div>
-
 </div>
 
 <div class="card">
-
 <h2>ChatGPTへ渡す内容</h2>
-
-<div id="promptOutput" class="output">
-ここに生成されます。
-</div>
-
+<div id="promptOutput" class="output">ここに生成されます。</div>
 </div>
 
 </main>
 
 <script>
-
 const POST_KEY='rso_posts_v1';
 const REF_KEY='rso_refs_v1';
 
 let posts=JSON.parse(localStorage.getItem(POST_KEY)||'[]');
 let refs=JSON.parse(localStorage.getItem(REF_KEY)||'[]');
-
 let videoName='';
 
 function v(id){
@@ -252,13 +239,10 @@ return document.getElementById(id).value||''
 }
 
 function previewVideo(e){
-
 const f=e.target.files[0];
-
 if(!f)return;
 
 videoName=f.name;
-
 const u=URL.createObjectURL(f);
 
 document.getElementById('videoPreview').innerHTML=
@@ -266,7 +250,6 @@ document.getElementById('videoPreview').innerHTML=
 <video src="${u}" controls style="width:100%;border-radius:12px"></video>
 <div style="margin-top:8px">${f.name}</div>
 `;
-
 }
 
 function buildPrompt(){
@@ -275,7 +258,7 @@ const top=[...posts]
 .sort((a,b)=>Number(b.views||0)-Number(a.views||0))
 .slice(0,8)
 .map(p=>`・${p.title}｜再生:${p.views}｜保存:${p.saves}｜コメント:${p.comments}`)
-.join('\\n');
+.join('\n');
 
 const ref=refs.map(r=>`
 【参考DB】
@@ -289,63 +272,144 @@ ${r.template||''}
 出典:
 ${r.creator||''}
 
-商材本文:
+種別:
+${r.type||''}
+
+なぜ気になったか:
+${r.why||''}
+
+構造:
+${r.structure||''}
+
+翻訳:
+${r.translate||''}
+
+チェックリスト:
+${r.checklist||''}
+
+商材本文 / メモ / 参考資料:
 ${r.material||''}
-`).join('\\n\\n');
+`).join('\n\n');
 
 const p=`
 この投稿予定動画を、実際に動画を見たうえで投稿前診断してください。
+動画ファイルを添付しています。
+
+あなたは単なるSNS運用アドバイザーではありません。
+Instagram Reels / TikTokの視聴維持・未完成性・リアル感・地域性・コメント誘発・シリーズ導線・感情設計を分析する「SNS構造分析AI」です。
+
+この診断では、単に「もっと短く」「もっとテンポよく」などの一般論ではなく、
+なぜその改善が必要なのかを、参考DB・過去投稿・視聴心理と照合して説明してください。
+
+特に以下を重視してください。
+
+- 冒頭0〜2秒で続きを見たくなるか
+- 無音視聴でも意味が伝わるか
+- 「完成品」ではなく「途中感・問題感」があるか
+- コメントしたくなる余白があるか
+- 地域性・リアル感があるか
+- 「次も見たい」と思う導線があるか
+- ナカムロボ / 工場化 / 職人 / AI制作 という世界観に繋がるか
+
+また、参考DBは整理前の生データです。
+不要部分は無視し、SNS改善に必要な部分だけ抽出してください。
+
+他者の文章や構成をそのままコピーせず、
+「なぜ伸びるのか」という構造・空気感・感情設計として抽象化してください。
+
+---
 
 【投稿目的】
 ${v('goal')}
 
-【投稿タイトル】
+【投稿タイトル / 仮テーマ】
 ${v('nextTitle')}
 
-【冒頭テロップ】
+【サムネ文字 / 冒頭テロップ案】
 ${v('hookText')}
 
-【キャプション】
+【キャプション案】
 ${v('nextCaption')}
 
 【補足メモ】
 ${v('extraMemo')}
 
+【動画ファイル名】
+${videoName||'別添付動画を参照'}
+
+---
+
 【過去投稿DB】
-${top||'なし'}
+${top||'まだDBなし'}
+
+---
 
 【参考DB全文】
-${ref||'なし'}
+${ref||'まだ参考DBなし'}
 
-重要:
-参考DBは整理前の生データです。
-不要部分は無視し、SNS改善に必要な部分だけ抽出してください。
+---
 
-出力:
-- 一言診断
-- 冒頭改善
-- フック改善
-- 15秒構成
-- CTA改善
-- バズ構成案
+出力形式：
+
+1. 一言診断
+→ この投稿が今どう見えるかを一言で。
+
+2. 視聴維持の分析
+→ 0〜2秒 / 3〜7秒 / 8秒以降で離脱ポイントを予測。
+
+3. 参考DBとの照合分析
+→ どの参考DBのどの構造に近いか。
+→ なぜその構造が有効なのか。
+→ 足りない要素は何か。
+
+4. 強み
+→ この投稿ならではの武器。
+
+5. 弱点
+→ 伸びを止めている要因。
+
+6. 改善理由付きの提案
+→ 「なぜそれが必要か」を必ず説明。
+→ 単なる感想で終わらせない。
+
+7. 冒頭フック改善案
+→ 10案。
+→ それぞれ狙っている感情も説明。
+
+8. サムネ文字改善案
+→ 10案。
+→ 強い順に。
+
+9. 15秒構成案
+→ カットごとの役割も説明。
+
+10. コメント誘発ポイント
+→ コメントしたくなる余白を設計。
+
+11. CTA改善案
+→ フォロー / 保存 / 続き視聴への導線。
+
+12. バズ構成分析
+→ この動画がどのタイプの伸び方を狙っているのか。
+→ 共感型 / 問題提起型 / 未完成型 / 地域リアル型 / ストーリー型 など。
+
+13. 投稿前チェックリスト
+→ 投稿前に確認するべき項目。
+
+14. 次に試すべき派生案
+→ この動画から派生できる次回投稿案を5つ。
 `;
 
 document.getElementById('promptOutput').textContent=p;
-
 return p;
-
 }
 
 async function copyPrompt(){
-
 await navigator.clipboard.writeText(
 document.getElementById('promptOutput').textContent
 );
-
 alert('コピーしました');
-
 }
-
 </script>
 
 </body>
