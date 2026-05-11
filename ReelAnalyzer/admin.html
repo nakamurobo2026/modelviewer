@@ -31,7 +31,7 @@ main.wrap.layout > section{min-width:0} main.wrap.layout > aside{min-width:0}
 <div class="card">
 <h2>投稿カルテDB</h2>
 <div class="note">
-各Instagram投稿に、スクショ・動画・解析結果・勝ち筋タグを紐づけ保存。スクショは容量が大きいと保存に時間がかかります。
+各Instagram投稿に、スクショ・動画・解析結果・勝ち筋タグを紐づけ保存。
 </div>
 
 <label>投稿選択</label>
@@ -84,7 +84,7 @@ main.wrap.layout > section{min-width:0} main.wrap.layout > aside{min-width:0}
 const POST_KEY='rso_posts_v1',REF_KEY='rso_refs_v1';let posts=JSON.parse(localStorage.getItem(POST_KEY)||'[]'),refs=JSON.parse(localStorage.getItem(REF_KEY)||'[]'),editId=null;
 function v(id){return document.getElementById(id).value||''}function esc(s=''){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}function num(n){return Number(n||0).toLocaleString()}function status(t,c='var(--muted)'){let e=document.getElementById('status');e.textContent=t;e.style.color=c}
 function setWorkerUrl(){const cur=localStorage.getItem('worker_url')||'https://reelanalyzer.nakamura0407.workers.dev';const u=prompt('Worker URL',cur);if(u===null)return;localStorage.setItem('worker_url',u.replace(/\/$/,''));status('Worker URL保存済','var(--accent)')}
-async function fetchInstagramPosts(){const base=localStorage.getItem('worker_url')||'https://reelanalyzer.nakamura0407.workers.dev';status('Instagram API接続中...','var(--warn)');try{const r=await fetch(base+'/reels');const j=await r.json();if(j.error)throw new Error(j.error.message||j.error);posts=(j.data||[]).map(p=>({id:p.id,title:firstLine(p.caption),caption:p.caption||'',views:p.views||0,reach:p.reach||0,saves:p.saved||p.saves||0,shares:p.shares||0,likes:p.like_count||0,comments:p.comments_count||0,url:p.permalink||'',date:p.timestamp||''}));localStorage.setItem(POST_KEY,JSON.stringify(posts));renderPosts();refreshPostCardSelect();status('取得成功：'+posts.length+'件','var(--accent)')}catch(e){status('取得失敗：'+e.message,'var(--bad)')}}
+async function fetchInstagramPosts(){const base=localStorage.getItem('worker_url')||'https://reelanalyzer.nakamura0407.workers.dev';status('Instagram API接続中...','var(--warn)');try{const r=await fetch(base+'/reels');const j=await r.json();if(j.error)throw new Error(j.error.message||j.error);posts=(j.data||[]).map(p=>({id:p.id,title:firstLine(p.caption),caption:p.caption||'',views:p.views||0,reach:p.reach||0,saves:p.saved||p.saves||0,shares:p.shares||0,likes:p.like_count||0,comments:p.comments_count||0,url:p.permalink||'',date:p.timestamp||''}));localStorage.setItem(POST_KEY,JSON.stringify(posts));renderPosts();if(typeof refreshPostCardSelect==='function')refreshPostCardSelect();status('取得成功：'+posts.length+'件','var(--accent)')}catch(e){status('取得失敗：'+e.message,'var(--bad)')}}
 function firstLine(c=''){const s=(c||'').split('\n').map(x=>x.trim()).find(Boolean)||'無題';return s.length>42?s.slice(0,42)+'…':s}
 function importText(e){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{document.getElementById('refMaterial').value+=(v('refMaterial')?'\n\n':'')+`--- 取り込みファイル: ${f.name} ---\n${rd.result}\n--- ここまで ---`;if(!v('refTitle'))document.getElementById('refTitle').value=f.name};rd.readAsText(f,'utf-8')}
 function appendTemplate(){document.getElementById('refMaterial').value+=(v('refMaterial')?'\n\n':'')+'【資料の種類】\n商材/教材テキスト\n\n【知りたいこと】\n・根本思想\n・伸びる構造\n・中村さんジャンルへの翻訳\n\n【本文/要点】\n'}
@@ -96,7 +96,7 @@ function loadRef(id){const r=refs.find(x=>x.id===id);if(!r)return;editId=id;docu
 function deleteRef(id){if(!confirm('削除しますか？'))return;refs=refs.filter(r=>r.id!==id);localStorage.setItem(REF_KEY,JSON.stringify(refs));renderRefs()}function clearRefForm(){editId=null;['refTitle','refCreator','refUrl','refMaterial','refWhy','refStructure','refTranslate','refTemplate','refChecklist'].forEach(id=>document.getElementById(id).value='')}
 function renderRefs(){document.getElementById('referenceList').innerHTML=refs.length?refs.map(r=>`<div class="item"><b>${esc(r.title||'無題')}</b><div class="small">${esc(r.template||r.creator||'')}</div><div class="btns"><button class="secondary" onclick="loadRef(${r.id})">編集</button><button class="danger" onclick="deleteRef(${r.id})">削除</button></div></div>`).join(''):'<div class="small">参考構造なし</div>'}
 function renderPosts(){document.getElementById('postSummary').textContent='投稿数：'+posts.length+' / 総再生：'+num(posts.reduce((a,p)=>a+Number(p.views||0),0));document.getElementById('postList').innerHTML=posts.map(p=>`<div class="item"><b>${esc(p.title)}</b><div class="small">再生:${num(p.views)} / 保存:${num(p.saves)} / コメント:${num(p.comments)}</div></div>`).join('')}
-function exportAll(){const b=new Blob([JSON.stringify({posts,refs},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='rso_backup.json';a.click()}function importAll(e){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{const d=JSON.parse(rd.result);posts=d.posts||[];refs=d.refs||[];localStorage.setItem(POST_KEY,JSON.stringify(posts));localStorage.setItem(REF_KEY,JSON.stringify(refs));renderPosts();renderRefs();refreshPostCardSelect()};rd.readAsText(f)}function clearAll(){if(!confirm('全DB削除しますか？'))return;posts=[];refs=[];localStorage.removeItem(POST_KEY);localStorage.removeItem(REF_KEY);renderPosts();renderRefs()}
+function exportAll(){const b=new Blob([JSON.stringify({posts,refs,postCards:JSON.parse(localStorage.getItem('rso_post_cards_v1')||'{}')},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='rso_backup.json';a.click()}function importAll(e){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{const d=JSON.parse(rd.result);posts=d.posts||[];refs=d.refs||[];localStorage.setItem(POST_KEY,JSON.stringify(posts));localStorage.setItem(REF_KEY,JSON.stringify(refs));if(d.postCards){localStorage.setItem('rso_post_cards_v1',JSON.stringify(d.postCards));postCards=d.postCards;}renderPosts();renderRefs();if(typeof refreshPostCardSelect==='function')refreshPostCardSelect()};rd.readAsText(f)}function clearAll(){if(!confirm('全DB削除しますか？'))return;posts=[];refs=[];localStorage.removeItem(POST_KEY);localStorage.removeItem(REF_KEY);renderPosts();renderRefs()}
 renderRefs();renderPosts();
 </script>
 <script>
@@ -193,7 +193,7 @@ async function savePostCard(){
 
     status.innerHTML=
       '保存完了<br>' +
-      'スクショ:' + ((postCards[id].screens||[]).length) + '枚<br>' +
+      'スクショ:' + (screens.length||0) + '枚<br>' +
       '動画:' + (videoFile?.name || '未登録');
 
   }catch(err){

@@ -1,151 +1,205 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>過去投稿×参考DB検証</title><style>
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>過去投稿×参考DB検証</title>
+<style>
 :root{--bg:#0b1016;--panel:#121922;--line:#263445;--text:#eef4ff;--muted:#94a7bc;--accent:#57e0aa;--warn:#ffd166;--bad:#ff6b6b;--r:18px}
 *{box-sizing:border-box}body{margin:0;background:#0b1016;color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.55}
 header{padding:20px 22px;border-bottom:1px solid var(--line);background:#0f151d;position:sticky;top:0;z-index:10}
 h1{margin:0;font-size:24px}.sub{color:var(--muted);font-size:13px;margin-top:4px}
 nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}nav a{color:var(--text);text-decoration:none;background:#1b2734;border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:13px;font-weight:800}nav a.active{background:var(--accent);color:#06130f}
-.wrap{max-width:1180px;margin:0 auto;padding:22px}.clean{max-width:920px}.layout{display:grid;grid-template-columns:360px 1fr;gap:18px}@media(max-width:900px){.layout{grid-template-columns:1fr}}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:18px}.homegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}@media(max-width:900px){.homegrid{grid-template-columns:1fr}}
-.homecard{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:22px;text-decoration:none;color:var(--text);display:block;min-height:190px}.homecard:hover{border-color:var(--accent)}.homecard b{font-size:20px}.homecard p{color:var(--muted);font-size:14px}.tag{display:inline-block;background:#0b1118;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:4px 9px;font-size:12px;margin-top:10px}
-input,textarea,select{width:100%;background:#0b1118;border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:12px;font-size:14px}textarea{min-height:120px;resize:vertical}label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
-button,.btn{border:0;background:var(--accent);padding:10px 14px;border-radius:999px;font-weight:800;cursor:pointer;color:#06130f;text-decoration:none;display:inline-flex;font-size:13px}button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px solid var(--line)}button.warn{background:var(--warn);color:#221700}button.danger{background:#40242a;color:#ffd4d4;border:1px solid #67323b}
-.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.grid2{grid-template-columns:1fr}}
-.item{padding:12px;border:1px solid var(--line);border-radius:14px;background:#101721;cursor:pointer;margin-bottom:8px}.item.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}.item:hover{border-color:#3b526a}
-.small{font-size:12px;color:var(--muted)}.status,.note,.preview{padding:12px;border-radius:12px;background:#0b1118;border:1px solid var(--line);color:var(--muted);font-size:13px;margin-top:10px}.ok{color:var(--accent)}.bad{color:var(--bad)}
-.output{white-space:pre-wrap;background:#0b1118;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;line-height:1.7;max-height:620px;overflow:auto}.hidden{display:none}main.wrap.layout>section,main.wrap.layout>aside{min-width:0}
-</style><script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script></head><body>
-<header><h1>過去投稿×参考DB検証</h1><div class="sub">1投稿を、蓄積した参考DB・商材テキスト・投稿カルテに照合して、バズる構成案まで出す。</div><nav><a href="./index.html">TOP</a><a href="./check.html">投稿前チェック</a><a class="active" href="./compare.html">過去投稿比較</a><a href="./admin.html">Admin</a></nav></header>
-<main class="wrap layout"><aside>
-<div class="card"><h2>検証する過去投稿</h2><div class="note">投稿同士の比較ではなく、選んだ1投稿を参考DB全体と照合します。</div><div class="btns"><button class="secondary" onclick="selectTop()">上位投稿</button><button class="secondary" onclick="selectBottom()">下位投稿</button><button class="secondary" onclick="clearPost()">解除</button></div><label>投稿検索</label><input id="postSearch" oninput="renderPosts()" placeholder="タイトル・キャプション検索"><div id="postList" style="margin-top:14px"></div></div>
-<div class="card"><h2>照合DB</h2><div id="dbSummary" class="output">読み込み中</div><div class="note">参考DBは全件を自動投入。商材本文も入れて、ChatGPT側で重要部分だけ整理させます。</div></div>
-</aside><section>
-<div class="card"><h2>検証条件</h2><div class="grid2"><div><label>目的</label><select id="goal" onchange="buildPrompt()"><option>再生数を伸ばす</option><option>フォローにつなげる</option><option>仕事依頼につなげる</option><option>地域で話題化する</option><option>ナカムロボ/IP育成につなげる</option></select></div><div><label>次に欲しい提案</label><select id="proposal" onchange="buildPrompt()"><option>バズる構成案まで出す</option><option>冒頭0〜2秒を重点改善</option><option>コメントが増える余白を作る</option><option>シリーズ化の案を出す</option></select></div></div><label>メモ</label><textarea id="memo" oninput="buildPrompt()" placeholder="例：この投稿は伸びた理由を知りたい / 次は工場ネタに転用したい"></textarea><div class="btns"><button onclick="buildPrompt()">プロンプト生成</button><button class="secondary" onclick="copyPrompt()">コピー</button><button class="warn" onclick="downloadPack()">ZIP生成</button></div></div>
-<div class="card"><h2>選択中</h2><div id="selectedSummary" class="output">未選択</div></div>
-<div class="card"><h2>ChatGPTへ渡す照合プロンプト</h2><div id="prompt" class="output">ここに生成されます。</div></div>
-</section></main>
-<script>
-const POST_KEY='rso_posts_v1',REF_KEY='rso_refs_v1',CARD_KEY='rso_post_cards_v1';
-let posts=JSON.parse(localStorage.getItem(POST_KEY)||'[]');
-let refs=JSON.parse(localStorage.getItem(REF_KEY)||'[]');
-let postCards=JSON.parse(localStorage.getItem(CARD_KEY)||'{}');
-let selectedPostId=null;
-function v(id){return document.getElementById(id)?.value||''}
-function num(n){return Number(n||0).toLocaleString()}
-function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function selectedPostData(){return posts.find(p=>String(p.id)===String(selectedPostId))||null}
-function selectedCardData(){return selectedPostId ? (postCards[selectedPostId]||{}) : {}}
-function renderPosts(){const el=document.getElementById('postList');const q=v('postSearch').toLowerCase();if(!posts.length){el.innerHTML='<div class="small">AdminでInstagram投稿を取得してください</div>';renderSummary();return;}const sorted=[...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0)).filter(p=>(String(p.title||'')+' '+String(p.caption||'')).toLowerCase().includes(q));el.innerHTML=sorted.map(p=>`<div class="item ${String(selectedPostId)===String(p.id)?'active':''}" onclick="selectPost('${esc(String(p.id))}')"><b>${esc(p.title||'無題')}</b><div class="small">再生:${num(p.views)} / 保存:${num(p.saves)} / コメント:${num(p.comments)}</div></div>`).join('')||'<div class="small">該当なし</div>';renderSummary();}
-function renderDbSummary(){const cards=Object.keys(postCards).length;document.getElementById('dbSummary').textContent=`参考構造DB：${refs.length}件
-投稿DB：${posts.length}件
-投稿カルテ：${cards}件
+.wrap{max-width:1180px;margin:0 auto;padding:22px}.layout{display:grid;grid-template-columns:340px 1fr;gap:18px}@media(max-width:900px){.layout{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:18px}
+input,textarea,select{width:100%;background:#0b1118;border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:12px;font-size:14px}textarea{min-height:120px;resize:vertical}
+label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}button,.btn{border:0;background:var(--accent);padding:10px 14px;border-radius:999px;font-weight:800;cursor:pointer;color:#06130f;text-decoration:none;display:inline-flex;font-size:13px}
+button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px solid var(--line)}button.warn{background:var(--warn);color:#221700}button.danger{background:#40242a;color:#ffd4d4;border:1px solid #67323b}.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.grid2{grid-template-columns:1fr}}
+.item{padding:12px;border:1px solid var(--line);border-radius:14px;background:#101721;cursor:pointer;margin-bottom:8px}.item.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}.item:hover{border-color:#3a526b}
+.small{font-size:12px;color:var(--muted)}.status,.note,.preview{padding:12px;border-radius:12px;background:#0b1118;border:1px solid var(--line);color:var(--muted);font-size:13px;margin-top:10px}.ok{color:var(--accent)}.ng{color:var(--bad)}.warntext{color:var(--warn)}
+.output{white-space:pre-wrap;background:#0b1118;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;line-height:1.7;max-height:560px;overflow:auto}.hidden{display:none}.pill{display:inline-block;border:1px solid var(--line);background:#0b1118;border-radius:999px;padding:4px 8px;font-size:12px;color:var(--muted);margin:2px 4px 2px 0}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+</head>
+<body>
+<header>
+  <h1>過去投稿×参考DB検証</h1>
+  <div class="sub">1投稿を、参考DB・商材テキスト・投稿カルテに照合して、バズる構成案まで出す。</div>
+  <nav>
+    <a href="./index.html">TOP</a>
+    <a href="./check.html">投稿前チェック</a>
+    <a class="active" href="./compare.html">過去投稿比較</a>
+    <a href="./admin.html">Admin</a>
+  </nav>
+</header>
 
-このページでは参考DBを個別選択せず、全件を照合材料にします。`;}
-function selectPost(id){selectedPostId=id;renderPosts();buildPrompt();}
-function clearPost(){selectedPostId=null;renderPosts();buildPrompt();}
-function selectTop(){const s=[...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0));selectedPostId=s[0]?.id||null;renderPosts();buildPrompt();}
-function selectBottom(){const s=[...posts].sort((a,b)=>Number(a.views||0)-Number(b.views||0));selectedPostId=s[0]?.id||null;renderPosts();buildPrompt();}
-function renderSummary(){const p=selectedPostData();const c=selectedCardData();document.getElementById('selectedSummary').textContent=p?`【検証する過去投稿】
-${p.title}
-再生:${num(p.views)} / リーチ:${num(p.reach)} / 保存:${num(p.saves)} / シェア:${num(p.shares)} / コメント:${num(p.comments)}
+<main class="wrap layout">
+  <aside>
+    <div class="card">
+      <h2>DB状態</h2>
+      <div id="dbStatus" class="status">DB確認中...</div>
+      <div class="btns">
+        <button class="secondary" onclick="reloadDB()">DB再読込</button>
+        <a class="btn secondary" href="./admin.html">Adminへ</a>
+      </div>
+      <label class="btn secondary" for="importFile">バックアップJSON読込</label>
+      <input id="importFile" class="hidden" type="file" accept="application/json" onchange="importBackup(event)">
+      <div class="note">Adminの「全DB書出」で出したJSONもここで読めます。GitHub Pagesのキャッシュ対策として、アップ後は Ctrl+F5 推奨。</div>
+    </div>
+
+    <div class="card">
+      <h2>検証する過去投稿</h2>
+      <div class="note">投稿同士の比較ではなく、選んだ1投稿を参考DB全体と照合します。</div>
+      <div class="btns">
+        <button class="secondary" onclick="selectTop()">上位投稿</button>
+        <button class="secondary" onclick="selectBottom()">下位投稿</button>
+        <button class="secondary" onclick="clearPost()">解除</button>
+      </div>
+      <label>投稿検索</label>
+      <input id="postSearch" placeholder="タイトル・キャプション検索" oninput="renderPosts()">
+      <div id="postList" style="margin-top:14px"></div>
+    </div>
+
+    <div class="card">
+      <h2>照合DB</h2>
+      <div id="refSummary" class="status">読み込み中...</div>
+      <div class="btns">
+        <button class="secondary" onclick="selectAllRefs()">参考DB全使用</button>
+        <button class="secondary" onclick="clearRefs()">参考DBなし</button>
+      </div>
+      <div id="refList" style="margin-top:14px"></div>
+    </div>
+  </aside>
+
+  <section>
+    <div class="card">
+      <h2>検証条件</h2>
+      <div class="grid2">
+        <div><label>目的</label><select id="goal"><option>再生数を伸ばす</option><option>フォロー増につなげる</option><option>仕事依頼につなげる</option><option>工場化ストーリーを育てる</option><option>ナカムロボ/IPを育てる</option><option>保存・シェアを増やす</option></select></div>
+        <div><label>次に欲しい提案</label><select id="want"><option>バズる構成案まで出す</option><option>冒頭0〜2秒を改善</option><option>サムネ文字を改善</option><option>キャプションを改善</option><option>シリーズ化する</option><option>仕事導線に変換する</option></select></div>
+      </div>
+      <label>メモ</label>
+      <textarea id="memo" placeholder="例：この投稿が伸びた理由を知りたい / 次は工場ネタに転用したい"></textarea>
+      <div class="btns"><button onclick="buildPrompt()">プロンプト生成</button><button class="secondary" onclick="copyPrompt()">コピー</button><button class="warn" onclick="downloadPack()">ZIP生成</button></div>
+    </div>
+
+    <div class="card"><h2>選択中</h2><div id="selectedSummary" class="output">未選択</div></div>
+    <div class="card"><h2>ChatGPTへ渡す照合プロンプト</h2><div id="prompt" class="output">ここに生成されます。</div></div>
+  </section>
+</main>
+
+<script>
+const POST_KEY='rso_posts_v1';
+const REF_KEY='rso_refs_v1';
+const CARD_KEY='rso_post_cards_v1';
+let posts=[],refs=[],postCards={},selectedPostId=null,selectedRefs=new Set();
+
+function safeParse(raw,fallback){try{return raw?JSON.parse(raw):fallback}catch(e){return fallback}}
+function esc(s=''){return String(s).replace(/[&<>\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
+function num(n){return Number(n||0).toLocaleString()}
+function val(id){return document.getElementById(id)?.value||''}
+function firstLine(c=''){return (c||'').split('\n').map(x=>x.trim()).find(Boolean)||'無題'}
+
+function loadDB(){
+  posts=safeParse(localStorage.getItem(POST_KEY),[]);
+  refs=safeParse(localStorage.getItem(REF_KEY),[]);
+  postCards=safeParse(localStorage.getItem(CARD_KEY),{});
+  if(!Array.isArray(posts))posts=[];
+  if(!Array.isArray(refs))refs=[];
+  selectedRefs=new Set(refs.map(r=>String(r.id)));
+}
+function reloadDB(){loadDB();renderAll();buildPrompt(false)}
+
+function renderStatus(){
+  const cardCount=Object.keys(postCards||{}).length;
+  const ok=posts.length||refs.length||cardCount;
+  document.getElementById('dbStatus').innerHTML = ok
+    ? `<span class="ok">読み込みOK</span><br>投稿DB：${posts.length}件<br>参考DB：${refs.length}件<br>投稿カルテ：${cardCount}件`
+    : `<span class="ng">DBが空です</span><br>AdminでInstagram投稿取得・参考構造登録をしてください。すでに登録済みならCtrl+F5後にDB再読込。`;
+  document.getElementById('refSummary').innerHTML = refs.length
+    ? `参考DB：${refs.length}件を照合対象にできます。<br><span class="small">クリックで個別にON/OFF。</span>`
+    : `参考DBなし。Adminでノウハウ・商材テキストを登録してください。`;
+}
+
+function renderPosts(){
+  const el=document.getElementById('postList');
+  if(!posts.length){el.innerHTML='<div class="small">投稿DBなし。AdminでInstagram投稿を取得してください。</div>';renderSummary();return}
+  const q=val('postSearch').toLowerCase().trim();
+  let list=[...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0));
+  if(q)list=list.filter(p=>String(p.title||'').toLowerCase().includes(q)||String(p.caption||'').toLowerCase().includes(q));
+  el.innerHTML=list.slice(0,80).map(p=>`
+    <div class="item ${selectedPostId===p.id?'active':''}" onclick="selectPost('${String(p.id).replace(/'/g,'\\\'')}')">
+      <b>${esc(p.title||firstLine(p.caption))}</b>
+      <div class="small">再生:${num(p.views)} / 保存:${num(p.saves)} / コメント:${num(p.comments)} ${postCards[p.id]?' / カルテあり':''}</div>
+    </div>`).join('') || '<div class="small">検索結果なし</div>';
+  renderSummary();
+}
+
+function renderRefs(){
+  const el=document.getElementById('refList');
+  if(!refs.length){el.innerHTML='<div class="small">参考DBなし</div>';return}
+  el.innerHTML=refs.map(r=>`
+    <div class="item ${selectedRefs.has(String(r.id))?'active':''}" onclick="toggleRef('${String(r.id).replace(/'/g,'\\\'')}')">
+      <b>${esc(r.template||r.title||'無題')}</b>
+      <div class="small">${esc(r.creator||r.type||'参考DB')}</div>
+    </div>`).join('');
+}
+function renderAll(){renderStatus();renderPosts();renderRefs();renderSummary()}
+
+function selectedPostData(){return posts.find(p=>String(p.id)===String(selectedPostId))||null}
+function selectedRefData(){return refs.filter(r=>selectedRefs.has(String(r.id)))}
+function selectPost(id){selectedPostId=id;renderPosts();buildPrompt(false)}
+function clearPost(){selectedPostId=null;renderPosts();buildPrompt(false)}
+function toggleRef(id){id=String(id);selectedRefs.has(id)?selectedRefs.delete(id):selectedRefs.add(id);renderRefs();renderSummary();buildPrompt(false)}
+function selectAllRefs(){selectedRefs=new Set(refs.map(r=>String(r.id)));renderRefs();renderSummary();buildPrompt(false)}
+function clearRefs(){selectedRefs.clear();renderRefs();renderSummary();buildPrompt(false)}
+function selectTop(){const s=[...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0));selectedPostId=s[0]?.id||null;renderPosts();buildPrompt(false)}
+function selectBottom(){const s=[...posts].sort((a,b)=>Number(a.views||0)-Number(b.views||0));selectedPostId=s[0]?.id||null;renderPosts();buildPrompt(false)}
+
+function renderSummary(){
+  const p=selectedPostData();const rs=selectedRefData();const card=p?postCards[p.id]:null;
+  document.getElementById('selectedSummary').textContent =
+`【検証する過去投稿】
+${p ? `・${p.title||firstLine(p.caption)}｜再生:${p.views||0}｜保存:${p.saves||0}｜コメント:${p.comments||0}` : '未選択'}
 
 【投稿カルテ】
-タグ:${c.tags||'未登録'}
-タイプ:${c.type||'未登録'}
-解析:${c.analysis?'登録あり':'未登録'}
-スクショ:${(c.screens||[]).length}枚 / 動画:${c.videoName||'未登録'}`:'未選択';}
-function refTextAll(){return refs.map((r,i)=>`【参考DB ${i+1}】
-タイトル:${r.title||''}
-テンプレ名:${r.template||''}
-出典:${r.creator||''}
-種別:${r.type||''}
-なぜ気になったか:${r.why||''}
+${card ? `あり｜タグ:${card.tags||''}｜タイプ:${card.type||''}` : 'なし'}
 
-抽象化した構造:
-${r.structure||''}
+【照合する参考DB】
+${rs.length ? rs.map(r=>`・${r.template||r.title||'無題'}｜${r.creator||r.type||''}`).join('\n') : '未選択'}
 
-自分ジャンルへの翻訳:
-${r.translate||''}
+【DB全体】
+投稿DB:${posts.length}件 / 参考DB:${refs.length}件 / 投稿カルテ:${Object.keys(postCards||{}).length}件`;
+}
 
-チェックリスト:
-${r.checklist||''}
+function buildPrompt(forceScroll=true){
+  const p=selectedPostData();const rs=selectedRefData();const card=p?postCards[p.id]:null;
+  const top=[...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0)).slice(0,10).map((x,i)=>`${i+1}. ${x.title||firstLine(x.caption)}｜再生:${x.views||0}｜保存:${x.saves||0}｜コメント:${x.comments||0}`).join('\n');
+  const postText=p?`タイトル:${p.title||firstLine(p.caption)}\nURL:${p.url||''}\n日付:${p.date||''}\n再生:${p.views||0}\nリーチ:${p.reach||0}\n保存:${p.saves||0}\nシェア:${p.shares||0}\nいいね:${p.likes||0}\nコメント:${p.comments||0}\nキャプション:\n${p.caption||''}`:'未選択。まず左側から投稿を選んでください。';
+  const cardText=card?`勝ち筋タグ:${card.tags||''}\n投稿タイプ:${card.type||''}\n解析結果:\n${card.analysis||''}\n投稿メモ:\n${card.memo||''}\n動画ファイル名:${card.videoName||''}`:'投稿カルテなし。動画やスクショ分析がある場合はAdminで保存すると精度が上がります。';
+  const refText=rs.map((r,i)=>`【参考DB ${i+1}】\nタイトル:${r.title||''}\nテンプレ名:${r.template||''}\n出典:${r.creator||''}\n種別:${r.type||''}\nなぜ気になったか:${r.why||''}\n\n抽象化した構造:\n${r.structure||''}\n\n自分ジャンルへの翻訳:\n${r.translate||''}\n\nチェックリスト:\n${r.checklist||''}\n\n元資料/商材本文/参考メモ:\n${r.material||''}`).join('\n\n---\n\n');
+  const prompt=`あなたはInstagramリールの投稿構造を検証するSNS戦略AIです。\n\nこれは「過去投稿同士の比較」ではありません。\n1つの【中村さんの過去投稿】を、【参考DB・商材テキスト・投稿カルテ・過去の上位投稿傾向】に照らして検証してください。\n\n【検証目的】\n${val('goal')}\n\n【次に欲しい提案】\n${val('want')}\n\n【中村さんメモ】\n${val('memo')}\n\n【検証する過去投稿】\n${postText}\n\n【この投稿のカルテ】\n${cardText}\n\n【過去上位投稿の傾向】\n${top||'まだ投稿DBなし'}\n\n【照合する参考DB / ノウハウDB】\n${refText||'参考DB未選択。投稿DBとカルテのみで検証してください。'}\n\n重要：\n- 数字だけで判断せず、文脈・問題提起・未完成感・リアル感・コメント余白・続き感・地域性を見る。\n- 他者の文章や商材本文をそのままコピーせず、構造・考え方・判断基準として抽象化する。\n- 中村さんのジャンルは、工場化・職人・地域・AI制作・ナカムロボ物語・府中/福山のリアル感に翻訳する。\n- 動画本体が無い場合でも、キャプション・数字・カルテ・参考DBから仮説として出す。断定しすぎない。\n\n出力：\n1. 一言結論\n2. この投稿が伸びた/伸びなかった理由\n3. 参考DBに近い点\n4. 参考DBとズレている点\n5. 足りない要素\n6. 中村さんジャンルへの翻訳\n7. 次回投稿で使うべき改善点\n8. 冒頭0〜2秒の改善案10個\n9. サムネ文字案10個\n10. 15秒構成案を3パターン\n11. コメントが来やすい締め方\n12. 保存用の勝ち筋テンプレ名\n13. 投稿前チェックリスト\n14. 次に試す投稿案5つ`;
+  document.getElementById('prompt').textContent=prompt;
+  if(forceScroll)document.getElementById('prompt').scrollIntoView({behavior:'smooth',block:'start'});
+  return prompt;
+}
 
-元資料 / 商材本文 / 参考メモ:
-${r.material||''}`).join('
+async function copyPrompt(){const p=buildPrompt(false);await navigator.clipboard.writeText(p);alert('コピーしました')}
+async function downloadPack(){
+  const prompt=buildPrompt(false);
+  if(typeof JSZip==='undefined'){alert('ZIP生成ライブラリが読み込めません');return}
+  const z=new JSZip();
+  z.file('reference_alignment_prompt.txt',prompt);
+  z.file('reference_alignment_data.json',JSON.stringify({generatedAt:new Date().toISOString(),goal:val('goal'),want:val('want'),memo:val('memo'),selectedPost:selectedPostData(),selectedPostCard:selectedPostData()?postCards[selectedPostData().id]:null,selectedReferences:selectedRefData()},null,2));
+  const blob=await z.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='reference_alignment_pack.zip';a.click();URL.revokeObjectURL(a.href);
+}
+function importBackup(e){
+  const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const d=JSON.parse(r.result);if(Array.isArray(d.posts)){posts=d.posts;localStorage.setItem(POST_KEY,JSON.stringify(posts))}if(Array.isArray(d.refs)){refs=d.refs;localStorage.setItem(REF_KEY,JSON.stringify(refs))}if(d.postCards&&typeof d.postCards==='object'){postCards=d.postCards;localStorage.setItem(CARD_KEY,JSON.stringify(postCards))}selectedRefs=new Set(refs.map(x=>String(x.id)));renderAll();alert('読み込みました')}catch(err){alert('JSON読込失敗：'+err.message)}};
+  r.readAsText(f,'utf-8');
+}
 
----
-
-');}
-function cardText(c){if(!c||!Object.keys(c).length)return '投稿カルテ未登録';return `タグ:${c.tags||''}
-投稿タイプ:${c.type||''}
-ChatGPT解析結果:
-${c.analysis||''}
-
-投稿メモ:
-${c.memo||''}
-
-スクショ名:${(c.screens||[]).map(s=>s.name).join(', ')||'なし'}
-動画名:${c.videoName||'なし'}
-保存日時:${c.savedAt||''}`;}
-function buildPrompt(){const p=selectedPostData();const c=selectedCardData();const postText=p?`タイトル:${p.title||''}
-URL:${p.url||''}
-日付:${p.date||''}
-再生:${p.views||0}
-リーチ:${p.reach||0}
-保存:${p.saves||0}
-シェア:${p.shares||0}
-いいね:${p.likes||0}
-コメント:${p.comments||0}
-
-キャプション:
-${p.caption||''}`:'未選択';const prompt=`あなたはInstagramリールの戦略編集者です。
-
-これは「過去投稿同士の比較」ではありません。
-選択した1つの過去投稿を、蓄積した参考DB・商材テキスト・投稿カルテと照合し、次にバズるための構成案・改善案まで作ってください。
-
-【検証目的】
-${v('goal')}
-
-【欲しい提案】
-${v('proposal')}
-
-【中村さんメモ】
-${v('memo')||'なし'}
-
-【検証する過去投稿】
-${postText}
-
-【この投稿に紐づいた投稿カルテ】
-${cardText(c)}
-
-【蓄積した参考DB / 商材 / ノウハウ全文】
-${refTextAll()||'未登録'}
-
-重要ルール：
-- 投稿同士を比較しない。比較対象は参考DB・商材・勝ち構造。
-- 商材本文や参考資料は全部読んだうえで、SNS改善に必要な部分だけを選別する。
-- どうでもいい情報は捨ててよい。捨てた理由も短く言う。
-- 他者の文章や商材内容をそのままコピーせず、構造・考え方・判断基準として抽象化する。
-- ど素人ホテル式が含まれる場合は、ホテル再建ではなく、中村さんの工場化・職人・地域・AI制作・ナカムロボ物語へ翻訳する。
-- 数字だけで判断せず、文脈・問題提起・未完成感・リアル感・コメント余白・続き感・地域性を見る。
-- 最後に「次回そのまま撮れる構成」を出す。
-
-出力形式：
-1. 一言結論
-2. この投稿が参考DBに近い点
-3. ズレている点
-4. 足りない要素
-5. 伸びた/伸びなかった理由
-6. 捨ててよい商材情報・拾うべき商材情報
-7. 中村さんジャンルへの翻訳
-8. 次回投稿の改善方針
-9. バズるための15秒構成案
-10. 冒頭0〜2秒フック案10個
-11. サムネ/画面文字案10個
-12. コメントが増える問いかけ案5個
-13. 保存用の勝ち筋テンプレ名
-14. 投稿前チェックリスト
-15. 次に試す投稿案5つ`;document.getElementById('prompt').textContent=prompt;return prompt;}
-async function copyPrompt(){const p=buildPrompt();await navigator.clipboard.writeText(p);alert('コピーしました');}
-async function downloadPack(){if(typeof JSZip==='undefined'){alert('ZIP生成ライブラリが読み込めません');return;}const z=new JSZip();const prompt=buildPrompt();z.file('buzz_alignment_prompt.txt',prompt);z.file('selected_post.json',JSON.stringify(selectedPostData(),null,2));z.file('selected_post_card.json',JSON.stringify(selectedCardData(),null,2));z.file('reference_db_full.json',JSON.stringify(refs,null,2));z.file('readme.txt','このZIPと、必要なら該当投稿のスクショ/動画をChatGPTへ添付してください。');const blob=await z.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='buzz_alignment_pack.zip';a.click();URL.revokeObjectURL(a.href);}
-renderDbSummary();renderPosts();renderSummary();buildPrompt();
-</script></body></html>
+loadDB();renderAll();buildPrompt(false);
+</script>
+</body>
+</html>
