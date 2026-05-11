@@ -13,9 +13,6 @@ nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}nav a{color:var(--text);
 .wrap{max-width:1180px;margin:0 auto;padding:22px}.clean{max-width:920px}
 .layout{display:grid;grid-template-columns:340px 1fr;gap:18px}@media(max-width:900px){.layout{grid-template-columns:1fr}}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:18px}
-.homegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}@media(max-width:900px){.homegrid{grid-template-columns:1fr}}
-.homecard{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:22px;text-decoration:none;color:var(--text);display:block;min-height:190px}
-.homecard:hover{border-color:var(--accent)}.homecard b{font-size:20px}.homecard p{color:var(--muted);font-size:14px}.tag{display:inline-block;background:#0b1118;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:4px 9px;font-size:12px;margin-top:10px}
 input,textarea,select{width:100%;background:#0b1118;border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:12px;font-size:14px}
 textarea{min-height:120px;resize:vertical}label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
 button,.btn{border:0;background:var(--accent);padding:10px 14px;border-radius:999px;font-weight:800;cursor:pointer;color:#06130f;text-decoration:none;display:inline-flex;font-size:13px}
@@ -23,11 +20,11 @@ button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px 
 .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.grid2{grid-template-columns:1fr}}
 .item{padding:12px;border:1px solid var(--line);border-radius:14px;background:#101721;cursor:pointer;margin-bottom:8px}.item.active{border-color:var(--accent)}
 .small{font-size:12px;color:var(--muted)}.status,.note,.preview{padding:12px;border-radius:12px;background:#0b1118;border:1px solid var(--line);color:var(--muted);font-size:13px;margin-top:10px}
-.output{white-space:pre-wrap;background:#0b1118;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;line-height:1.7;max-height:560px;overflow:auto}
+.output{white-space:pre-wrap;background:#0b1118;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;line-height:1.7;max-height:760px;overflow:auto}
 .hidden{display:none}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </head>
+
 <body>
 <header>
   <h1>過去投稿×参考DB検証</h1>
@@ -46,32 +43,44 @@ button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px 
       <h2>検証する過去投稿</h2>
       <div class="note">ここでは投稿同士を比較しません。1投稿を選び、参考DBと照合します。</div>
       <div class="btns">
+        <button class="secondary" onclick="reloadDB()">DB再読込</button>
         <button class="secondary" onclick="selectTop()">上位投稿を選択</button>
         <button class="secondary" onclick="selectBottom()">下位投稿を選択</button>
         <button class="secondary" onclick="clearPost()">選択解除</button>
       </div>
+
+      <label>投稿検索</label>
+      <input id="postSearch" placeholder="タイトル・キャプション検索" oninput="renderPosts()">
+
+      <div id="postStatus" class="status">読み込み中</div>
       <div id="postList" style="margin-top:14px"></div>
     </div>
 
     <div class="card">
       <h2>照合する参考DB</h2>
-      <div class="note">プロンプトには元資料の全文は入れません。保存済みの構造・翻訳・チェックリストだけを使います。</div>
+      <div class="note">保存済みの構造・商材本文・翻訳・チェックリストをプロンプトに入れます。</div>
       <div class="btns">
         <button class="secondary" onclick="selectAllRefs()">全選択</button>
         <button class="secondary" onclick="clearRefs()">選択解除</button>
       </div>
+      <div id="refStatus" class="status">読み込み中</div>
       <div id="refList" style="margin-top:14px"></div>
     </div>
   </aside>
 
   <section>
-    <div class="card"><h2>選択中</h2>
+    <div class="card">
+      <h2>選択中</h2>
       <div id="selectedSummary" class="output">未選択</div>
     </div>
 
     <div class="card">
       <h2>ChatGPTへ渡す照合プロンプト</h2>
-      <div id="prompt" class="output">ここに生成されます。</div>
+      <div class="btns">
+        <button onclick="buildPrompt()">プロンプト生成</button>
+        <button class="secondary" onclick="copyPrompt()">コピー</button>
+      </div>
+      <div id="prompt" class="output" style="margin-top:14px">ここに生成されます。</div>
     </div>
   </section>
 </main>
@@ -79,55 +88,160 @@ button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px 
 <script>
 const POST_KEY='rso_posts_v1';
 const REF_KEY='rso_refs_v1';
-let posts=JSON.parse(localStorage.getItem(POST_KEY)||'[]');
-let refs=JSON.parse(localStorage.getItem(REF_KEY)||'[]');
+const CARD_KEY='rso_post_cards_v1';
+
+let posts=[];
+let refs=[];
+let postCards={};
 let selectedPostId=null;
 let selectedRefs=new Set();
 
-function v(id){return document.getElementById(id).value||''}
+function esc(s=''){
+  return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+}
 function num(n){return Number(n||0).toLocaleString()}
-function esc(s=''){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
+function safeParse(raw,fallback){
+  try{
+    if(!raw)return fallback;
+    return JSON.parse(raw);
+  }catch(e){
+    console.warn('JSON parse error',e);
+    return fallback;
+  }
+}
+function getAny(keys,fallback){
+  for(const k of keys){
+    const raw=localStorage.getItem(k);
+    const parsed=safeParse(raw,null);
+    if(parsed && ((Array.isArray(parsed)&&parsed.length) || (!Array.isArray(parsed)&&Object.keys(parsed).length))){
+      return parsed;
+    }
+  }
+  return fallback;
+}
+function normalizePosts(data){
+  if(!Array.isArray(data))return [];
+  return data.map(p=>({
+    id:String(p.id||p.media_id||p.shortcode||p.url||Date.now()+Math.random()),
+    title:p.title||firstLine(p.caption)||'無題',
+    caption:p.caption||'',
+    views:p.views||p.plays||p.video_views||p.reach||0,
+    reach:p.reach||0,
+    saves:p.saves||p.saved||0,
+    shares:p.shares||0,
+    likes:p.likes||p.like_count||0,
+    comments:p.comments||p.comments_count||0,
+    url:p.url||p.permalink||'',
+    date:p.date||p.timestamp||''
+  }));
+}
+function firstLine(c=''){
+  return (String(c).split('\n').map(x=>x.trim()).find(Boolean)||'無題').slice(0,60);
+}
+function reloadDB(){
+  posts=normalizePosts(getAny([POST_KEY,'posts','ig_posts','rso_posts','instagram_posts'],[]));
+  refs=getAny([REF_KEY,'refs','rso_refs','reference_db'],[]);
+  if(!Array.isArray(refs))refs=[];
+  postCards=getAny([CARD_KEY,'postCards','rso_cards'],{});
+  if(!postCards || Array.isArray(postCards))postCards={};
+
+  // 正規KEYへ戻しておく
+  localStorage.setItem(POST_KEY,JSON.stringify(posts));
+  localStorage.setItem(REF_KEY,JSON.stringify(refs));
+  localStorage.setItem(CARD_KEY,JSON.stringify(postCards));
+
+  console.log('POSTS',posts);
+  console.log('REFS',refs);
+  console.log('POST CARDS',postCards);
+
+  // 参考DBは基本すべて照合対象にしておく
+  if(refs.length && selectedRefs.size===0){
+    selectedRefs=new Set(refs.map(r=>String(r.id)));
+  }
+
+  renderPosts();
+  renderRefs();
+  renderSummary();
+}
 
 function renderPosts(){
   const el=document.getElementById('postList');
+  const status=document.getElementById('postStatus');
+  const q=(document.getElementById('postSearch')?.value||'').toLowerCase();
+
   if(!posts.length){
-    el.innerHTML='<div class="small">AdminでInstagram投稿を取得してください</div>';
+    status.innerHTML='投稿DBがありません。AdminでInstagram投稿を取得してください。';
+    el.innerHTML='';
+    renderSummary();
     return;
   }
-  const sorted=[...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0));
+
+  const sorted=[...posts]
+    .filter(p=>(p.title+' '+p.caption).toLowerCase().includes(q))
+    .sort((a,b)=>Number(b.views||0)-Number(a.views||0));
+
+  status.innerHTML=`読み込み完了：${posts.length}件 / 表示：${sorted.length}件`;
+
   el.innerHTML=sorted.map(p=>`
-    <div class="item ${selectedPostId===p.id?'active':''}" onclick="selectPost('${p.id}')">
+    <div class="item ${selectedPostId===String(p.id)?'active':''}" onclick="selectPost('${String(p.id).replace(/'/g,"\\'")}')">
       <b>${esc(p.title)}</b>
       <div class="small">再生:${num(p.views)} / 保存:${num(p.saves)} / コメント:${num(p.comments)}</div>
     </div>
   `).join('');
+
   renderSummary();
 }
 
 function renderRefs(){
   const el=document.getElementById('refList');
+  const status=document.getElementById('refStatus');
+
   if(!refs.length){
-    el.innerHTML='<div class="small">Adminで参考構造DBを登録してください</div>';
+    status.innerHTML='参考DBがありません。Adminで参考構造DBを保存してください。';
+    el.innerHTML='';
+    renderSummary();
     return;
   }
+
+  status.innerHTML=`読み込み完了：${refs.length}件`;
+
   el.innerHTML=refs.map(r=>`
-    <div class="item ${selectedRefs.has(String(r.id))?'active':''}" onclick="toggleRef('${r.id}')">
+    <div class="item ${selectedRefs.has(String(r.id))?'active':''}" onclick="toggleRef('${String(r.id).replace(/'/g,"\\'")}')">
       <b>${esc(r.template||r.title||'無題')}</b>
       <div class="small">${esc(r.creator||r.type||'参考DB')}</div>
     </div>
   `).join('');
+
   renderSummary();
 }
 
-function selectPost(id){selectedPostId=id;renderPosts();}
-function clearPost(){selectedPostId=null;renderPosts();}
-function selectedPostData(){return posts.find(p=>p.id===selectedPostId)||null;}
-
-function toggleRef(id){id=String(id);selectedRefs.has(id)?selectedRefs.delete(id):selectedRefs.add(id);renderRefs();}
-function selectedRefData(){return refs.filter(r=>selectedRefs.has(String(r.id)));}
-function selectAllRefs(){selectedRefs=new Set(refs.map(r=>String(r.id)));renderRefs();}
-function clearRefs(){selectedRefs.clear();renderRefs();}
-
+function selectPost(id){
+  selectedPostId=String(id);
+  renderPosts();
+}
+function clearPost(){
+  selectedPostId=null;
+  renderPosts();
+}
+function selectedPostData(){
+  return posts.find(p=>String(p.id)===String(selectedPostId))||null;
+}
+function toggleRef(id){
+  id=String(id);
+  selectedRefs.has(id)?selectedRefs.delete(id):selectedRefs.add(id);
+  renderRefs();
+}
+function selectedRefData(){
+  return refs.filter(r=>selectedRefs.has(String(r.id)));
+}
+function selectAllRefs(){
+  selectedRefs=new Set(refs.map(r=>String(r.id)));
+  renderRefs();
+}
+function clearRefs(){
+  selectedRefs.clear();
+  renderRefs();
+}
 function selectTop(){
   const sorted=[...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0));
   selectedPostId=sorted[0]?.id||null;
@@ -142,9 +256,14 @@ function selectBottom(){
 function renderSummary(){
   const p=selectedPostData();
   const rs=selectedRefData();
+  const card=p ? postCards[String(p.id)] : null;
+
   document.getElementById('selectedSummary').textContent =
 `【検証する過去投稿】
 ${p ? `・${p.title}｜再生:${p.views}｜保存:${p.saves}｜コメント:${p.comments}` : '未選択'}
+
+【投稿カルテ】
+${card ? `タグ:${card.tags||''}\nタイプ:${card.type||''}\n解析:${(card.analysis||'').slice(0,180)}...` : '未登録'}
 
 【照合する参考DB】
 ${rs.length ? rs.map(r=>`・${r.template||r.title}｜${r.creator||r.type||''}`).join('\n') : '未選択'}`;
@@ -153,6 +272,7 @@ ${rs.length ? rs.map(r=>`・${r.template||r.title}｜${r.creator||r.type||''}`).
 function buildPrompt(){
   const p=selectedPostData();
   const rs=selectedRefData();
+  const card=p ? postCards[String(p.id)] : null;
 
   const postText=p ? `【中村さんの過去投稿】
 タイトル:${p.title}
@@ -166,6 +286,19 @@ URL:${p.url||''}
 コメント:${p.comments||0}
 キャプション:
 ${p.caption||''}` : '未選択';
+
+  const cardText=card ? `【投稿カルテ】
+勝ち筋タグ:${card.tags||''}
+投稿タイプ:${card.type||''}
+ChatGPT解析結果:
+${card.analysis||''}
+
+投稿メモ:
+${card.memo||''}
+
+動画ファイル名:${card.videoName||''}
+インサイトスクショ名:${(card.screens||[]).map(s=>s.name).join(', ')}
+保存日時:${card.savedAt||''}` : '投稿カルテ未登録';
 
   const refText=rs.map(r=>`【参考DB / 勝ち構造】
 タイトル:${r.title||''}
@@ -187,14 +320,12 @@ ${r.translate||''}
 ${r.checklist||''}
 
 元資料 / 商材本文 / 参考メモ:
-${r.material||''}`).join('
-
-');
+${r.material||''}`).join('\n\n');
 
   const prompt=`あなたはSNS投稿の照合検証AIです。
 
 これは「過去投稿同士の比較」ではありません。
-1つの【中村さんの過去投稿】を、【参考DB / ノウハウDB / 商材本文】に照らして検証してください。
+1つの【中村さんの過去投稿】を、【参考DB / ノウハウDB / 商材本文 / 投稿カルテ】に照らして検証してください。
 
 目的は、過去投稿を採点することではなく、
 「なぜ伸びたのか / なぜ伸びなかったのか / 次にどう再利用するのか」を根拠付きで抽出することです。
@@ -205,10 +336,13 @@ ${r.material||''}`).join('
 - 参考DBの元資料や商材本文も読み込んだうえで、重要部分と不要部分をChatGPT側で選別してください。
 - 他者の文章や商材内容をそのままコピーせず、構造・考え方・判断基準として抽象化してください。
 - 数字だけでなく、文脈・問題提起・未完成感・リアル感・コメント余白・続き感・地域性を見てください。
-- 「なんとなく良い」ではなく、どの要素が視聴維持・保存・コメント・フォローに効いた可能性があるか説明してください。
+- なんとなく良いではなく、どの要素が視聴維持・保存・コメント・フォローに効いた可能性があるか説明してください。
 
 【検証する中村さんの過去投稿】
 ${postText}
+
+【投稿カルテ】
+${cardText}
 
 【照合する参考DB / ノウハウDB / 商材本文】
 ${refText || '未選択'}
@@ -259,42 +393,12 @@ ${refText || '未選択'}
 }
 
 async function copyPrompt(){
-  await navigator.clipboard.writeText(document.getElementById('prompt').textContent);
+  const text=document.getElementById('prompt').textContent;
+  await navigator.clipboard.writeText(text);
   alert('コピーしました');
 }
 
-async function downloadPack(){
-  if(typeof JSZip==='undefined'){alert('ZIP生成ライブラリが読み込めません');return;}
-  const z=new JSZip();
-  const prompt=buildPrompt();
-  z.file('reference_alignment_prompt.txt',prompt);
-  z.file('reference_alignment_data.json',JSON.stringify({
-    generatedAt:new Date().toISOString(),
-    goal:v('goal'),
-    axis:v('axis'),
-    memo:v('memo'),
-    selectedPost:selectedPostData(),
-    selectedReferences:selectedRefData().map(r=>({
-      title:r.title,
-      template:r.template,
-      creator:r.creator,
-      type:r.type,
-      structure:r.structure,
-      translate:r.translate,
-      checklist:r.checklist
-    }))
-  },null,2));
-  const blob=await z.generateAsync({type:'blob'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='reference_alignment_pack.zip';
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-renderPosts();
-renderRefs();
-renderSummary();
+reloadDB();
 </script>
 </body>
 </html>

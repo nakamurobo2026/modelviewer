@@ -41,9 +41,17 @@ button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px 
 </main>
 <script>
 const POST_KEY='rso_posts_v1',REF_KEY='rso_refs_v1',CARD_KEY='rso_post_cards_v1';
-let posts=JSON.parse(localStorage.getItem(POST_KEY)||'[]');
-let refs=JSON.parse(localStorage.getItem(REF_KEY)||'[]');
-let postCards=JSON.parse(localStorage.getItem(CARD_KEY)||'{}');
+function safeParse(raw,fallback){try{return raw?JSON.parse(raw):fallback}catch(e){return fallback}}
+function getAny(keys,fallback){
+  for(const k of keys){
+    const v=safeParse(localStorage.getItem(k),null);
+    if(v && ((Array.isArray(v)&&v.length) || (!Array.isArray(v)&&Object.keys(v).length))) return v;
+  }
+  return fallback;
+}
+let posts=getAny([POST_KEY,'posts','ig_posts','rso_posts','instagram_posts'],[]);
+let refs=getAny([REF_KEY,'refs','rso_refs','reference_db'],[]);
+let postCards=getAny([CARD_KEY,'postCards','rso_cards'],{});
 let videoName='';
 
 function v(id){return document.getElementById(id).value||''}
