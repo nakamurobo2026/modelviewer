@@ -4,9 +4,12 @@
 header{padding:20px 22px;border-bottom:1px solid var(--line);background:#0f151d;position:sticky;top:0;z-index:10}
 h1{margin:0;font-size:24px}.sub{color:var(--muted);font-size:13px;margin-top:4px}
 nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}nav a{color:var(--text);text-decoration:none;background:#1b2734;border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:13px;font-weight:800}nav a.active{background:var(--accent);color:#06130f}
-.wrap{max-width:1180px;margin:0 auto;padding:22px}.clean{max-width:900px}
+.wrap{max-width:1180px;margin:0 auto;padding:22px}.clean{max-width:920px}
 .layout{display:grid;grid-template-columns:340px 1fr;gap:18px}@media(max-width:900px){.layout{grid-template-columns:1fr}}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:18px}
+.homegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}@media(max-width:900px){.homegrid{grid-template-columns:1fr}}
+.homecard{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:22px;text-decoration:none;color:var(--text);display:block;min-height:190px}
+.homecard:hover{border-color:var(--accent)}.homecard b{font-size:20px}.homecard p{color:var(--muted);font-size:14px}.tag{display:inline-block;background:#0b1118;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:4px 9px;font-size:12px;margin-top:10px}
 input,textarea,select{width:100%;background:#0b1118;border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:12px;font-size:14px}
 textarea{min-height:120px;resize:vertical}label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
 button,.btn{border:0;background:var(--accent);padding:10px 14px;border-radius:999px;font-weight:800;cursor:pointer;color:#06130f;text-decoration:none;display:inline-flex;font-size:13px}
@@ -17,7 +20,7 @@ button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px 
 .output{white-space:pre-wrap;background:#0b1118;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;line-height:1.7;max-height:560px;overflow:auto}
 .hidden{display:none}
 </style><script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script></head><body>
-<header><h1>過去投稿比較分析</h1><div class="sub">過去を見る。伸びた投稿と伸びなかった投稿を比較して勝ちパターンを抽出。</div><nav><a href="./index.html">投稿前チェック</a><a class="active" href="./compare.html">過去投稿比較</a><a href="./admin.html">Admin</a></nav></header>
+<header><h1>過去投稿比較分析</h1><div class="sub">過去を見る。伸びた投稿と伸びなかった投稿を比較して勝ちパターンを抽出。</div><nav><a class="" href="./index.html">TOP</a><a class="" href="./check.html">投稿前チェック</a><a class="active" href="./compare.html">過去投稿比較</a><a class="" href="./admin.html">Admin</a></nav></header>
 <main class="wrap layout"><aside><div class="card"><h2>投稿選択</h2><div class="note">比較したい投稿を2つ以上選択。</div><div class="btns"><button class="secondary" onclick="selectTopBottom()">上位/下位を自動選択</button><button class="secondary" onclick="clearSelected()">選択解除</button></div><div id="postList" style="margin-top:14px"></div></div></aside>
 <section><div class="card"><h2>比較条件</h2><div class="grid2"><div><label>比較目的</label><select id="goal"><option>伸びた理由/伸びなかった理由</option><option>フォロー増につながる投稿</option><option>仕事依頼につながる投稿</option><option>ナカムロボと工場系の違い</option><option>地域性の効き方</option></select></div><div><label>分析軸</label><select id="axis"><option>文脈・問題提起・リアル感</option><option>冒頭2秒・フック</option><option>保存/シェア</option><option>コメント余白</option><option>世界観/IP育成</option></select></div></div><label>追加メモ</label><textarea id="memo"></textarea><div class="btns"><button onclick="buildPrompt()">比較分析プロンプト生成</button><button class="secondary" onclick="copyPrompt()">コピー</button><button class="warn" onclick="downloadPack()">比較パックZIP生成</button></div></div>
 <div class="card"><h2>選択中</h2><div id="selectedList" class="output">未選択</div></div><div class="card"><h2>比較プロンプト</h2><div id="prompt" class="output">ここに生成されます。</div></div></section></main>
