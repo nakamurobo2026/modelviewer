@@ -23,6 +23,7 @@ button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px 
 .output{white-space:pre-wrap;background:#0b1118;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;line-height:1.7;max-height:760px;overflow:auto}
 .hidden{display:none}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </head>
 
 <body>
@@ -79,6 +80,7 @@ button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px 
       <div class="btns">
         <button onclick="buildPrompt()">プロンプト生成</button>
         <button class="secondary" onclick="copyPrompt()">コピー</button>
+        <button class="warn" onclick="downloadPack()">解析データZIP生成</button>
       </div>
       <div id="prompt" class="output" style="margin-top:14px">ここに生成されます。</div>
     </div>
@@ -397,6 +399,64 @@ async function copyPrompt(){
   await navigator.clipboard.writeText(text);
   alert('コピーしました');
 }
+
+async function downloadPack(){
+  if(typeof JSZip==='undefined'){
+    alert('ZIP生成ライブラリが読み込めません。ネット接続またはCDNを確認してください。');
+    return;
+  }
+
+  const prompt=buildPrompt();
+  const selectedPost=selectedPostData();
+  const selectedReferences=selectedRefData();
+  const selectedCard=selectedPost ? postCards[String(selectedPost.id)] || null : null;
+
+  const safeTitle=(selectedPost?.title||'reference_alignment')
+    .replace(/[\\/:*?"<>|\s]+/g,'_')
+    .slice(0,40);
+
+  const z=new JSZip();
+
+  z.file('prompt.txt',prompt);
+
+  z.file('selected_post.json',JSON.stringify(selectedPost,null,2));
+  z.file('selected_post_card.json',JSON.stringify(selectedCard,null,2));
+  z.file('selected_references.json',JSON.stringify(selectedReferences,null,2));
+
+  z.file('all_posts_db.json',JSON.stringify(posts,null,2));
+  z.file('all_reference_db.json',JSON.stringify(refs,null,2));
+  z.file('all_post_cards_db.json',JSON.stringify(postCards,null,2));
+
+  z.file('analysis_context.json',JSON.stringify({
+    generatedAt:new Date().toISOString(),
+    selectedPostId:selectedPostId,
+    selectedReferenceIds:[...selectedRefs],
+    selectedPost:selectedPost,
+    selectedCard:selectedCard,
+    selectedReferences:selectedReferences
+  },null,2));
+
+  z.file('readme.txt',
+`このZIPはChatGPTへ渡す過去投稿×参考DB検証用の解析データです。
+
+使い方:
+1. 必要なら過去動画やインサイト画像をChatGPTへ別添付
+2. このZIPを添付
+3. prompt.txt の内容で検証
+
+注意:
+動画本体はZIPに入っていません。
+選択投稿・選択参考DB・投稿カルテ・全DBをJSONとして入れています。`
+  );
+
+  const blob=await z.generateAsync({type:'blob'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='reference_alignment_pack_'+safeTitle+'.zip';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 
 reloadDB();
 </script>

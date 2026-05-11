@@ -26,6 +26,56 @@ button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px 
 .output{white-space:pre-wrap;background:#0b1118;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;line-height:1.7;max-height:760px;overflow:auto}
 .hidden{display:none}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js">
+async function downloadPack(){
+  if(typeof JSZip==='undefined'){
+    alert('ZIP生成ライブラリが読み込めません。ネット接続またはCDNを確認してください。');
+    return;
+  }
+
+  const prompt=buildPrompt();
+  const title=(v('nextTitle')||'next_post').replace(/[\\/:*?"<>|\s]+/g,'_').slice(0,40);
+
+  const z=new JSZip();
+
+  z.file('prompt.txt',prompt);
+
+  z.file('next_post.json',JSON.stringify({
+    generatedAt:new Date().toISOString(),
+    title:v('nextTitle'),
+    goal:v('goal'),
+    caption:v('nextCaption'),
+    hookText:v('hookText'),
+    memo:v('extraMemo'),
+    videoFile:videoName
+  },null,2));
+
+  z.file('all_posts_db.json',JSON.stringify(posts,null,2));
+  z.file('all_reference_db.json',JSON.stringify(refs,null,2));
+  z.file('all_post_cards_db.json',JSON.stringify(postCards,null,2));
+
+  z.file('readme.txt',
+`このZIPはChatGPTへ渡す投稿前チェック用解析データです。
+
+使い方:
+1. 動画ファイルをChatGPTへ別添付
+2. このZIPも添付
+3. prompt.txt の内容で診断
+
+注意:
+動画本体はZIPに入っていません。
+参考DB・過去投稿DB・投稿カルテDBはJSONとして入っています。`
+  );
+
+  const blob=await z.generateAsync({type:'blob'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='post_check_analysis_pack_'+title+'.zip';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+</script>
 </head>
 <body>
 <header><h1>投稿前チェック</h1><div class="sub">未来を見る。動画・キャプション・目的を入れて、根拠付きで投稿前にブラッシュアップ。</div><nav><a class="" href="./index.html">TOP</a><a class="active" href="./check.html">投稿前チェック</a><a class="" href="./compare.html">過去投稿比較</a><a class="" href="./admin.html">Admin</a></nav></header>
@@ -36,7 +86,7 @@ button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px 
 <label>サムネ文字 / 冒頭テロップ案</label><input id="hookText">
 <label>動画ファイル（ChatGPTへ別添付）</label><input id="videoInput" type="file" accept="video/*" onchange="previewVideo(event)"><div id="videoPreview" class="preview">動画をアップしてください</div>
 <label>補足メモ</label><textarea id="extraMemo"></textarea>
-<div class="btns"><button onclick="buildPrompt()">診断プロンプト生成</button><button class="secondary" onclick="copyPrompt()">コピー</button></div></div>
+<div class="btns"><button onclick="buildPrompt()">診断プロンプト生成</button><button class="secondary" onclick="copyPrompt()">コピー</button><button class="warn" onclick="downloadPack()">解析データZIP生成</button></div></div>
 <div class="card"><h2>ChatGPTへ渡す内容</h2><div class="note">動画ファイルと、このプロンプトをChatGPTへ渡してください。過去投稿DB・参考構造DB・投稿カルテDBをすべて反映します。</div><div id="promptOutput" class="output">ここに生成されます。</div></div>
 </main>
 <script>
@@ -293,5 +343,54 @@ ${allCards||'まだ投稿カルテDBなし'}
 }
 
 async function copyPrompt(){await navigator.clipboard.writeText(document.getElementById('promptOutput').textContent);alert('コピーしました')}
+
+async function downloadPack(){
+  if(typeof JSZip==='undefined'){
+    alert('ZIP生成ライブラリが読み込めません。ネット接続またはCDNを確認してください。');
+    return;
+  }
+
+  const prompt=buildPrompt();
+  const title=(v('nextTitle')||'next_post').replace(/[\\/:*?"<>|\s]+/g,'_').slice(0,40);
+
+  const z=new JSZip();
+
+  z.file('prompt.txt',prompt);
+
+  z.file('next_post.json',JSON.stringify({
+    generatedAt:new Date().toISOString(),
+    title:v('nextTitle'),
+    goal:v('goal'),
+    caption:v('nextCaption'),
+    hookText:v('hookText'),
+    memo:v('extraMemo'),
+    videoFile:videoName
+  },null,2));
+
+  z.file('all_posts_db.json',JSON.stringify(posts,null,2));
+  z.file('all_reference_db.json',JSON.stringify(refs,null,2));
+  z.file('all_post_cards_db.json',JSON.stringify(postCards,null,2));
+
+  z.file('readme.txt',
+`このZIPはChatGPTへ渡す投稿前チェック用解析データです。
+
+使い方:
+1. 動画ファイルをChatGPTへ別添付
+2. このZIPも添付
+3. prompt.txt の内容で診断
+
+注意:
+動画本体はZIPに入っていません。
+参考DB・過去投稿DB・投稿カルテDBはJSONとして入っています。`
+  );
+
+  const blob=await z.generateAsync({type:'blob'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='post_check_analysis_pack_'+title+'.zip';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 </script>
 </body></html>
