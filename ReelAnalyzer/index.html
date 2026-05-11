@@ -1,205 +1,27 @@
 <!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Reel Story Analyzer｜個人用MVP</title>
-  <style>
-    :root{
-      --bg:#0b0f14;--panel:#111821;--panel2:#162231;--text:#eef5ff;--muted:#9fb0c2;--line:#263648;--accent:#55d6a7;--warn:#ffd166;--bad:#ff6b6b;
-      --radius:18px;
-    }
-    *{box-sizing:border-box}
-    body{margin:0;background:linear-gradient(180deg,#071018,#0b0f14);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.55}
-    header{padding:28px 18px;border-bottom:1px solid var(--line);background:rgba(11,15,20,.8);position:sticky;top:0;z-index:10;backdrop-filter:blur(10px)}
-    .wrap{max-width:1180px;margin:0 auto}
-    h1{font-size:24px;margin:0 0 6px;letter-spacing:.02em}
-    .sub{color:var(--muted);font-size:14px}
-    main{padding:22px 18px 60px}
-    .grid{display:grid;grid-template-columns:360px 1fr;gap:18px;align-items:start}
-    @media(max-width:900px){.grid{grid-template-columns:1fr}}
-    .card{background:rgba(17,24,33,.94);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 16px 40px rgba(0,0,0,.25);overflow:hidden}
-    .card h2{font-size:16px;margin:0;padding:16px 16px 10px;border-bottom:1px solid var(--line)}
-    .body{padding:16px}
-    label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
-    input,textarea,select{width:100%;background:#08111a;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px;outline:none}
-    textarea{min-height:92px;resize:vertical}
-    input:focus,textarea:focus,select:focus{border-color:var(--accent)}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
-    button,.btn{border:0;border-radius:999px;padding:10px 14px;font-weight:700;cursor:pointer;background:var(--accent);color:#04100c;text-decoration:none;display:inline-flex;align-items:center;gap:6px;font-size:13px}
-    button.secondary{background:#243246;color:var(--text);border:1px solid var(--line)}
-    button.danger{background:#40242a;color:#ffd4d4;border:1px solid #67323b}
-    button.warn{background:var(--warn);color:#211700}
-    .list{display:flex;flex-direction:column;gap:8px}
-    .item{padding:12px;border:1px solid var(--line);border-radius:14px;background:#0b131d;cursor:pointer}
-    .item.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
-    .item-title{font-weight:800;font-size:14px}
-    .item-meta{font-size:12px;color:var(--muted);margin-top:3px}
-    .pill{display:inline-flex;font-size:11px;color:#09130f;background:var(--accent);border-radius:999px;padding:2px 8px;font-weight:800;margin-left:6px}
-    .tabs{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line);background:#0c141d}
-    .tab{background:#1a2736;color:var(--muted);padding:8px 12px;border-radius:999px;cursor:pointer;font-size:13px;font-weight:800}
-    .tab.active{background:var(--accent);color:#04100c}
-    .section{display:none}.section.active{display:block}
-    .score-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-    @media(max-width:700px){.score-grid{grid-template-columns:1fr}}
-    .scorebox{background:#0b131d;border:1px solid var(--line);border-radius:14px;padding:12px}
-    .scorebox b{display:block;font-size:13px;margin-bottom:8px}
-    .scorebox input{padding:8px}
-    .preview{border:1px dashed var(--line);border-radius:14px;padding:12px;background:#08111a;color:var(--muted);font-size:13px}
-    video{width:100%;max-height:420px;border-radius:14px;background:#000;border:1px solid var(--line)}
-    .shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:10px}
-    .shots img{width:100%;border-radius:12px;border:1px solid var(--line);object-fit:cover;background:#000}
-    .prompt{white-space:pre-wrap;background:#071019;border:1px solid var(--line);border-radius:14px;padding:14px;color:#dcecff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;max-height:560px;overflow:auto}
-    .hint{font-size:12px;color:var(--muted);margin-top:8px}
-    .empty{color:var(--muted);padding:20px;text-align:center}
-    .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
-    @media(max-width:700px){.kpi{grid-template-columns:1fr 1fr}}
-    .kpi div{background:#0b131d;border:1px solid var(--line);border-radius:14px;padding:10px}.kpi span{display:block;color:var(--muted);font-size:11px}.kpi b{font-size:18px}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>投稿前チェック｜Reel Strategy OS</title>
+<style>
+:root{--bg:#0b1016;--panel:#121922;--line:#263445;--text:#eef4ff;--muted:#94a7bc;--accent:#57e0aa;--warn:#ffd166;--radius:18px}*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#081018,#0b1016);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.55}header{padding:20px 22px;border-bottom:1px solid var(--line);background:#0f151d;position:sticky;top:0;z-index:20}.wrap{max-width:900px;margin:0 auto;padding:22px}h1{margin:0;font-size:28px}.sub{color:var(--muted);font-size:13px;margin-top:4px}.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:18px}input,textarea,select{width:100%;background:#0b1118;border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:12px;font-size:14px}textarea{min-height:120px;resize:vertical}label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}button{border:0;background:var(--accent);padding:10px 14px;border-radius:999px;font-weight:800;cursor:pointer;color:#06130f;font-size:13px}button.secondary{background:#1b2734;color:var(--text);border:1px solid var(--line)}.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.grid2{grid-template-columns:1fr}}.preview{padding:12px;border-radius:12px;border:1px dashed var(--line);margin-top:12px;color:var(--muted);background:#0b1118}.output{white-space:pre-wrap;background:#0b1118;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;line-height:1.7;max-height:560px;overflow:auto}.note{background:#101721;border:1px solid var(--line);padding:12px;border-radius:14px;color:var(--muted);font-size:13px}.small{font-size:12px;color:var(--muted)}
+</style>
 </head>
 <body>
-<header>
-  <div class="wrap">
-    <h1>Reel Story Analyzer <span class="pill">個人用MVP</span></h1>
-    <div class="sub">自分のリールを「文脈・構造・ジャンル別勝ち筋」で分析するためのローカル保存ツール。データはこのブラウザ内に保存されます。</div>
-  </div>
-</header>
-<main class="wrap grid">
-  <aside class="card">
-    <h2>リール一覧</h2>
-    <div class="body">
-      <div class="btns" style="margin-top:0">
-        <button onclick="newReel()">＋ 新規</button>
-        <button class="secondary" onclick="exportJSON()">JSON書出</button>
-        <label class="btn secondary" for="importFile">JSON読込</label>
-        <input id="importFile" type="file" accept="application/json" style="display:none" onchange="importJSON(event)">
-      </div>
-      <div class="hint">動画・スクショ本体はブラウザ保存しません。分析時にプレビューして、内容はメモやプロンプトに反映してください。</div>
-      <hr style="border-color:var(--line);border-style:solid;border-width:1px 0 0;margin:14px 0">
-      <div id="reelList" class="list"></div>
-    </div>
-  </aside>
-
-  <section class="card" id="editorCard">
-    <div class="tabs">
-      <div class="tab active" onclick="showTab('basic')">基本</div>
-      <div class="tab" onclick="showTab('insight')">インサイト</div>
-      <div class="tab" onclick="showTab('story')">文脈分析</div>
-      <div class="tab" onclick="showTab('media')">動画/スクショ</div>
-      <div class="tab" onclick="showTab('prompt')">AIプロンプト</div>
-      <div class="tab" onclick="showTab('result')">分析結果</div>
-    </div>
-
-    <div id="emptyState" class="empty">左の「＋ 新規」からリールを登録してください。</div>
-
-    <div id="editor" style="display:none">
-      <div id="basic" class="section active body">
-        <div class="row">
-          <div><label>タイトル</label><input id="title" oninput="saveField('title',this.value)" placeholder="例：ボロ倉庫を工場にする"></div>
-          <div><label>ジャンル</label><select id="genre" onchange="saveField('genre',this.value)">
-            <option>工場化/再建</option><option>職人/ものづくり</option><option>地域ネタ</option><option>買取/お金/不動産</option><option>AI/制作裏側</option><option>ナカムロボ物語</option><option>日常/家族</option><option>その他</option>
-          </select></div>
-        </div>
-        <div class="row">
-          <div><label>投稿URL</label><input id="url" oninput="saveField('url',this.value)" placeholder="https://www.instagram.com/reel/..." /></div>
-          <div><label>投稿日</label><input id="date" type="date" onchange="saveField('date',this.value)" /></div>
-        </div>
-        <div class="row">
-          <div><label>動画尺（秒）</label><input id="duration" type="number" oninput="saveField('duration',this.value)" /></div>
-          <div><label>投稿目的</label><select id="purpose" onchange="saveField('purpose',this.value)"><option>再生数</option><option>フォロー増</option><option>仕事依頼</option><option>地域認知</option><option>保存/シェア</option><option>物語の継続視聴</option></select></div>
-        </div>
-        <label>サムネ文字</label><input id="thumbnailText" oninput="saveField('thumbnailText',this.value)" placeholder="例：ボロ倉庫、工場にします">
-        <label>キャプション全文</label><textarea id="caption" oninput="saveField('caption',this.value)" placeholder="投稿文をコピペ"></textarea>
-        <label>自分の感覚・仮説</label><textarea id="memo" oninput="saveField('memo',this.value)" placeholder="例：冒頭は弱いかも。地元感は刺さった。コメントは多かった。"></textarea>
-        <div class="btns"><button onclick="saveCurrent()">保存</button><button class="danger" onclick="deleteCurrent()">削除</button></div>
-      </div>
-
-      <div id="insight" class="section body">
-        <div class="kpi">
-          <div><span>再生数</span><b id="kViews">0</b></div><div><span>フォロー増</span><b id="kFollows">0</b></div><div><span>保存</span><b id="kSaves">0</b></div><div><span>シェア</span><b id="kShares">0</b></div>
-        </div>
-        <div class="row">
-          <div><label>再生数</label><input id="views" type="number" oninput="saveField('views',this.value)"></div>
-          <div><label>リーチ</label><input id="reach" type="number" oninput="saveField('reach',this.value)"></div>
-        </div>
-        <div class="row">
-          <div><label>平均再生時間（秒）</label><input id="avgWatch" type="number" step="0.1" oninput="saveField('avgWatch',this.value)"></div>
-          <div><label>スキップ率（%）</label><input id="skipRate" type="number" step="0.1" oninput="saveField('skipRate',this.value)"></div>
-        </div>
-        <div class="row">
-          <div><label>いいね</label><input id="likes" type="number" oninput="saveField('likes',this.value)"></div>
-          <div><label>コメント</label><input id="comments" type="number" oninput="saveField('comments',this.value)"></div>
-        </div>
-        <div class="row">
-          <div><label>保存</label><input id="saves" type="number" oninput="saveField('saves',this.value)"></div>
-          <div><label>シェア</label><input id="shares" type="number" oninput="saveField('shares',this.value)"></div>
-        </div>
-        <div class="row">
-          <div><label>フォロー増加</label><input id="follows" type="number" oninput="saveField('follows',this.value)"></div>
-          <div><label>プロフィールアクセス</label><input id="profileAccess" type="number" oninput="saveField('profileAccess',this.value)"></div>
-        </div>
-        <label>コメント・反応メモ</label><textarea id="reactionMemo" oninput="saveField('reactionMemo',this.value)" placeholder="印象的なコメント、荒れた点、質問が多かった点など"></textarea>
-      </div>
-
-      <div id="story" class="section body">
-        <p class="hint">ど素人ホテル式＝ホテル再建のコピーではなく、「投稿者の文脈」「未完成」「問題発生」「視聴者参加」「ジャンル別変換」を読むための採点です。</p>
-        <div class="score-grid" id="scoreGrid"></div>
-        <label>参考にしたい公開投稿者・投稿URL</label><textarea id="referencePosts" oninput="saveField('referencePosts',this.value)" placeholder="例：ど素人ホテルさんのこの投稿URL、Threadsの投稿URL、気づいた傾向など"></textarea>
-        <label>この投稿の“文脈”</label><textarea id="contextNote" oninput="saveField('contextNote',this.value)" placeholder="例：ボロ倉庫を工場に変える途中。搬入できない問題がある。地元のリアルがある。"></textarea>
-        <label>ジャンル別に置き換えた勝ち筋</label><textarea id="genreNote" oninput="saveField('genreNote',this.value)" placeholder="例：工場化ジャンルなら、完成ではなく問題発生→判断→途中経過が強い。"></textarea>
-      </div>
-
-      <div id="media" class="section body">
-        <label>動画プレビュー（保存されません）</label><input type="file" accept="video/*" onchange="loadVideo(event)"><div id="videoBox" class="preview">動画を選ぶとここに表示されます。</div>
-        <label>インサイトスクショ（保存されません）</label><input type="file" accept="image/*" multiple onchange="loadScreens(event)"><div id="shots" class="shots"></div>
-        <label>スクショから読み取った内容メモ</label><textarea id="screenshotMemo" oninput="saveField('screenshotMemo',this.value)" placeholder="例：維持率グラフは冒頭で急落。非フォロワー率90%。スキップ率70%。"></textarea>
-      </div>
-
-      <div id="prompt" class="section body">
-        <div class="btns" style="margin-top:0"><button onclick="buildPrompt()">プロンプト生成</button><button class="secondary" onclick="copyPrompt()">コピー</button></div>
-        <p class="hint">このプロンプトをChatGPTに貼ると、AI APIなしで分析できます。参考投稿URLやスクショ内容メモを入れるほど精度が上がります。</p>
-        <div id="promptOut" class="prompt"></div>
-      </div>
-
-      <div id="result" class="section body">
-        <label>AI分析結果</label><textarea id="analysisResult" style="min-height:280px" oninput="saveField('analysisResult',this.value)" placeholder="ChatGPTの分析結果をここに保存"></textarea>
-        <label>次回投稿案</label><textarea id="nextIdea" oninput="saveField('nextIdea',this.value)" placeholder="次のリールタイトル、冒頭2秒、カット構成など"></textarea>
-      </div>
-    </div>
-  </section>
+<header><div class="wrap" style="padding:0"><h1>投稿前チェック</h1><div class="sub">動画・キャプション・投稿目的を入れるだけ。裏側の参考DBやノウハウは表示されません。</div></div></header>
+<main class="wrap">
+<div class="card"><h2>次回投稿をブラッシュアップ</h2><div class="grid2"><div><label>投稿タイトル / 仮テーマ</label><input id="nextTitle" placeholder="例：4mCNC、本当に入るのか"></div><div><label>投稿目的</label><select id="goal"><option>再生数</option><option>フォロー増</option><option>仕事依頼</option><option>世界観/IP育成</option><option>保存/シェア</option></select></div></div><label>キャプション案</label><textarea id="nextCaption" placeholder="投稿予定のキャプションを入れる"></textarea><label>サムネ文字 / 冒頭テロップ案</label><input id="hookText" placeholder="例：この道、CNC入らんかも"><label>動画ファイル</label><input type="file" accept="video/*" onchange="previewVideo(event)"><div id="videoPreview" class="preview">動画をアップしてください</div><label>インサイトスクショ / 参考スクショ</label><input type="file" accept="image/*" multiple onchange="previewScreens(event)"><div id="screenPreview" class="preview">スクショをアップしてください</div><div class="btns"><button onclick="buildCheckPrompt()">診断プロンプト生成</button><button class="secondary" onclick="copyPrompt()">コピー</button></div></div>
+<div class="card"><h2>ChatGPTへ渡す内容</h2><div class="note">動画とスクショをChatGPTに添付して、このプロンプトを貼ってください。裏側のDB情報はプロンプト内にだけ含まれます。</div><div id="promptOutput" class="output" style="margin-top:14px">ここに生成されます。</div></div>
+<div class="card"><h2>分析結果メモ</h2><textarea id="analysisMemo" placeholder="ChatGPTの分析結果を貼って保存"></textarea><div class="btns"><button onclick="saveMemo()">メモ保存</button></div><div id="memoStatus" class="small"></div></div>
 </main>
 <script>
-const KEY='reel_story_analyzer_v1';
-const scoreItems=[
-  ['hook','冒頭2秒の強さ'],['context','投稿者の文脈'],['problem','問題のわかりやすさ'],['unfinished','未完成・続き'],['real','リアル感'],['participation','コメント余白'],['emotion','応援したくなる度'],['business','仕事につながる度'],['genreFit','ジャンル変換力']
-];
-let reels=JSON.parse(localStorage.getItem(KEY)||'[]');
-let currentId=reels[0]?.id||null;
-function persist(){localStorage.setItem(KEY,JSON.stringify(reels));renderList();}
-function current(){return reels.find(r=>r.id===currentId)}
-function uid(){return 'r_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7)}
-function newReel(){const r={id:uid(),title:'新規リール',genre:'工場化/再建',purpose:'再生数',scores:{}};scoreItems.forEach(([k])=>r.scores[k]=5);reels.unshift(r);currentId=r.id;persist();loadEditor();}
-function renderList(){const el=document.getElementById('reelList'); if(!reels.length){el.innerHTML='<div class="empty">まだ登録がありません</div>';return;} el.innerHTML=reels.map(r=>`<div class="item ${r.id===currentId?'active':''}" onclick="selectReel('${r.id}')"><div class="item-title">${esc(r.title||'無題')}</div><div class="item-meta">${esc(r.genre||'')}｜再生 ${num(r.views)}｜${esc(r.date||'日付未設定')}</div></div>`).join('')}
-function selectReel(id){currentId=id;renderList();loadEditor();}
-function loadEditor(){const r=current();document.getElementById('emptyState').style.display=r?'none':'block';document.getElementById('editor').style.display=r?'block':'none'; if(!r)return; const ids=['title','genre','url','date','duration','purpose','thumbnailText','caption','memo','views','reach','avgWatch','skipRate','likes','comments','saves','shares','follows','profileAccess','reactionMemo','referencePosts','contextNote','genreNote','screenshotMemo','analysisResult','nextIdea']; ids.forEach(id=>{const e=document.getElementById(id); if(e)e.value=r[id]||''}); buildScoreGrid(); updateKpi(); buildPrompt();}
-function saveField(k,v){const r=current(); if(!r)return; r[k]=v; if(k==='title'||k==='genre'||k==='views'||k==='date')renderList(); updateKpi(); persist();}
-function saveScore(k,v){const r=current(); if(!r)return; r.scores=r.scores||{}; r.scores[k]=Number(v||0); persist();}
-function saveCurrent(){persist(); alert('保存しました');}
-function deleteCurrent(){if(!current())return; if(!confirm('このリールを削除しますか？'))return; reels=reels.filter(r=>r.id!==currentId); currentId=reels[0]?.id||null; persist(); loadEditor();}
-function buildScoreGrid(){const r=current(); const el=document.getElementById('scoreGrid'); el.innerHTML=scoreItems.map(([k,label])=>`<div class="scorebox"><b>${label}</b><input type="range" min="0" max="10" value="${r.scores?.[k]??5}" oninput="this.nextElementSibling.textContent=this.value;saveScore('${k}',this.value)"><div style="color:var(--accent);font-weight:900;margin-top:6px">${r.scores?.[k]??5}</div></div>`).join('')}
-function showTab(id){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));[...document.querySelectorAll('.tab')].find(t=>t.textContent.includes(tabLabel(id)))?.classList.add('active');document.getElementById(id).classList.add('active'); if(id==='prompt')buildPrompt();}
-function tabLabel(id){return {basic:'基本',insight:'インサイト',story:'文脈分析',media:'動画/スクショ',prompt:'AIプロンプト',result:'分析結果'}[id]}
-function updateKpi(){const r=current()||{}; document.getElementById('kViews').textContent=num(r.views);document.getElementById('kFollows').textContent=num(r.follows);document.getElementById('kSaves').textContent=num(r.saves);document.getElementById('kShares').textContent=num(r.shares);}
-function buildPrompt(){const r=current(); if(!r)return; const scores=scoreItems.map(([k,l])=>`- ${l}: ${r.scores?.[k]??''}/10`).join('\n'); const p=`あなたはInstagramリールの分析者です。\n以下のリールを、単なる数値分析ではなく「投稿者の文脈」「ジャンル別の勝ち筋」「視聴者が反応する余白」まで深堀して分析してください。\n\n重要：\n- ど素人ホテルさんの公開投稿のような「未完成・問題発生・視聴者参加・文脈の積み上げ」という考え方を参考にしてください。\n- ただしホテル再建のコピーにせず、この投稿者のジャンルに翻訳してください。\n- 参考投稿URLがある場合は、その投稿の構造・言葉選び・余白・コメントしたくなる要素を抽象化して比較してください。\n- 著作権上、他者投稿の長い引用は避け、構造と傾向として扱ってください。\n\n【分析対象リール】\nタイトル：${r.title||''}\nジャンル：${r.genre||''}\n投稿目的：${r.purpose||''}\n投稿日：${r.date||''}\n投稿URL：${r.url||''}\n動画尺：${r.duration||''}秒\nサムネ文字：${r.thumbnailText||''}\n\n【インサイト】\n再生数：${r.views||''}\nリーチ：${r.reach||''}\n平均再生時間：${r.avgWatch||''}\nスキップ率：${r.skipRate||''}%\nいいね：${r.likes||''}\nコメント：${r.comments||''}\n保存：${r.saves||''}\nシェア：${r.shares||''}\nフォロー増加：${r.follows||''}\nプロフィールアクセス：${r.profileAccess||''}\n\n【キャプション】\n${r.caption||''}\n\n【自分の感覚】\n${r.memo||''}\n\n【コメント・反応メモ】\n${r.reactionMemo||''}\n\n【スクショから読み取った内容】\n${r.screenshotMemo||''}\n\n【参考にしたい公開投稿・傾向】\n${r.referencePosts||''}\n\n【この投稿の文脈メモ】\n${r.contextNote||''}\n\n【ジャンル別勝ち筋メモ】\n${r.genreNote||''}\n\n【自己採点】\n${scores}\n\n出力してほしい内容：\n1. この投稿の一言診断\n2. 伸びた/伸びなかった理由\n3. 冒頭2秒の評価\n4. 投稿者の文脈が伝わっているか\n5. コメントしたくなる余白があるか\n6. ど素人ホテル式の考え方から見た強み・弱み\n7. このジャンルに翻訳した場合の改善点\n8. 次回リールのタイトル案10個\n9. 次回リールの0〜3秒フック案10個\n10. 15秒以内のカット構成案\n11. フォローにつなげる締め方\n12. 今後シリーズ化するなら何を追うべきか\n\n厳しめで、実行できる形で出してください。`; document.getElementById('promptOut').textContent=p; return p;}
-async function copyPrompt(){const p=buildPrompt(); await navigator.clipboard.writeText(p); alert('コピーしました');}
-function exportJSON(){const blob=new Blob([JSON.stringify(reels,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='reel_story_analyzer_data.json';a.click();URL.revokeObjectURL(a.href)}
-function importJSON(e){const file=e.target.files[0]; if(!file)return; const reader=new FileReader(); reader.onload=()=>{try{const data=JSON.parse(reader.result); if(!Array.isArray(data))throw new Error('配列ではありません'); reels=data; currentId=reels[0]?.id||null; persist(); loadEditor(); alert('読み込みました');}catch(err){alert('読み込み失敗: '+err.message)}}; reader.readAsText(file)}
-function loadVideo(e){const file=e.target.files[0]; const box=document.getElementById('videoBox'); if(!file){box.textContent='動画を選ぶとここに表示されます。';return;} const url=URL.createObjectURL(file); box.innerHTML=`<video src="${url}" controls></video><div class="hint">ファイル名：${esc(file.name)} / この動画本体は保存されません。</div>`;}
-function loadScreens(e){const files=[...e.target.files]; const el=document.getElementById('shots'); el.innerHTML=''; files.forEach(f=>{const url=URL.createObjectURL(f); const img=document.createElement('img'); img.src=url; img.title=f.name; el.appendChild(img);});}
-function num(v){return v?Number(v).toLocaleString():'0'}
-function esc(s){return String(s||'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
-renderList();loadEditor();
-</script>
-</body>
-</html>
+const POST_KEY='rso_posts_v1', REF_KEY='rso_refs_v1', MEMO_KEY='rso_front_memo_v1';
+let posts=JSON.parse(localStorage.getItem(POST_KEY)||'[]');let refs=JSON.parse(localStorage.getItem(REF_KEY)||'[]');
+function previewVideo(e){const file=e.target.files[0];if(!file)return;const url=URL.createObjectURL(file);document.getElementById('videoPreview').innerHTML=`<video src="${url}" controls style="width:100%;border-radius:12px"></video><div class="small">${esc(file.name)}</div>`}
+function previewScreens(e){const files=[...e.target.files];document.getElementById('screenPreview').innerHTML=files.length?files.map(f=>`<div>${esc(f.name)}</div>`).join(''):'スクショなし'}
+function buildCheckPrompt(){const title=v('nextTitle'),goal=v('goal'),caption=v('nextCaption'),hook=v('hookText');const topPosts=[...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0)).slice(0,8).map(p=>`・${p.title}｜再生:${p.views}｜保存:${p.saves}｜コメント:${p.comments}`).join('\n');const refDigest=refs.slice(0,12).map(r=>`【${r.template||r.title}】\n構造:${r.structure}\n翻訳:${r.translate}\nチェック:${r.checklist}`).join('\n\n');const prompt=`この投稿予定動画を、実際に動画を見たうえで投稿前診断してください。\n動画ファイルとスクショも添付しています。\n\nあなたはSNS投稿の改善AIです。\nただし一般論ではなく、以下の過去投稿DBと参考構造DBを前提に、中村さんの投稿に合う形へブラッシュアップしてください。\n\n【投稿目的】\n${goal}\n\n【投稿タイトル/仮テーマ】\n${title}\n\n【サムネ文字/冒頭テロップ案】\n${hook}\n\n【キャプション案】\n${caption}\n\n【過去投稿DB：上位傾向】\n${topPosts||'まだDBなし'}\n\n【参考構造DB：内部ノウハウ】\n${refDigest||'まだ参考構造なし'}\n\n重要：\n- 参考構造DBの内容をそのまま見せたり、他者の表現をコピーしないでください。\n- あくまで構造として使い、この投稿のジャンルへ翻訳してください。\n- バズだけでなく、仕事依頼・地域性・世界観/IP育成も考慮してください。\n- 動画の冒頭0〜2秒、テンポ、テロップ、無音視聴で伝わるかを必ず見てください。\n\n出力：\n1. 投稿前の一言診断\n2. 冒頭0〜2秒の弱点\n3. このまま投稿した場合のリスク\n4. 強み\n5. キャプション修正案\n6. サムネ文字案10個\n7. 冒頭フック案10個\n8. 15秒以内のカット構成\n9. コメントを増やす余白の作り方\n10. フォロー/仕事依頼につなげる締め方\n11. 最終投稿前チェックリスト`;document.getElementById('promptOutput').textContent=prompt}
+async function copyPrompt(){await navigator.clipboard.writeText(document.getElementById('promptOutput').textContent);alert('コピーしました')}
+function saveMemo(){localStorage.setItem(MEMO_KEY,document.getElementById('analysisMemo').value);document.getElementById('memoStatus').textContent='保存しました'}
+function v(id){return document.getElementById(id).value||''}function esc(s=''){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}document.getElementById('analysisMemo').value=localStorage.getItem(MEMO_KEY)||'';
+</script></body></html>
