@@ -84,19 +84,87 @@ main.wrap.layout > section{min-width:0} main.wrap.layout > aside{min-width:0}
 const POST_KEY='rso_posts_v1',REF_KEY='rso_refs_v1';let posts=JSON.parse(localStorage.getItem(POST_KEY)||'[]'),refs=JSON.parse(localStorage.getItem(REF_KEY)||'[]'),editId=null;
 function v(id){return document.getElementById(id).value||''}function esc(s=''){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}function num(n){return Number(n||0).toLocaleString()}function status(t,c='var(--muted)'){let e=document.getElementById('status');e.textContent=t;e.style.color=c}
 function setWorkerUrl(){const cur=localStorage.getItem('worker_url')||'https://reelanalyzer.nakamura0407.workers.dev';const u=prompt('Worker URL',cur);if(u===null)return;localStorage.setItem('worker_url',u.replace(/\/$/,''));status('Worker URL保存済','var(--accent)')}
-async function fetchInstagramPosts(){const base=localStorage.getItem('worker_url')||'https://reelanalyzer.nakamura0407.workers.dev';status('Instagram API接続中...','var(--warn)');try{const r=await fetch(base+'/reels');const j=await r.json();if(j.error)throw new Error(j.error.message||j.error);posts=(j.data||[]).map(p=>({id:p.id,title:firstLine(p.caption),caption:p.caption||'',views:p.views||0,reach:p.reach||0,saves:p.saved||p.saves||0,shares:p.shares||0,likes:p.like_count||0,comments:p.comments_count||0,url:p.permalink||'',date:p.timestamp||''}));localStorage.setItem(POST_KEY,JSON.stringify(posts));renderPosts();if(typeof refreshPostCardSelect==='function')refreshPostCardSelect();status('取得成功：'+posts.length+'件','var(--accent)')}catch(e){status('取得失敗：'+e.message,'var(--bad)')}}
+async function fetchInstagramPosts(){const base=localStorage.getItem('worker_url')||'https://reelanalyzer.nakamura0407.workers.dev';status('Instagram API接続中...','var(--warn)');try{const r=await fetch(base+'/reels');const j=await r.json();if(j.error)throw new Error(j.error.message||j.error);posts=(j.data||[]).map(p=>({id:p.id,title:firstLine(p.caption),caption:p.caption||'',views:p.views||0,reach:p.reach||0,saves:p.saved||p.saves||0,shares:p.shares||0,likes:p.like_count||0,comments:p.comments_count||0,url:p.permalink||'',date:p.timestamp||''}));localStorage.setItem(POST_KEY,JSON.stringify(posts));renderPosts();status('取得成功：'+posts.length+'件','var(--accent)')}catch(e){status('取得失敗：'+e.message,'var(--bad)')}}
 function firstLine(c=''){const s=(c||'').split('\n').map(x=>x.trim()).find(Boolean)||'無題';return s.length>42?s.slice(0,42)+'…':s}
 function importText(e){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{document.getElementById('refMaterial').value+=(v('refMaterial')?'\n\n':'')+`--- 取り込みファイル: ${f.name} ---\n${rd.result}\n--- ここまで ---`;if(!v('refTitle'))document.getElementById('refTitle').value=f.name};rd.readAsText(f,'utf-8')}
 function appendTemplate(){document.getElementById('refMaterial').value+=(v('refMaterial')?'\n\n':'')+'【資料の種類】\n商材/教材テキスト\n\n【知りたいこと】\n・根本思想\n・伸びる構造\n・中村さんジャンルへの翻訳\n\n【本文/要点】\n'}
 function clearMaterial(){if(confirm('解析資料をクリアしますか？'))document.getElementById('refMaterial').value=''}
-function buildRefPrompt(){const p=`あなたはSNS投稿・発信ノウハウの構造分析者です。以下の資料を、単なる要約ではなく「投稿者の考え方」「投稿構造」「視聴者心理」「自分の投稿に応用できる型」に分解してください。\n\n重要：元テキストを再配布せず、表現ではなく構造を抽象化してください。中村さんの工場化・職人・地域・AI制作・ナカムロボ物語に翻訳してください。\n\n【参考タイトル】\n${v('refTitle')}\n\n【投稿者・出典】\n${v('refCreator')}\n\n【種別】\n${v('refType')}\n\n【参考URL】\n${v('refUrl')}\n\n【なぜ気になったか】\n${v('refWhy')}\n\n【解析資料】\n${v('refMaterial')}\n\n出力：一言診断、根本思想、伸びる構造、冒頭、問題提起、コメント余白、未完成性、応援理由、中村さんへの翻訳、勝ち筋テンプレ名、チェックリスト、具体案5つ。最後に保存用形式で。`;document.getElementById('refPrompt').textContent=p;return p}
+function buildRefPrompt(){
+  const p=`あなたはSNS投稿・発信ノウハウの構造分析者です。
+
+以下の参考資料を、単なる要約ではなく「なぜ伸びるのか」「どの視聴心理に効くのか」「中村さんの発信にどう翻訳できるのか」まで、根拠付きで分解してください。
+
+重要:
+- 元テキストを再配布せず、表現ではなく構造を抽象化してください。
+- ただし参考資料は整理前の生データなので、SNS改善に関係ある部分と不要な部分をChatGPT側で選別してください。
+- ど素人ホテル式が含まれる場合は、ホテル再建ではなく、中村さんの工場化・職人・地域・AI制作・ナカムロボ物語に翻訳してください。
+- なんとなくの感想ではなく、「どの構造がなぜ人を止めるのか」「どこにコメント余白があるのか」を説明してください。
+
+【参考タイトル】
+${v('refTitle')}
+
+【投稿者・出典】
+${v('refCreator')}
+
+【種別】
+${v('refType')}
+
+【参考URL】
+${v('refUrl')}
+
+【なぜ気になったか】
+${v('refWhy')}
+
+【解析資料 / 商材本文 / メモ】
+${v('refMaterial')}
+
+出力形式:
+
+1. 一言診断
+→ この資料の使いどころを一言で。
+
+2. 根本思想
+→ 表面的なノウハウではなく、根っこの考え方。
+
+3. 伸びる構造
+→ 冒頭、問題提起、未完成感、葛藤、変化、リアル感、コメント余白に分解。
+
+4. 視聴者心理
+→ なぜ見たくなるか / なぜコメントしたくなるか / なぜ続きが気になるか。
+
+5. 参考資料の中で重要な部分
+→ SNS改善に使える部分だけを抽出。
+
+6. 参考資料の中で不要な部分
+→ 中村さんの発信には使わなくてよい部分。
+
+7. 中村さんジャンルへの翻訳
+→ 工場化 / 職人 / 地域 / AI制作 / ナカムロボ物語へ具体的に変換。
+
+8. 投稿で使える型
+→ どんな投稿に応用できるか。
+
+9. 勝ち筋テンプレ名
+→ 保存しやすい短い名前。
+
+10. チェックリスト
+→ 投稿前に確認する項目。
+
+11. 具体案5つ
+→ 中村さんが次に作れる投稿案。
+
+12. 保存用形式
+→ 抽象化した構造 / 自分ジャンルへの翻訳 / 勝ち筋テンプレ名 / チェックリスト に分けて出力。`;
+  document.getElementById('refPrompt').textContent=p;
+  return p;
+}
 async function copyRefPrompt(){await navigator.clipboard.writeText(document.getElementById('refPrompt').textContent);alert('コピーしました')}
 function saveRef(){const d={id:editId||Date.now(),title:v('refTitle'),creator:v('refCreator'),type:v('refType'),url:v('refUrl'),material:v('refMaterial'),why:v('refWhy'),structure:v('refStructure'),translate:v('refTranslate'),template:v('refTemplate'),checklist:v('refChecklist')};if(editId)refs=refs.map(r=>r.id===editId?d:r);else refs.unshift(d);localStorage.setItem(REF_KEY,JSON.stringify(refs));renderRefs();alert('保存しました')}
 function loadRef(id){const r=refs.find(x=>x.id===id);if(!r)return;editId=id;document.getElementById('refTitle').value=r.title||'';document.getElementById('refCreator').value=r.creator||'';document.getElementById('refType').value=r.type||'商材/教材テキスト';document.getElementById('refUrl').value=r.url||'';document.getElementById('refMaterial').value=r.material||'';document.getElementById('refWhy').value=r.why||'';document.getElementById('refStructure').value=r.structure||'';document.getElementById('refTranslate').value=r.translate||'';document.getElementById('refTemplate').value=r.template||'';document.getElementById('refChecklist').value=r.checklist||''}
 function deleteRef(id){if(!confirm('削除しますか？'))return;refs=refs.filter(r=>r.id!==id);localStorage.setItem(REF_KEY,JSON.stringify(refs));renderRefs()}function clearRefForm(){editId=null;['refTitle','refCreator','refUrl','refMaterial','refWhy','refStructure','refTranslate','refTemplate','refChecklist'].forEach(id=>document.getElementById(id).value='')}
 function renderRefs(){document.getElementById('referenceList').innerHTML=refs.length?refs.map(r=>`<div class="item"><b>${esc(r.title||'無題')}</b><div class="small">${esc(r.template||r.creator||'')}</div><div class="btns"><button class="secondary" onclick="loadRef(${r.id})">編集</button><button class="danger" onclick="deleteRef(${r.id})">削除</button></div></div>`).join(''):'<div class="small">参考構造なし</div>'}
 function renderPosts(){document.getElementById('postSummary').textContent='投稿数：'+posts.length+' / 総再生：'+num(posts.reduce((a,p)=>a+Number(p.views||0),0));document.getElementById('postList').innerHTML=posts.map(p=>`<div class="item"><b>${esc(p.title)}</b><div class="small">再生:${num(p.views)} / 保存:${num(p.saves)} / コメント:${num(p.comments)}</div></div>`).join('')}
-function exportAll(){const b=new Blob([JSON.stringify({posts,refs,postCards:JSON.parse(localStorage.getItem('rso_post_cards_v1')||'{}')},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='rso_backup.json';a.click()}function importAll(e){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{const d=JSON.parse(rd.result);posts=d.posts||[];refs=d.refs||[];localStorage.setItem(POST_KEY,JSON.stringify(posts));localStorage.setItem(REF_KEY,JSON.stringify(refs));if(d.postCards){localStorage.setItem('rso_post_cards_v1',JSON.stringify(d.postCards));postCards=d.postCards;}renderPosts();renderRefs();if(typeof refreshPostCardSelect==='function')refreshPostCardSelect()};rd.readAsText(f)}function clearAll(){if(!confirm('全DB削除しますか？'))return;posts=[];refs=[];localStorage.removeItem(POST_KEY);localStorage.removeItem(REF_KEY);renderPosts();renderRefs()}
+function exportAll(){const b=new Blob([JSON.stringify({posts,refs},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='rso_backup.json';a.click()}function importAll(e){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{const d=JSON.parse(rd.result);posts=d.posts||[];refs=d.refs||[];localStorage.setItem(POST_KEY,JSON.stringify(posts));localStorage.setItem(REF_KEY,JSON.stringify(refs));renderPosts();renderRefs()};rd.readAsText(f)}function clearAll(){if(!confirm('全DB削除しますか？'))return;posts=[];refs=[];localStorage.removeItem(POST_KEY);localStorage.removeItem(REF_KEY);renderPosts();renderRefs()}
 renderRefs();renderPosts();
 </script>
 <script>
