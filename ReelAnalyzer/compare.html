@@ -31,7 +31,7 @@ button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px 
 <body>
 <header>
   <h1>過去投稿×参考DB検証</h1>
-  <div class="sub">選んだ投稿を、蓄積したDB・商材・勝ち筋・過去成功例と照合してAIが改善案を生成します。</div>
+  <div class="sub">選んだ投稿を、蓄積したDB・商材・勝ち筋と照合し、既存動画素材だけで10秒前後の再編集構成まで生成します。</div>
   <nav>
     <a href="./index.html">TOP</a>
     <a href="./check.html">投稿前チェック</a>
@@ -55,7 +55,7 @@ button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px 
 
     <div class="card">
       <h2>照合する参考DB</h2>
-      <div class="note">プロンプトには元資料の全文は入れません。保存済みの構造・翻訳・チェックリストだけを使います。</div>
+      <div class="note">保存済みの構造・翻訳・チェックリスト・元資料を使って照合します。</div>
       <div class="btns">
         <button class="secondary" onclick="selectAllRefs()">全選択</button>
         <button class="secondary" onclick="clearRefs()">選択解除</button>
@@ -70,13 +70,46 @@ button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px 
     </div>
 
     <div class="card">
-      <h2>ChatGPTへ渡す照合プロンプト</h2>
-      <div class="btns">
-        <button onclick="buildPrompt()">プロンプト生成</button>
-        <button class="secondary" onclick="copyPrompt()">コピー</button>
-        <button class="secondary" onclick="downloadPack()">ZIP保存</button>
+      <h2>動画素材メモ</h2>
+      <div class="note">撮り直し禁止で、今ある動画素材だけを使った10秒前後の構成を出させます。動画をChatGPTに別添付する場合も、ここに見えている素材をメモしておくと精度が上がります。</div>
+      <div class="grid2">
+        <div>
+          <label>検証目的</label>
+          <select id="goal">
+            <option>再生数</option>
+            <option>フォロー増</option>
+            <option>保存/シェア</option>
+            <option>仕事依頼</option>
+            <option>地域ブランディング</option>
+            <option>プロセスエコノミー化</option>
+          </select>
+        </div>
+        <div>
+          <label>寄せたい軸</label>
+          <select id="axis">
+            <option>動画素材だけでバズ構成化</option>
+            <option>事件化</option>
+            <option>不安化</option>
+            <option>弱者挑戦型</option>
+            <option>地域ドキュメンタリー型</option>
+            <option>コメント誘導型</option>
+          </select>
+        </div>
       </div>
-      <div id="prompt" class="output" style="margin-top:14px">ここに生成されます。</div>
+      <label>動画内にある使える素材・場面</label>
+      <textarea id="videoMaterials" placeholder="例：ボロ倉庫の外観、掃除している手元、手伝ってくれた人、狭い搬入路、古い機械、父母の反応、驚いた表情など"></textarea>
+      <label>補足メモ</label>
+      <textarea id="memo" placeholder="例：撮り直し不可。今ある動画から10秒前後に再編集したい。0.5〜0.7秒カットでテンポ重視。"></textarea>
+      <div class="btns">
+        <button onclick="buildPrompt()">診断プロンプト生成</button>
+        <button class="secondary" onclick="copyPrompt()">コピー</button>
+        <button class="warn" onclick="downloadPack()">解析パックZIP生成</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>ChatGPTへ渡す照合プロンプト</h2>
+      <div id="prompt" class="output">ここに生成されます。</div>
     </div>
   </section>
 </main>
@@ -91,7 +124,7 @@ let postCards=JSON.parse(localStorage.getItem(CARD_KEY)||'{}');
 let selectedPostId=null;
 let selectedRefs=new Set();
 
-function v(id){return document.getElementById(id).value||''}
+function v(id){const el=document.getElementById(id);return el ? (el.value||'') : ''}
 function num(n){return Number(n||0).toLocaleString()}
 function esc(s=''){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
 
@@ -105,7 +138,7 @@ function renderPosts(){
   el.innerHTML=sorted.map(p=>`
     <div class="item ${selectedPostId===p.id?'active':''}" onclick="selectPost('${p.id}')">
       <b>${esc(p.title)}</b>
-      <div class="small">再生:${num(p.views)} / 保存:${num(p.saves)} / コメント:${num(p.comments)}</div>
+      <div class="small">再生:${num(p.views)} / 保存:${num(p.saves)} / シェア:${num(p.shares)} / コメント:${num(p.comments)}</div>
     </div>
   `).join('');
   renderSummary();
@@ -149,32 +182,18 @@ function selectBottom(){
 function renderSummary(){
   const p=selectedPostData();
   const rs=selectedRefData();
-  const card=p ? (postCards[p.id]||{}) : {};
   document.getElementById('selectedSummary').textContent =
 `【検証する過去投稿】
-${p ? `・${p.title}｜再生:${p.views}｜保存:${p.saves}｜コメント:${p.comments}` : '未選択'}
+${p ? `・${p.title}｜再生:${p.views}｜リーチ:${p.reach||0}｜保存:${p.saves||0}｜シェア:${p.shares||0}｜コメント:${p.comments||0}` : '未選択'}
 
 【照合する参考DB】
 ${rs.length ? rs.map(r=>`・${r.template||r.title}｜${r.creator||r.type||''}`).join('\n') : '未選択'}`;
-
-  // 選択状態が変わったら自動でプロンプトも更新
-  buildPrompt();
 }
 
 function buildPrompt(){
   const p=selectedPostData();
   const rs=selectedRefData();
   const card=p ? (postCards[p.id]||{}) : {};
-
-  if(!p){
-    document.getElementById('prompt').textContent='検証する過去投稿を選択してください。';
-    return '';
-  }
-
-  if(!rs.length){
-    document.getElementById('prompt').textContent='照合する参考DBを選択してください。';
-    return '';
-  }
 
   const postText=p ? `【中村さんの過去投稿】
 タイトル:${p.title}
@@ -187,7 +206,10 @@ URL:${p.url||''}
 いいね:${p.likes||0}
 コメント:${p.comments||0}
 キャプション:
-${p.caption||''}` : '未選択';
+${p.caption||''}
+
+【投稿カルテ / 蓄積メモ】
+${JSON.stringify(card,null,2)}` : '未選択';
 
   const refText=rs.map(r=>`【参考DB / 勝ち構造】
 タイトル:${r.title||''}
@@ -207,40 +229,134 @@ ${r.checklist||''}
 元資料 / 商材本文 / 参考メモ:
 ${r.material||''}`).join('\n\n');
 
-  const prompt=`あなたはSNS投稿の照合検証AIです。
+  const prompt=`あなたはSNSショート動画専用の「構成改善AI」です。
 
 これは「過去投稿同士の比較」ではありません。
-1つの【中村さんの過去投稿】を、【参考DB/ノウハウDBの勝ち構造】に照らして検証してください。
+1つの【中村さんの過去投稿】を、【参考DB/ノウハウDBの勝ち構造】に照らして検証し、さらに【今ある動画素材だけ】でバズ寄りに再編集する構成を提案してください。
 
 【検証目的】
+${v('goal') || '再生数'}
 
+【寄せたい軸】
+${v('axis') || '動画素材だけでバズ構成化'}
 
 【検証する中村さんの過去投稿】
 ${postText}
+
+【動画素材 / 実際に使える場面】
+${v('videoMaterials') || '動画ファイルが別添付されている場合は、映像の中身を確認して使える素材を抽出してください。動画が見られない場合は、投稿情報と補足メモから推定せず、不足情報として明記してください。'}
+
+【補足メモ】
+${v('memo') || '撮り直しは禁止。既存素材だけで再編集構成を作る。'}
 
 【照合する参考DB / ノウハウDB】
 ${refText || '未選択'}
 
 重要：
 - 投稿同士を比較しないでください。
+- 単なる感想は禁止です。
 - 選択した過去投稿が、参考DBの勝ち構造にどれだけ近いかを評価してください。
-- 参考DBの元資料や商材本文も読み込んだうえで、重要部分と不要部分を選別してください。
-- ただし他者の文章や商材内容をそのままコピーせず、構造・考え方・判断基準として抽象化してください。
-- 商材本文の中にどうでもいい情報が含まれていても、SNS改善に関係ある部分だけを抜き出してください。
+- 参考DBの元資料や商材本文も読み込んだうえで、SNS改善に関係ある部分だけを抽出してください。
+- 他者の文章や商材内容をそのままコピーせず、構造・考え方・判断基準として抽象化してください。
 - ど素人ホテル式が含まれる場合は、「ホテル再建」ではなく、中村さんの工場化・職人・地域・AI制作・ナカムロボ物語へ翻訳してください。
 - 数字だけでなく、文脈・問題提起・未完成感・リアル感・コメント余白・続き感・地域性を見てください。
+- 必ず「今ある動画素材だけ」で改善案を作ってください。撮り直し前提は禁止です。
+- 10秒前後、0.5〜0.7秒ごとの高速カットで構成してください。
+- 1カットが長い＝離脱、という前提で設計してください。
+- テロップは0.3秒で読める短さにしてください。
+- 「完成品」ではなく「まだ終わってない物語」に変換してください。
 
-出力：
-1. 照合結果の一言結論
-2. 参考DBに近い点
-3. 参考DBとズレている点
-4. 足りない要素
-5. 伸びた/伸びなかった理由を参考DBで説明
-6. 中村さんジャンルへの翻訳
-7. 次回投稿で使うべき改善点
-8. 保存用の勝ち筋テンプレ名
-9. 投稿前チェック用チェックリスト
-10. 次に試す投稿案5つ`;
+【必ず分析する観点】
+- 離脱ポイント
+- 弱い理由
+- 視聴維持が落ちる理由
+- 感情導線
+- フック不足
+- 事件性不足
+- 主人公不足
+- ワンチャン感不足
+- 保存/シェアされない理由
+- コメントしたくならない理由
+
+【出力形式】
+
+① 投稿の構造分析
+- この投稿は何系か
+- 何が弱いか
+- どこで離脱するか
+- 参考DB/勝ち構造とのズレ
+- 何が足りないか
+
+② この素材で作れる“勝ち構造”
+以下から、どれに寄せるべきか判定してください。
+- プロセスエコノミー型
+- 事件型
+- 弱者挑戦型
+- 地域ドキュメンタリー型
+- ギャップ型
+- 不安型
+- 応援型
+- ストリート型
+- コメント誘導型
+
+③ 既存素材だけで作る10秒前後の再編集構成
+必ず以下の形式で、0.5〜0.7秒刻みで出してください。
+
+■0.0〜0.6秒
+テロップ：
+映像：
+狙い：
+
+■0.6〜1.2秒
+テロップ：
+映像：
+狙い：
+
+この形式を10秒前後まで続ける。
+映像欄には、必ず【動画素材 / 実際に使える場面】または動画内に確認できる素材だけを書いてください。
+
+④ テロップ改善
+元のテロップが弱い場合、以下の方向で改善してください。
+- 事件化
+- 不安化
+- 続きが気になる化
+- ワンチャン感
+- 主人公化
+短く、0.3秒で読める文字数にしてください。
+
+⑤ アルゴリズム評価
+以下を5段階評価してください。
+- フック力
+- コメント誘導
+- 保存率
+- シェア率
+- 視聴維持
+- 主人公性
+- ストーリー性
+- 続きが気になる度
+
+さらに「なぜ伸びないか」をアルゴリズム視点で説明してください。
+
+⑥ 次に試す投稿案5つ
+ただし撮り直し前提ではなく、今ある素材を再利用できる案を優先してください。
+
+⑦ この動画の本当の武器
+最後に必ず1文で断定してください。
+例：
+- 「感謝」ではなく“無理ゲー感”
+- 「倉庫」ではなく“人生再建”
+- 「整理」ではなく“工場化プロセス”
+- 「DIY」ではなく“地方リアル”
+
+禁止事項：
+- 一般論
+- 抽象論
+- 「共感が大事」だけで終わる回答
+- 「冒頭改善」だけで終わる回答
+- 撮り直し前提
+- 長い説明テロップ
+- 1カットが長い編集
+- 既存素材にない映像を勝手に追加すること`;
 
   document.getElementById('prompt').textContent=prompt;
   return prompt;
@@ -248,25 +364,21 @@ ${refText || '未選択'}
 
 async function copyPrompt(){
   const text=document.getElementById('prompt').textContent;
-  if(!text || text==='ここに生成されます。'){alert('先にプロンプトを生成してください');return;}
-  try{
-    await navigator.clipboard.writeText(text);
-    alert('コピーしました');
-  }catch(e){
-    alert('コピーに失敗しました。ブラウザの権限を確認してください。');
-  }
+  if(!text || text==='ここに生成されます。') buildPrompt();
+  await navigator.clipboard.writeText(document.getElementById('prompt').textContent);
+  alert('コピーしました');
 }
 
 async function downloadPack(){
   if(typeof JSZip==='undefined'){alert('ZIP生成ライブラリが読み込めません');return;}
   const z=new JSZip();
   const prompt=buildPrompt();
-  if(!prompt){return;}
   z.file('reference_alignment_prompt.txt',prompt);
   z.file('reference_alignment_data.json',JSON.stringify({
     generatedAt:new Date().toISOString(),
     goal:v('goal'),
     axis:v('axis'),
+    videoMaterials:v('videoMaterials'),
     memo:v('memo'),
     selectedPost:selectedPostData(),
     selectedPostCard:selectedPostData()?postCards[selectedPostData().id]||{}:{},
@@ -277,7 +389,8 @@ async function downloadPack(){
       type:r.type,
       structure:r.structure,
       translate:r.translate,
-      checklist:r.checklist
+      checklist:r.checklist,
+      material:r.material
     }))
   },null,2));
   const blob=await z.generateAsync({type:'blob'});
