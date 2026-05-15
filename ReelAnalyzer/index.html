@@ -5,17 +5,27 @@ header{padding:20px 22px;border-bottom:1px solid var(--line);background:#0f151d;
 h1{margin:0;font-size:24px}.sub{color:var(--muted);font-size:13px;margin-top:4px}
 nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}nav a{color:var(--text);text-decoration:none;background:#1b2734;border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:13px;font-weight:800}nav a.active{background:var(--accent);color:#06130f}
 .wrap{max-width:1180px;margin:0 auto;padding:22px}.clean{max-width:920px}
+.layout{display:grid;grid-template-columns:340px 1fr;gap:18px}@media(max-width:900px){.layout{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:18px}
 .homegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}@media(max-width:900px){.homegrid{grid-template-columns:1fr}}
 .homecard{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:22px;text-decoration:none;color:var(--text);display:block;min-height:190px}
 .homecard:hover{border-color:var(--accent)}.homecard b{font-size:20px}.homecard p{color:var(--muted);font-size:14px}.tag{display:inline-block;background:#0b1118;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:4px 9px;font-size:12px;margin-top:10px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:18px}
+input,textarea,select{width:100%;background:#0b1118;border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:12px;font-size:14px}
+textarea{min-height:120px;resize:vertical}label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
+button,.btn{border:0;background:var(--accent);padding:10px 14px;border-radius:999px;font-weight:800;cursor:pointer;color:#06130f;text-decoration:none;display:inline-flex;font-size:13px}
+button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px solid var(--line)}button.warn{background:var(--warn);color:#221700}button.danger{background:#40242a;color:#ffd4d4;border:1px solid #67323b}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.grid2{grid-template-columns:1fr}}
+.item{padding:12px;border:1px solid var(--line);border-radius:14px;background:#101721;cursor:pointer;margin-bottom:8px}.item.active{border-color:var(--accent)}
+.small{font-size:12px;color:var(--muted)}.status,.note,.preview{padding:12px;border-radius:12px;background:#0b1118;border:1px solid var(--line);color:var(--muted);font-size:13px;margin-top:10px}
+.output{white-space:pre-wrap;background:#0b1118;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;line-height:1.7;max-height:560px;overflow:auto}
+.hidden{display:none}
 </style></head><body>
-<header><h1>Reel Strategy OS</h1><div class="sub">SNS投稿を、蓄積・比較・検証で育てる個人用OS。</div><nav><a class="active" href="./index.html">TOP</a><a href="./check.html">投稿前チェック</a><a href="./compare.html">過去投稿比較</a><a href="./admin.html">Admin</a></nav></header>
+<header><h1>Reel Strategy OS</h1><div class="sub">SNS投稿を、蓄積・比較・投稿前検証で育てる個人用OS。</div><nav><a class="active" href="./index.html">TOP</a><a class="" href="./check.html">投稿前チェック</a><a class="" href="./compare.html">過去投稿比較</a><a class="" href="./admin.html">Admin</a></nav></header>
 <main class="wrap clean">
 <div class="homegrid">
-<a class="homecard" href="./check.html"><b>投稿前チェック</b><p>次回投稿予定の動画・案を入れて、ChatGPT/Geminiに渡す解析パックを作る。</p><span class="tag">未来を見る</span></a>
-<a class="homecard" href="./compare.html"><b>過去投稿×参考DB検証</b><p>選んだ投稿をDBと照合し、既存素材から改善構成をAIに出させる。</p><span class="tag">過去を見る</span></a>
-<a class="homecard" href="./admin.html"><b>Admin</b><p>ノウハウ、商材、参考投稿、Instagram投稿DBを登録・管理する。</p><span class="tag">脳みそを育てる</span></a>
+<a class="homecard" href="./check.html"><b>投稿前チェック</b><p>次回投稿予定の動画・キャプションを入れて、ChatGPTに渡す解析パックを作る。</p><span class="tag">未来を見る</span></a>
+<a class="homecard" href="./compare.html"><b>過去投稿×参考DB検証</b><p>選んだ投稿をDBと照合し、撮り直しなしで既存素材から改善構成を出す。</p><span class="tag">過去を見る</span></a>
+<a class="homecard" href="./admin.html"><b>Admin</b><p>ノウハウ、商材テキスト、参考投稿、Instagram投稿DBを登録・管理するバックオフィス。</p><span class="tag">脳みそを育てる</span></a>
 </div>
-<div class="card" style="margin-top:18px"><h2>使う順番</h2><p style="font-size:14px;color:var(--muted)">① AdminでInstagram投稿取得・参考構造登録 → ② 過去投稿比較で勝ち筋抽出 → ③ 投稿前チェックで次回投稿を改善。</p></div>
+<div class="card" style="margin-top:18px"><h2>使う順番</h2><p class="small">① AdminでInstagram投稿取得・参考構造登録 → ② 過去投稿比較で勝ち筋抽出 → ③ 投稿前チェックで次回投稿を改善。</p></div>
 </main></body></html>

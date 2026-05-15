@@ -1,43 +1,271 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>過去投稿×参考DB検証</title><style>
-:root{--bg:#0b1016;--panel:#121922;--line:#263445;--text:#eef4ff;--muted:#94a7bc;--accent:#57e0aa;--r:18px}
-*{box-sizing:border-box}body{margin:0;background:#0b1016;color:var(--text);font-family:system-ui,-apple-system,sans-serif;line-height:1.55}
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>過去投稿×参考DB検証</title>
+<style>
+:root{--bg:#0b1016;--panel:#121922;--line:#263445;--text:#eef4ff;--muted:#94a7bc;--accent:#57e0aa;--warn:#ffd166;--bad:#ff6b6b;--r:18px}
+*{box-sizing:border-box}body{margin:0;background:#0b1016;color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.55}
 header{padding:20px 22px;border-bottom:1px solid var(--line);background:#0f151d;position:sticky;top:0;z-index:10}
-nav{display:flex;gap:8px;margin-top:12px}nav a{color:var(--text);text-decoration:none;background:#1b2734;border-radius:999px;padding:8px 12px;font-size:13px}
-nav a.active{background:var(--accent);color:#06130f}
-.wrap{max-width:1180px;margin:0 auto;padding:22px;display:grid;grid-template-columns:340px 1fr;gap:18px}
+h1{margin:0;font-size:24px}.sub{color:var(--muted);font-size:13px;margin-top:4px}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}nav a{color:var(--text);text-decoration:none;background:#1b2734;border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:13px;font-weight:800}nav a.active{background:var(--accent);color:#06130f}
+.wrap{max-width:1180px;margin:0 auto;padding:22px}.clean{max-width:920px}
+.layout{display:grid;grid-template-columns:340px 1fr;gap:18px}@media(max-width:900px){.layout{grid-template-columns:1fr}}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:18px}
-.item{padding:12px;border:1px solid var(--line);border-radius:14px;background:#101721;cursor:pointer;margin-bottom:8px}
-.item.active{border-color:var(--accent)}.small{font-size:12px;color:var(--muted)}
-.output{white-space:pre-wrap;background:#0b1118;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;max-height:600px;overflow:auto}
-button{border:0;background:var(--accent);padding:10px 14px;border-radius:999px;font-weight:800;cursor:pointer;color:#06130f}
-</style></head><body>
-<header><h1>過去投稿×参考DB検証</h1><nav><a href="./index.html">TOP</a><a href="./check.html">投稿前チェック</a><a class="active" href="./compare.html">過去投稿比較</a><a href="./admin.html">Admin</a></nav></header>
-<main class="wrap"><aside><div class="card"><h2>検証する過去投稿</h2><div id="postList"></div></div><div class="card"><h2>照合する参考DB</h2><div id="refList"></div></div></aside>
-<section><div class="card"><h2>Gemini/ChatGPTへ渡すプロンプト</h2><div class="btns" style="margin-bottom:10px"><button onclick="copyPrompt()">プロンプトをコピー</button></div><div id="prompt" class="output">投稿とDBを選択してください。</div></div></section></main>
+.homegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}@media(max-width:900px){.homegrid{grid-template-columns:1fr}}
+.homecard{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:22px;text-decoration:none;color:var(--text);display:block;min-height:190px}
+.homecard:hover{border-color:var(--accent)}.homecard b{font-size:20px}.homecard p{color:var(--muted);font-size:14px}.tag{display:inline-block;background:#0b1118;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:4px 9px;font-size:12px;margin-top:10px}
+input,textarea,select{width:100%;background:#0b1118;border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:12px;font-size:14px}
+textarea{min-height:120px;resize:vertical}label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
+button,.btn{border:0;background:var(--accent);padding:10px 14px;border-radius:999px;font-weight:800;cursor:pointer;color:#06130f;text-decoration:none;display:inline-flex;font-size:13px}
+button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px solid var(--line)}button.warn{background:var(--warn);color:#221700}button.danger{background:#40242a;color:#ffd4d4;border:1px solid #67323b}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.grid2{grid-template-columns:1fr}}
+.item{padding:12px;border:1px solid var(--line);border-radius:14px;background:#101721;cursor:pointer;margin-bottom:8px}.item.active{border-color:var(--accent)}
+.small{font-size:12px;color:var(--muted)}.status,.note,.preview{padding:12px;border-radius:12px;background:#0b1118;border:1px solid var(--line);color:var(--muted);font-size:13px;margin-top:10px}
+.output{white-space:pre-wrap;background:#0b1118;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;line-height:1.7;max-height:560px;overflow:auto}
+.hidden{display:none}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+</head>
+<body>
+<header>
+  <h1>過去投稿×参考DB検証</h1>
+  <div class="sub">選んだ投稿を、蓄積したDB・商材・勝ち筋・過去成功例と照合してAIが改善案を生成します。</div>
+  <nav>
+    <a href="./index.html">TOP</a>
+    <a href="./check.html">投稿前チェック</a>
+    <a class="active" href="./compare.html">過去投稿比較</a>
+    <a href="./admin.html">Admin</a>
+  </nav>
+</header>
+
+<main class="wrap layout">
+  <aside>
+    <div class="card">
+      <h2>検証する過去投稿</h2>
+      <div class="note">ここでは投稿同士を比較しません。1投稿を選び、参考DBと照合します。</div>
+      <div class="btns">
+        <button class="secondary" onclick="selectTop()">上位投稿を選択</button>
+        <button class="secondary" onclick="selectBottom()">下位投稿を選択</button>
+        <button class="secondary" onclick="clearPost()">選択解除</button>
+      </div>
+      <div id="postList" style="margin-top:14px"></div>
+    </div>
+
+    <div class="card">
+      <h2>照合する参考DB</h2>
+      <div class="note">プロンプトには元資料の全文は入れません。保存済みの構造・翻訳・チェックリストだけを使います。</div>
+      <div class="btns">
+        <button class="secondary" onclick="selectAllRefs()">全選択</button>
+        <button class="secondary" onclick="clearRefs()">選択解除</button>
+      </div>
+      <div id="refList" style="margin-top:14px"></div>
+    </div>
+  </aside>
+
+  <section>
+    <div class="card"><h2>選択中</h2>
+      <div id="selectedSummary" class="output">未選択</div>
+    </div>
+
+    <div class="card">
+      <h2>ChatGPTへ渡す照合プロンプト</h2>
+      <div id="prompt" class="output">ここに生成されます。</div>
+    </div>
+  </section>
+</main>
+
 <script>
-const POST_KEY='rso_posts_v1',REF_KEY='rso_refs_v1',CARD_KEY='rso_post_cards_v1';
-let posts=JSON.parse(localStorage.getItem(POST_KEY)||'[]'),refs=JSON.parse(localStorage.getItem(REF_KEY)||'[]'),cards=JSON.parse(localStorage.getItem(CARD_KEY)||'{}'),selectedPostId=null,selectedRefs=new Set();
-function renderPosts(){document.getElementById('postList').innerHTML=posts.sort((a,b)=>b.views-a.views).map(p=>`<div class="item ${selectedPostId===p.id?'active':''}" onclick="selectPost('${p.id}')"><b>${p.title}</b><div class="small">再生:${p.views.toLocaleString()}</div></div>`).join('')}
-function renderRefs(){document.getElementById('refList').innerHTML=refs.map(r=>`<div class="item ${selectedRefs.has(String(r.id))?'active':''}" onclick="toggleRef('${r.id}')"><b>${r.template||r.title}</b></div>`).join('')}
-function selectPost(id){selectedPostId=id;renderPosts();buildPrompt()}
-function toggleRef(id){selectedRefs.has(id)?selectedRefs.delete(id):selectedRefs.add(id);renderRefs();buildPrompt()}
-function buildPrompt(){
-  const p=posts.find(x=>x.id===selectedPostId),rs=refs.filter(r=>selectedRefs.has(String(r.id))),c=cards[selectedPostId]||{};
-  if(!p)return;
-  const postText=`【中村さんの過去投稿DB】\nタイトル:${p.title}\n数値:再生${p.views}/保存${p.saves}/コメ${p.comments}\nキャプション:${p.caption}\nカルテメモ:${c.memo||'なし'}`;
-  const refText=rs.map(r=>`【参照DB:${r.template}】\n構造:${r.structure}\n翻訳案:${r.translate}\n資料全文:${r.material}`).join('\n\n');
-  const pr=`あなたはSNS戦略のプロです。以下のDB情報を読み解き、中村さんのエンジニアリング活動を「素人ホテル」的な熱狂を生む物語へ昇華させてください。
-### 1. 解析対象
-${postText}
-### 2. 勝ち筋の指針
-${refText}
-### 3. ミッション
-情報の取捨選択はGeminiが行い、既存素材のみで「視聴者が応援したくなる構成」へ組み替えてください。
-- 診断:なぜこの投稿は勝ち筋からズレたか
-- シン・構成案:素材をどう切り貼りするか
-- コメント誘導:応援を加速させる一行`;
-  document.getElementById('prompt').textContent=pr;
+const POST_KEY='rso_posts_v1';
+const REF_KEY='rso_refs_v1';
+const CARD_KEY='rso_post_cards_v1';
+let posts=JSON.parse(localStorage.getItem(POST_KEY)||'[]');
+let refs=JSON.parse(localStorage.getItem(REF_KEY)||'[]');
+let postCards=JSON.parse(localStorage.getItem(CARD_KEY)||'{}');
+let selectedPostId=null;
+let selectedRefs=new Set();
+
+function v(id){return document.getElementById(id).value||''}
+function num(n){return Number(n||0).toLocaleString()}
+function esc(s=''){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
+
+function renderPosts(){
+  const el=document.getElementById('postList');
+  if(!posts.length){
+    el.innerHTML='<div class="small">AdminでInstagram投稿を取得してください</div>';
+    return;
+  }
+  const sorted=[...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0));
+  el.innerHTML=sorted.map(p=>`
+    <div class="item ${selectedPostId===p.id?'active':''}" onclick="selectPost('${p.id}')">
+      <b>${esc(p.title)}</b>
+      <div class="small">再生:${num(p.views)} / 保存:${num(p.saves)} / コメント:${num(p.comments)}</div>
+    </div>
+  `).join('');
+  renderSummary();
 }
-async function copyPrompt(){await navigator.clipboard.writeText(document.getElementById('prompt').textContent);alert('コピー済')}
-renderPosts();renderRefs();
-</script></body></html>
+
+function renderRefs(){
+  const el=document.getElementById('refList');
+  if(!refs.length){
+    el.innerHTML='<div class="small">Adminで参考構造DBを登録してください</div>';
+    return;
+  }
+  el.innerHTML=refs.map(r=>`
+    <div class="item ${selectedRefs.has(String(r.id))?'active':''}" onclick="toggleRef('${r.id}')">
+      <b>${esc(r.template||r.title||'無題')}</b>
+      <div class="small">${esc(r.creator||r.type||'参考DB')}</div>
+    </div>
+  `).join('');
+  renderSummary();
+}
+
+function selectPost(id){selectedPostId=id;renderPosts();}
+function clearPost(){selectedPostId=null;renderPosts();}
+function selectedPostData(){return posts.find(p=>p.id===selectedPostId)||null;}
+
+function toggleRef(id){id=String(id);selectedRefs.has(id)?selectedRefs.delete(id):selectedRefs.add(id);renderRefs();}
+function selectedRefData(){return refs.filter(r=>selectedRefs.has(String(r.id)));}
+function selectAllRefs(){selectedRefs=new Set(refs.map(r=>String(r.id)));renderRefs();}
+function clearRefs(){selectedRefs.clear();renderRefs();}
+
+function selectTop(){
+  const sorted=[...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0));
+  selectedPostId=sorted[0]?.id||null;
+  renderPosts();
+}
+function selectBottom(){
+  const sorted=[...posts].sort((a,b)=>Number(a.views||0)-Number(b.views||0));
+  selectedPostId=sorted[0]?.id||null;
+  renderPosts();
+}
+
+function renderSummary(){
+  const p=selectedPostData();
+  const rs=selectedRefData();
+  const card=p ? (postCards[p.id]||{}) : {};
+  document.getElementById('selectedSummary').textContent =
+`【検証する過去投稿】
+${p ? `・${p.title}｜再生:${p.views}｜保存:${p.saves}｜コメント:${p.comments}` : '未選択'}
+
+【照合する参考DB】
+${rs.length ? rs.map(r=>`・${r.template||r.title}｜${r.creator||r.type||''}`).join('\n') : '未選択'}`;
+}
+
+function buildPrompt(){
+  const p=selectedPostData();
+  const rs=selectedRefData();
+  const card=p ? (postCards[p.id]||{}) : {};
+
+  const postText=p ? `【中村さんの過去投稿】
+タイトル:${p.title}
+URL:${p.url||''}
+日付:${p.date||''}
+再生:${p.views||0}
+リーチ:${p.reach||0}
+保存:${p.saves||0}
+シェア:${p.shares||0}
+いいね:${p.likes||0}
+コメント:${p.comments||0}
+キャプション:
+${p.caption||''}` : '未選択';
+
+  const refText=rs.map(r=>`【参考DB / 勝ち構造】
+タイトル:${r.title||''}
+テンプレ名:${r.template||''}
+出典:${r.creator||''}
+種別:${r.type||''}
+
+抽象化した構造:
+${r.structure||''}
+
+自分ジャンルへの翻訳:
+${r.translate||''}
+
+チェックリスト:
+${r.checklist||''}
+
+元資料 / 商材本文 / 参考メモ:
+${r.material||''}`).join('\n\n');
+
+  const prompt=`あなたはSNS投稿の照合検証AIです。
+
+これは「過去投稿同士の比較」ではありません。
+1つの【中村さんの過去投稿】を、【参考DB/ノウハウDBの勝ち構造】に照らして検証してください。
+
+【検証目的】
+
+
+【検証する中村さんの過去投稿】
+${postText}
+
+【照合する参考DB / ノウハウDB】
+${refText || '未選択'}
+
+重要：
+- 投稿同士を比較しないでください。
+- 選択した過去投稿が、参考DBの勝ち構造にどれだけ近いかを評価してください。
+- 参考DBの元資料や商材本文も読み込んだうえで、重要部分と不要部分を選別してください。
+- ただし他者の文章や商材内容をそのままコピーせず、構造・考え方・判断基準として抽象化してください。
+- 商材本文の中にどうでもいい情報が含まれていても、SNS改善に関係ある部分だけを抜き出してください。
+- ど素人ホテル式が含まれる場合は、「ホテル再建」ではなく、中村さんの工場化・職人・地域・AI制作・ナカムロボ物語へ翻訳してください。
+- 数字だけでなく、文脈・問題提起・未完成感・リアル感・コメント余白・続き感・地域性を見てください。
+
+出力：
+1. 照合結果の一言結論
+2. 参考DBに近い点
+3. 参考DBとズレている点
+4. 足りない要素
+5. 伸びた/伸びなかった理由を参考DBで説明
+6. 中村さんジャンルへの翻訳
+7. 次回投稿で使うべき改善点
+8. 保存用の勝ち筋テンプレ名
+9. 投稿前チェック用チェックリスト
+10. 次に試す投稿案5つ`;
+
+  document.getElementById('prompt').textContent=prompt;
+  return prompt;
+}
+
+async function copyPrompt(){
+  await navigator.clipboard.writeText(document.getElementById('prompt').textContent);
+  alert('コピーしました');
+}
+
+async function downloadPack(){
+  if(typeof JSZip==='undefined'){alert('ZIP生成ライブラリが読み込めません');return;}
+  const z=new JSZip();
+  const prompt=buildPrompt();
+  z.file('reference_alignment_prompt.txt',prompt);
+  z.file('reference_alignment_data.json',JSON.stringify({
+    generatedAt:new Date().toISOString(),
+    goal:v('goal'),
+    axis:v('axis'),
+    memo:v('memo'),
+    selectedPost:selectedPostData(),
+    selectedPostCard:selectedPostData()?postCards[selectedPostData().id]||{}:{},
+    selectedReferences:selectedRefData().map(r=>({
+      title:r.title,
+      template:r.template,
+      creator:r.creator,
+      type:r.type,
+      structure:r.structure,
+      translate:r.translate,
+      checklist:r.checklist
+    }))
+  },null,2));
+  const blob=await z.generateAsync({type:'blob'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='reference_alignment_pack.zip';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+renderPosts();
+renderRefs();
+renderSummary();
+</script>
+</body>
+</html>
