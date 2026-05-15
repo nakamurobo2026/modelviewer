@@ -13,25 +13,19 @@ nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}nav a{color:var(--text);
 .wrap{max-width:1180px;margin:0 auto;padding:22px}.clean{max-width:920px}
 .layout{display:grid;grid-template-columns:340px 1fr;gap:18px}@media(max-width:900px){.layout{grid-template-columns:1fr}}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:18px}
-.homegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}@media(max-width:900px){.homegrid{grid-template-columns:1fr}}
-.homecard{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:22px;text-decoration:none;color:var(--text);display:block;min-height:190px}
-.homecard:hover{border-color:var(--accent)}.homecard b{font-size:20px}.homecard p{color:var(--muted);font-size:14px}.tag{display:inline-block;background:#0b1118;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:4px 9px;font-size:12px;margin-top:10px}
-input,textarea,select{width:100%;background:#0b1118;border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:12px;font-size:14px}
-textarea{min-height:120px;resize:vertical}label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
-button,.btn{border:0;background:var(--accent);padding:10px 14px;border-radius:999px;font-weight:800;cursor:pointer;color:#06130f;text-decoration:none;display:inline-flex;font-size:13px}
-button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px solid var(--line)}button.warn{background:var(--warn);color:#221700}button.danger{background:#40242a;color:#ffd4d4;border:1px solid #67323b}
-.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.grid2{grid-template-columns:1fr}}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 .item{padding:12px;border:1px solid var(--line);border-radius:14px;background:#101721;cursor:pointer;margin-bottom:8px}.item.active{border-color:var(--accent)}
 .small{font-size:12px;color:var(--muted)}.status,.note,.preview{padding:12px;border-radius:12px;background:#0b1118;border:1px solid var(--line);color:var(--muted);font-size:13px;margin-top:10px}
-.output{white-space:pre-wrap;background:#0b1118;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;line-height:1.7;max-height:560px;overflow:auto}
-.hidden{display:none}
+.output{white-space:pre-wrap;background:#0b1118;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;line-height:1.7;max-height:600px;overflow:auto}
+button,.btn{border:0;background:var(--accent);padding:10px 14px;border-radius:999px;font-weight:800;cursor:pointer;color:#06130f;text-decoration:none;display:inline-flex;font-size:13px;margin-bottom:8px}
+button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px solid var(--line)}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </head>
 <body>
 <header>
   <h1>過去投稿×参考DB検証</h1>
-  <div class="sub">選んだ投稿を、蓄積したDB・商材・勝ち筋・過去成功例と照合してAIが改善案を生成します。</div>
+  <div class="sub">投稿を選んで、ナカムラボの「勝ちパターン」を分析・生成します。</div>
   <nav>
     <a href="./index.html">TOP</a>
     <a href="./check.html">投稿前チェック</a>
@@ -44,34 +38,36 @@ button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px 
   <aside>
     <div class="card">
       <h2>検証する過去投稿</h2>
-      <div class="note">ここでは投稿同士を比較しません。1投稿を選び、参考DBと照合します。</div>
       <div class="btns">
         <button class="secondary" onclick="selectTop()">上位投稿を選択</button>
         <button class="secondary" onclick="selectBottom()">下位投稿を選択</button>
-        <button class="secondary" onclick="clearPost()">選択解除</button>
+        <button class="secondary" onclick="clearPost()">解除</button>
       </div>
       <div id="postList" style="margin-top:14px"></div>
     </div>
 
     <div class="card">
       <h2>照合する参考DB</h2>
-      <div class="note">プロンプトには元資料の全文は入れません。保存済みの構造・翻訳・チェックリストだけを使います。</div>
       <div class="btns">
         <button class="secondary" onclick="selectAllRefs()">全選択</button>
-        <button class="secondary" onclick="clearRefs()">選択解除</button>
+        <button class="secondary" onclick="clearRefs()">解除</button>
       </div>
       <div id="refList" style="margin-top:14px"></div>
     </div>
   </aside>
 
   <section>
-    <div class="card"><h2>選択中</h2>
-      <div id="selectedSummary" class="output">未選択</div>
+    <div class="card">
+      <h2>選択中のステータス</h2>
+      <div id="selectedSummary" class="output" style="max-height:150px">未選択</div>
     </div>
 
     <div class="card">
-      <h2>ChatGPTへ渡す照合プロンプト</h2>
-      <div id="prompt" class="output">ここに生成されます。</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h2 style="margin:0">ChatGPTへ渡すプロンプト</h2>
+        <button onclick="copyPrompt()">コピー</button>
+      </div>
+      <div id="prompt" class="output">投稿と参考DBを選択するとここに生成されます。</div>
     </div>
   </section>
 </main>
@@ -86,16 +82,12 @@ let postCards=JSON.parse(localStorage.getItem(CARD_KEY)||'{}');
 let selectedPostId=null;
 let selectedRefs=new Set();
 
-function v(id){return document.getElementById(id).value||''}
-function num(n){return Number(n||0).toLocaleString()}
 function esc(s=''){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
+function num(n){return Number(n||0).toLocaleString()}
 
 function renderPosts(){
   const el=document.getElementById('postList');
-  if(!posts.length){
-    el.innerHTML='<div class="small">AdminでInstagram投稿を取得してください</div>';
-    return;
-  }
+  if(!posts.length){el.innerHTML='<div class="small">Adminで投稿を取得してください</div>';return;}
   const sorted=[...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0));
   el.innerHTML=sorted.map(p=>`
     <div class="item ${selectedPostId===p.id?'active':''}" onclick="selectPost('${p.id}')">
@@ -103,165 +95,94 @@ function renderPosts(){
       <div class="small">再生:${num(p.views)} / 保存:${num(p.saves)} / コメント:${num(p.comments)}</div>
     </div>
   `).join('');
-  renderSummary();
+  updateUI();
 }
 
 function renderRefs(){
   const el=document.getElementById('refList');
-  if(!refs.length){
-    el.innerHTML='<div class="small">Adminで参考構造DBを登録してください</div>';
-    return;
-  }
+  if(!refs.length){el.innerHTML='<div class="small">AdminでDBを登録してください</div>';return;}
   el.innerHTML=refs.map(r=>`
     <div class="item ${selectedRefs.has(String(r.id))?'active':''}" onclick="toggleRef('${r.id}')">
       <b>${esc(r.template||r.title||'無題')}</b>
       <div class="small">${esc(r.creator||r.type||'参考DB')}</div>
     </div>
   `).join('');
-  renderSummary();
+  updateUI();
 }
 
 function selectPost(id){selectedPostId=id;renderPosts();}
 function clearPost(){selectedPostId=null;renderPosts();}
-function selectedPostData(){return posts.find(p=>p.id===selectedPostId)||null;}
-
 function toggleRef(id){id=String(id);selectedRefs.has(id)?selectedRefs.delete(id):selectedRefs.add(id);renderRefs();}
-function selectedRefData(){return refs.filter(r=>selectedRefs.has(String(r.id)));}
 function selectAllRefs(){selectedRefs=new Set(refs.map(r=>String(r.id)));renderRefs();}
 function clearRefs(){selectedRefs.clear();renderRefs();}
+function selectTop(){const s=[...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0));selectedPostId=s[0]?.id||null;renderPosts();}
+function selectBottom(){const s=[...posts].sort((a,b)=>Number(a.views||0)-Number(b.views||0));selectedPostId=s[0]?.id||null;renderPosts();}
 
-function selectTop(){
-  const sorted=[...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0));
-  selectedPostId=sorted[0]?.id||null;
-  renderPosts();
-}
-function selectBottom(){
-  const sorted=[...posts].sort((a,b)=>Number(a.views||0)-Number(b.views||0));
-  selectedPostId=sorted[0]?.id||null;
-  renderPosts();
+function updateUI(){
+  renderSummary();
+  buildPrompt();
 }
 
 function renderSummary(){
-  const p=selectedPostData();
-  const rs=selectedRefData();
-  const card=p ? (postCards[p.id]||{}) : {};
+  const p=posts.find(p=>p.id===selectedPostId);
+  const rs=refs.filter(r=>selectedRefs.has(String(r.id)));
   document.getElementById('selectedSummary').textContent =
-`【検証する過去投稿】
-${p ? `・${p.title}｜再生:${p.views}｜保存:${p.saves}｜コメント:${p.comments}` : '未選択'}
-
-【照合する参考DB】
-${rs.length ? rs.map(r=>`・${r.template||r.title}｜${r.creator||r.type||''}`).join('\n') : '未選択'}`;
+`【検証対象】${p ? p.title : '未選択'}
+【照合DB】${rs.length ? rs.map(r=>r.template||r.title).join(', ') : '未選択'}`;
 }
 
 function buildPrompt(){
-  const p=selectedPostData();
-  const rs=selectedRefData();
-  const card=p ? (postCards[p.id]||{}) : {};
+  const p=posts.find(p=>p.id===selectedPostId);
+  const rs=refs.filter(r=>selectedRefs.has(String(r.id)));
+  if(!p || !rs.length){
+    document.getElementById('prompt').textContent = "投稿と参考DBの両方を選択してください。";
+    return;
+  }
 
-  const postText=p ? `【検証する過去投稿】
+  const postText=`【検証する過去投稿】
 タイトル:${p.title}
-URL:${p.url||''}
-日付:${p.date||''}
-再生:${p.views||0} / リーチ:${p.reach||0}
-保存:${p.saves||0} / シェア:${p.shares||0} / いいね:${p.likes||0} / コメント:${p.comments||0}
-キャプション:
-${p.caption||''}` : '未選択';
+再生:${p.views||0} / 保存:${p.saves||0} / コメント:${p.comments||0}
+キャプション:${p.caption||''}`;
 
-  const refText=rs.map(r=>`【照合する参考DB】
+  const refText=rs.map(r=>`【参考DB】
 タイトル:${r.title||''}
-テンプレ名:${r.template||''}
-出典:${r.creator||''}
-抽象化した構造:
-${r.structure||''}
-自分ジャンルへの翻訳案:
-${r.translate||''}
-チェックリスト:
-${r.checklist||''}
-元資料/メモ:
-${r.material||''}`).join('\n\n');
+抽象構造:${r.structure||''}
+翻訳案:${r.translate||''}
+チェックリスト:${r.checklist||''}`).join('\n\n');
 
-  const prompt=`
-# Role
+  const prompt=`# Role
 あなたは「ナカムラボエンジニアリング」の専属プロデューサーです。
 技術者でありIP開発者でもある中村さんの過去投稿を、蓄積された「勝ち構造DB」に照らし合わせ、ナカムロボの世界観を爆発させるための改善案を策定してください。
 
-# 目的
-過去の投稿がなぜその数字になったのかを「構造的」に解明し、次の投稿で再現可能な「中村さん専用の勝ちパターン」を抽出すること。
-
 # インプット
-## 1. 検証対象：中村さんの過去投稿
 ${postText}
 
-## 2. 照合基準：参考DB（勝ち構造・ノウハウ）
-${refText || '未選択'}
+${refText}
 
-# 出力項目（必須10点）
+# 出力項目
+1. 適合率判定（%）と一言結論
+2. 参考DBとの「合致点」と「致命的な不足点」
+3. ナカムラボ的翻訳（3Dプリンタ、ナカムロボ、職人、工場、福山市の要素へ変換）
+4. 数字の裏側分析（視聴者心理から見た「保存」や「コメント」の理由）
+5. 次回への改善アクション（最初の3秒、キャプション1行目、オチをどう変えるか）
+6. 中村さん専用勝ち筋テンプレ名（今回の検証を型として命名）
+7. 投稿前チェックリスト（公開前に確認すべき5項目）
+8. 次に試す投稿案5選（リベンジ版、実験版、ファン化版、メイキング版、リアル版）
 
-1. **一言結論**：参考DBの型に対する適合率（%）と、一言での評価。
-2. **参考DBとの合致点**：無意識にできていた「伸びる要素」の特定。
-3. **決定的な不足・ズレ**：参考DBにある要素のうち、今回「取りこぼしていた」または「表現が弱かった」部分。
-4. **ナカムラボ的コンテキストへの翻訳**：
-   - 参考DBの抽象概念（共感、教育、権威、物語など）を、中村さんの要素（3Dプリンタ、ナカムロボ、職人、工場、福山市、技術の試行錯誤）にどう落とし込むべきか。
-5. **数字の裏側分析**：再生や保存の数を、参考DBにある「視聴者心理（応援したくなるか？真似したくなるか？）」の観点から分析。
-6. **「余白と隙」の検証**：コメントやシェアを誘発する「ツッコミどころ」や「未完成感」がどこにあったか（あるいは無かったか）。
-7. **次回への改善アクション**：具体的に「最初の3秒」「キャプションの1行目」「動画のオチ」をどう変えるか。
-8. **保存用：中村さん専用勝ち筋テンプレ名**：今回の検証を経て、今後使い回せる型に名前をつけてください。
-9. **投稿前チェックリスト**：この型を使う際に、公開ボタンを押す前に確認すべき5つの項目。
-10. **次に試す投稿案5選**：
-   - 案1：今回の投稿の「完全版（リベンジ版）」
-   - 案2：参考DBの型を100%忠実に再現した「実験版」
-   - 案3：ナカムロボの物語・情緒に振り切った「ファン化版」
-   - 案4：メイキング・技術の裏側を晒す「プロセスエコノミー版」
-   - 案5：あえて型を崩した「リアル・人間味」重視版
-
-# 制約・思考ガイド
-- 「ホテル」や「ビジネス一般論」の用語は使わず、必ず「ロボ、工場、職人、AR、制作過程」などの言葉に置き換えてください。
-- 具体的でないアドバイス（「もっと面白くする」など）は不要です。「Aという構成をBに変える」という粒度で書いてください。
-- 中村さんの強みである「技術力」と「キャラクターIP（ナカムロボ）」が両立しているかを厳しく評価してください。
-`;
+# 制約
+- 「ホテル」等の一般論は使わず「ロボ、工場、職人、AR、制作過程」に置き換えること。
+- 具体的かつ辛口にアドバイスすること。`;
 
   document.getElementById('prompt').textContent=prompt;
-  return prompt;
 }
 
 async function copyPrompt(){
   await navigator.clipboard.writeText(document.getElementById('prompt').textContent);
-  alert('コピーしました');
-}
-
-async function downloadPack(){
-  if(typeof JSZip==='undefined'){alert('ZIP生成ライブラリが読み込めません');return;}
-  const z=new JSZip();
-  const prompt=buildPrompt();
-  z.file('reference_alignment_prompt.txt',prompt);
-  z.file('reference_alignment_data.json',JSON.stringify({
-    generatedAt:new Date().toISOString(),
-    goal:v('goal'),
-    axis:v('axis'),
-    memo:v('memo'),
-    selectedPost:selectedPostData(),
-    selectedPostCard:selectedPostData()?postCards[selectedPostData().id]||{}:{},
-    selectedReferences:selectedRefData().map(r=>({
-      title:r.title,
-      template:r.template,
-      creator:r.creator,
-      type:r.type,
-      structure:r.structure,
-      translate:r.translate,
-      checklist:r.checklist
-    }))
-  },null,2));
-  const blob=await z.generateAsync({type:'blob'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='reference_alignment_pack.zip';
-  a.click();
-  URL.revokeObjectURL(a.href);
+  alert('コピーしました！');
 }
 
 renderPosts();
 renderRefs();
-renderSummary();
 </script>
 </body>
 </html>
