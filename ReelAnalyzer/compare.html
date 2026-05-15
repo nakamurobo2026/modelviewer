@@ -1,4 +1,265 @@
+```html
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>過去投稿×参考DB検証</title>
+
+<style>
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+body{
+  background:#050b16;
+  color:#fff;
+  font-family:sans-serif;
+  padding:24px;
+}
+
+h1{
+  font-size:34px;
+  margin-bottom:8px;
+}
+
+.sub{
+  opacity:0.7;
+  margin-bottom:24px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:380px 1fr;
+  gap:24px;
+}
+
+.card{
+  background:#0b1324;
+  border:1px solid #1f2d4f;
+  border-radius:24px;
+  padding:20px;
+}
+
+.card h2{
+  margin-bottom:16px;
+}
+
+.post-item,
+.ref-item{
+  border:1px solid #243557;
+  border-radius:18px;
+  padding:14px;
+  margin-bottom:12px;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+.post-item:hover,
+.ref-item:hover{
+  border-color:#52ffe0;
+}
+
+.selected{
+  border:2px solid #52ffe0;
+  background:#102038;
+}
+
+.small{
+  font-size:13px;
+  opacity:0.7;
+  margin-top:6px;
+}
+
+.btns{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-bottom:20px;
+}
+
+button{
+  background:#52ffe0;
+  color:#000;
+  border:none;
+  padding:12px 18px;
+  border-radius:999px;
+  cursor:pointer;
+  font-weight:bold;
+}
+
+button.secondary{
+  background:#1b2a49;
+  color:#fff;
+}
+
+#summary,
+#prompt{
+  white-space:pre-wrap;
+  line-height:1.7;
+}
+
+#prompt{
+  background:#08101d;
+  border:1px solid #1d2a47;
+  border-radius:18px;
+  padding:20px;
+  min-height:300px;
+  overflow:auto;
+}
+
+textarea{
+  width:100%;
+  min-height:80px;
+  background:#08101d;
+  color:#fff;
+  border:1px solid #1d2a47;
+  border-radius:14px;
+  padding:12px;
+  margin-bottom:14px;
+}
+
+@media(max-width:900px){
+
+  .grid{
+    grid-template-columns:1fr;
+  }
+
+}
+
+</style>
+</head>
+<body>
+
+<h1>過去投稿×参考DB検証</h1>
+<div class="sub">
+選んだ投稿を、蓄積したDB・商材・勝ち筋・過去成功例と照合してAIが改善案を生成します。
+</div>
+
+<div class="grid">
+
+  <div class="card">
+
+    <h2>検証する過去投稿</h2>
+
+    <div class="btns">
+      <button onclick="clearPost()" class="secondary">選択解除</button>
+    </div>
+
+    <div id="posts"></div>
+
+  </div>
+
+  <div>
+
+    <div class="card" style="margin-bottom:24px">
+
+      <h2>参考DB</h2>
+
+      <div class="btns">
+        <button onclick="selectAllRefs()">全選択</button>
+        <button onclick="clearRefs()" class="secondary">解除</button>
+      </div>
+
+      <div id="refs"></div>
+
+    </div>
+
+    <div class="card" style="margin-bottom:24px">
+
+      <h2>選択中</h2>
+
+      <div id="summary"></div>
+
+    </div>
+
+    <div class="card" style="margin-bottom:24px">
+
+      <h2>メモ</h2>
+
+      <textarea id="goal" placeholder="目標"></textarea>
+      <textarea id="axis" placeholder="検証軸"></textarea>
+      <textarea id="memo" placeholder="自由メモ"></textarea>
+
+    </div>
+
+    <div class="card">
+
+      <h2>ChatGPTへ渡す照合プロンプト</h2>
+
+      <div class="btns">
+        <button onclick="buildPrompt()">プロンプト生成</button>
+        <button onclick="copyPrompt()" class="secondary">コピー</button>
+        <button onclick="downloadPack()" class="secondary">JSON保存</button>
+      </div>
+
+      <div id="prompt"></div>
+
+    </div>
+
+  </div>
+
+</div>
+
 <script>
+
+/* =========================
+   SAMPLE DATA
+========================= */
+
+const posts = [
+  {
+    id:1,
+    title:'地元府中市でモノづくりしたい！',
+    views:66648,
+    saves:19,
+    comments:13,
+    caption:'府中市で工場をやりたい話。'
+  },
+  {
+    id:2,
+    title:'実家から',
+    views:57377,
+    saves:40,
+    comments:19,
+    caption:'実家の倉庫を工場化する話。'
+  },
+  {
+    id:3,
+    title:'昨日の今日で',
+    views:7529,
+    saves:0,
+    comments:0,
+    caption:'急展開系投稿。'
+  }
+];
+
+const refs = [
+  {
+    id:1,
+    title:'素人ノウハウ.txt',
+    genre:'共感系',
+    feature:'リアル感',
+    reason:'地方×挑戦',
+    structure:'問題→挑戦→期待',
+    hook:'工場やります',
+    improve:'冒頭高速化'
+  },
+  {
+    id:2,
+    title:'商材/教材テキスト',
+    genre:'教育系',
+    feature:'情報密度',
+    reason:'保存率',
+    structure:'結論→理由→実例',
+    hook:'知らないと損',
+    improve:'尺短縮'
+  }
+];
+
 /* =========================
    STATE
 ========================= */
@@ -15,6 +276,58 @@ function v(id){
 }
 
 /* =========================
+   RENDER POSTS
+========================= */
+
+function renderPosts(){
+
+  const el = document.getElementById('posts');
+
+  el.innerHTML = posts.map(post => `
+
+    <div
+      class="post-item ${String(selectedPostId)===String(post.id)?'selected':''}"
+      onclick="selectPost(${post.id})"
+    >
+
+      <b>${post.title}</b>
+
+      <div class="small">
+        再生:${post.views} / 保存:${post.saves} / コメント:${post.comments}
+      </div>
+
+    </div>
+
+  `).join('');
+}
+
+/* =========================
+   RENDER REFS
+========================= */
+
+function renderRefs(){
+
+  const el = document.getElementById('refs');
+
+  el.innerHTML = refs.map(ref => `
+
+    <div
+      class="ref-item ${selectedRefs.has(String(ref.id))?'selected':''}"
+      onclick="toggleRef(${ref.id})"
+    >
+
+      <b>${ref.title}</b>
+
+      <div class="small">
+        ${ref.genre} / ${ref.reason}
+      </div>
+
+    </div>
+
+  `).join('');
+}
+
+/* =========================
    POST SELECT
 ========================= */
 
@@ -27,6 +340,7 @@ function selectPost(id){
 }
 
 function clearPost(){
+
   selectedPostId = null;
 
   renderPosts();
@@ -71,6 +385,48 @@ function clearRefs(){
   renderRefs();
   renderSummary();
   buildPrompt();
+}
+
+/* =========================
+   SUMMARY
+========================= */
+
+function renderSummary(){
+
+  const el = document.getElementById('summary');
+
+  const targetPost = posts.find(
+    p => String(p.id) === String(selectedPostId)
+  );
+
+  const selectedRefData = refs.filter(
+    r => selectedRefs.has(String(r.id))
+  );
+
+  el.innerHTML = `
+
+<div style="line-height:1.8">
+
+<b>【検証する過去投稿】</b><br>
+
+${
+  targetPost
+  ? `・${targetPost.title}｜再生:${targetPost.views}｜保存:${targetPost.saves}｜コメント:${targetPost.comments}`
+  : '未選択'
+}
+
+<br><br>
+
+<b>【照合する参考DB】</b><br>
+
+${
+  selectedRefData.length
+  ? selectedRefData.map(r => `・${r.title}`).join('<br>')
+  : '未選択'
+}
+
+</div>
+`;
 }
 
 /* =========================
@@ -195,7 +551,7 @@ async function copyPrompt(){
 }
 
 /* =========================
-   ZIP DOWNLOAD
+   JSON DOWNLOAD
 ========================= */
 
 async function downloadPack(){
@@ -239,46 +595,6 @@ async function downloadPack(){
 }
 
 /* =========================
-   SUMMARY
-========================= */
-
-function renderSummary(){
-
-  const el = document.getElementById('summary');
-
-  const targetPost = posts.find(
-    p => String(p.id) === String(selectedPostId)
-  );
-
-  const selectedRefData = refs.filter(
-    r => selectedRefs.has(String(r.id))
-  );
-
-  el.innerHTML = `
-<div style="line-height:1.8">
-
-<b>【検証する過去投稿】</b><br>
-${
-  targetPost
-  ? `・${targetPost.title}｜再生:${targetPost.views}｜保存:${targetPost.saves}｜コメント:${targetPost.comments}`
-  : '未選択'
-}
-
-<br><br>
-
-<b>【照合する参考DB】</b><br>
-
-${
-  selectedRefData.length
-    ? selectedRefData.map(r => `・${r.title}`).join('<br>')
-    : '未選択'
-}
-
-</div>
-`;
-}
-
-/* =========================
    INIT
 ========================= */
 
@@ -286,4 +602,9 @@ renderPosts();
 renderRefs();
 renderSummary();
 buildPrompt();
+
 </script>
+
+</body>
+</html>
+```
