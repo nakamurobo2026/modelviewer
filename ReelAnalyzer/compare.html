@@ -71,7 +71,12 @@ button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px 
 
     <div class="card">
       <h2>ChatGPTへ渡す照合プロンプト</h2>
-      <div id="prompt" class="output">ここに生成されます。</div>
+      <div class="btns">
+        <button onclick="buildPrompt()">プロンプト生成</button>
+        <button class="secondary" onclick="copyPrompt()">コピー</button>
+        <button class="secondary" onclick="downloadPack()">ZIP保存</button>
+      </div>
+      <div id="prompt" class="output" style="margin-top:14px">ここに生成されます。</div>
     </div>
   </section>
 </main>
@@ -151,12 +156,25 @@ ${p ? `・${p.title}｜再生:${p.views}｜保存:${p.saves}｜コメント:${p.
 
 【照合する参考DB】
 ${rs.length ? rs.map(r=>`・${r.template||r.title}｜${r.creator||r.type||''}`).join('\n') : '未選択'}`;
+
+  // 選択状態が変わったら自動でプロンプトも更新
+  buildPrompt();
 }
 
 function buildPrompt(){
   const p=selectedPostData();
   const rs=selectedRefData();
   const card=p ? (postCards[p.id]||{}) : {};
+
+  if(!p){
+    document.getElementById('prompt').textContent='検証する過去投稿を選択してください。';
+    return '';
+  }
+
+  if(!rs.length){
+    document.getElementById('prompt').textContent='照合する参考DBを選択してください。';
+    return '';
+  }
 
   const postText=p ? `【中村さんの過去投稿】
 タイトル:${p.title}
@@ -229,14 +247,21 @@ ${refText || '未選択'}
 }
 
 async function copyPrompt(){
-  await navigator.clipboard.writeText(document.getElementById('prompt').textContent);
-  alert('コピーしました');
+  const text=document.getElementById('prompt').textContent;
+  if(!text || text==='ここに生成されます。'){alert('先にプロンプトを生成してください');return;}
+  try{
+    await navigator.clipboard.writeText(text);
+    alert('コピーしました');
+  }catch(e){
+    alert('コピーに失敗しました。ブラウザの権限を確認してください。');
+  }
 }
 
 async function downloadPack(){
   if(typeof JSZip==='undefined'){alert('ZIP生成ライブラリが読み込めません');return;}
   const z=new JSZip();
   const prompt=buildPrompt();
+  if(!prompt){return;}
   z.file('reference_alignment_prompt.txt',prompt);
   z.file('reference_alignment_data.json',JSON.stringify({
     generatedAt:new Date().toISOString(),
