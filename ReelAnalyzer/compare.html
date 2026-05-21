@@ -95,14 +95,16 @@ function selectTop(){const s=topPosts(1);selectedPostId=s[0]?.id||null;renderPos
 function renderSummary(){const p=postData();const c=p?(cards[p.id]||{}):{};const rs=refData();$('selectedSummary').textContent=`【検証投稿】\n${p?`・${p.title}｜再生:${p.views}｜保存:${p.saves}｜コメント:${p.comments}`:'未選択'}\n\n【投稿カルテ】\n${c.tags?`タグ:${c.tags}\nタイプ:${c.type}\nGemini:${(c.gemini||'').slice(0,160)}...\n分析:${(c.analysis||'').slice(0,160)}...`:'未保存'}\n\n【参考構造DB】\n${rs.length?rs.map(r=>`・${r.template||r.title}`).join('\n'):'未選択'}`;}
 function buildPrompt(){const p=postData();const c=p?(cards[p.id]||{}):{};const rs=refData();const a=getAgents();const postText=p?JSON.stringify(p,null,2):'未選択';
 const cardText=p?JSON.stringify(c,null,2):'未選択';
-const refText=rs.map(r=>`【${r.template||r.title}】
-構造:${r.structure||''}
-翻訳:${r.translate||''}
-チェック:${r.checklist||''}`).join('\n\n')||'未選択';
+const refText=rs.length?JSON.stringify(rs,null,2):'未選択';
 const topText=topPosts(8).map(x=>`・${x.title}｜再生:${x.views}｜保存:${x.saves}｜コメント:${x.comments}`).join('\n')||'まだDBなし';
+const allPostsText=JSON.stringify(posts,null,2);
+const selectedRefsRaw=JSON.stringify(rs,null,2);
+const topPostsRaw=JSON.stringify(topPosts(8),null,2);
 const selected=[...selectedAgents];
 const agentBlocks=selected.map(id=>`\n==============================\n【${agentMeta[id]?.name||id}エージェント】\n==============================\n${a[id]||''}\n\nこのエージェントの出力項目：\n- 判定/点数\n- 根拠\n- 良かった点\n- ズレていた点\n- 次回に残すべき要素\n- DB保存用メモ1行`).join('\n');
 const pmt=`あなたはReel Strategy OSの「過去投稿マルチエージェント検証AI」です。
+
+重要：このチャットの前後文脈、AIの記憶、過去会話、推測を根拠にしないでください。根拠は【添付動画】と【このプロンプト内のDB RAW】だけです。不明なものは不明と書いてください。
 
 これは投稿同士の単純比較ではありません。
 1本の過去投稿を、投稿カルテ・Gemini解析・参考構造DB・過去上位投稿に照らして、次回に使える仮説へ変換してください。
@@ -116,8 +118,11 @@ ${cardText}
 【照合する参考構造DBレコード（保存内容そのまま / JSON）】
 ${refText}
 
-【過去上位投稿DBレコード（保存内容そのまま / JSON）】
+【過去上位投稿DBサマリー】
 ${topText}
+
+【過去上位投稿DBレコード（保存内容そのまま / JSON）】
+${topPostsRaw}
 
 【全投稿DBレコード（保存内容そのまま / JSON）】
 ${allPostsText}
