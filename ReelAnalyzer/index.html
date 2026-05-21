@@ -1,83 +1,29 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
-:root{--bg:#0b1016;--panel:#121922;--line:#263445;--text:#eef4ff;--muted:#94a7bc;--accent:#57e0aa;--warn:#ffd166;--bad:#ff6b6b;--blue:#7cc7ff;--r:18px}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.55}
-header{padding:20px 22px;border-bottom:1px solid var(--line);background:#0f151d;position:sticky;top:0;z-index:10}
-h1{margin:0;font-size:24px}h2{margin:0 0 10px;font-size:18px}h3{margin:16px 0 8px;font-size:15px}.sub{color:var(--muted);font-size:13px;margin-top:4px}
-nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}nav a{color:var(--text);text-decoration:none;background:#1b2734;border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:13px;font-weight:800}nav a.active{background:var(--accent);color:#06130f}
-.wrap{max-width:1180px;margin:0 auto;padding:22px}.clean{max-width:980px}.layout{display:grid;grid-template-columns:340px 1fr;gap:18px}@media(max-width:900px){.layout{grid-template-columns:1fr}}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:18px}.mini{padding:12px;border:1px solid var(--line);border-radius:14px;background:#101721;margin:8px 0}
-.homegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}@media(max-width:900px){.homegrid{grid-template-columns:1fr}}
-.homecard{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:22px;text-decoration:none;color:var(--text);display:block;min-height:190px}.homecard:hover{border-color:var(--accent)}.homecard b{font-size:20px}.homecard p{color:var(--muted);font-size:14px}
-.tag{display:inline-block;background:#0b1118;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:4px 9px;font-size:12px;margin:4px 4px 0 0}.tag.ok{color:#06130f;background:var(--accent);border-color:var(--accent)}.tag.warn{color:#221700;background:var(--warn);border-color:var(--warn)}
-input,textarea,select{width:100%;background:#0b1118;border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:12px;font-size:14px}textarea{min-height:120px;resize:vertical}label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
-button,.btn{border:0;background:var(--accent);padding:10px 14px;border-radius:999px;font-weight:800;cursor:pointer;color:#06130f;text-decoration:none;display:inline-flex;font-size:13px;align-items:center;gap:6px}
-button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px solid var(--line)}button.warn,.btn.warn{background:var(--warn);color:#221700}button.danger,.btn.danger{background:#40242a;color:#ffd4d4;border:1px solid #67323b}
-.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.grid2{grid-template-columns:1fr}}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}@media(max-width:900px){.grid3{grid-template-columns:1fr}}
-.item{padding:12px;border:1px solid var(--line);border-radius:14px;background:#101721;cursor:pointer;margin-bottom:8px}.item.active{border-color:var(--accent);box-shadow:0 0 0 1px rgba(87,224,170,.2) inset}
-.small{font-size:12px;color:var(--muted)}.status,.note,.preview{padding:12px;border-radius:12px;background:#0b1118;border:1px solid var(--line);color:var(--muted);font-size:13px;margin-top:10px}
-.output{white-space:pre-wrap;background:#0b1118;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;line-height:1.7;max-height:620px;overflow:auto}
-.hidden{display:none}.score{font-size:30px;font-weight:900}.pillrow{display:flex;gap:8px;flex-wrap:wrap}.kbd{font-family:ui-monospace,Consolas,monospace;background:#0b1118;border:1px solid var(--line);border-radius:8px;padding:2px 6px;color:var(--blue)}
-hr{border:0;border-top:1px solid var(--line);margin:16px 0}
-</style></head><body><header><h1>Reel Strategy OS</h1><div class="sub">コスパ重視。Geminiで動画を見る → ChatGPTでマルチエージェント分析 → 投稿DBを育てる。</div><nav><a class="active" href="./index.html">TOP</a><a href="./check.html">投稿前チェック</a><a href="./compare.html">過去投稿比較</a><a href="./admin.html">Admin</a></nav></header>
-<main class="wrap clean">
-<div class="card"><h2>今の運用構成</h2><div class="grid3">
-<div class="mini"><span class="tag ok">1</span><h3>Gemini</h3><p class="small">動画を見て、場面・音声・テロップ・感情変化を構造化。</p></div>
-<div class="mini"><span class="tag ok">2</span><h3>ChatGPT</h3><p class="small">冒頭、素人目線、感情、リアル感、DB比較、再編集の各エージェントで分析。</p></div>
-<div class="mini"><span class="tag ok">3</span><h3>DB</h3><p class="small">投稿カルテに保存。数字ではなく「なぜ伸びたか」の仮説を蓄積。</p></div>
-</div></div>
-<div class="homegrid">
-<a class="homecard" href="./check.html"><b>投稿前チェック</b><p>動画投稿前に、Gemini用プロンプトとChatGPT用マルチエージェント分析パックを作る。</p><span class="tag">次の投稿を改善</span></a>
-<a class="homecard" href="./compare.html"><b>過去投稿比較</b><p>1本の過去投稿を選び、投稿カルテ・参考構造DB・勝ち筋と照合する。</p><span class="tag">勝ち筋を発見</span></a>
-<a class="homecard" href="./admin.html"><b>Admin</b><p>投稿DB、投稿カルテ、参考構造DB、エージェント固定プロンプトを管理する。</p><span class="tag">脳みそを育てる</span></a>
-</div>
-<div class="card"><h2>使う順番</h2><p class="small">① Adminで過去投稿と参考構造を登録 → ② 投稿前チェックでGemini解析 → ③ ChatGPTでマルチエージェント分析 → ④ 結果を投稿カルテに保存 → ⑤ 24h/72h/7日後の数字を追記。</p></div>
-</main><script>
-const POST_KEY='rso_posts_v2';
-const REF_KEY='rso_refs_v2';
-const CARD_KEY='rso_post_cards_v2';
-const AGENT_KEY='rso_agents_v2';
-function $(id){return document.getElementById(id)}
-function v(id){return ($(id)?.value)||''}
-function setv(id,val){if($(id))$(id).value=val||''}
-function esc(s=''){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
-function num(n){return Number(n||0).toLocaleString()}
-function load(key, fallback){try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback))}catch(e){return fallback}}
-function save(key, data){localStorage.setItem(key, JSON.stringify(data))}
-let posts=load(POST_KEY, []);
-let refs=load(REF_KEY, []);
-let cards=load(CARD_KEY, {});
-const defaultAgents={
-  hook_agent:`あなたはInstagramリールの「冒頭0〜2秒」専門分析AIです。
-初見のスクロール停止率だけを評価してください。
-見る項目：最初に映るもの、0.5秒ごとの情報量、音、違和感、続きが気になる理由、離脱リスク。
-禁止：一般論。必ず動画内容またはGemini解析の事実に紐づけてください。`,
-  viewer_agent:`あなたは投稿者を知らない一般視聴者です。
-専門知識なし、3秒で判断、飽きたら即スワイプする前提で見てください。
-見る項目：意味が分かるか、気になるか、人に言いたくなるか、コメントしたくなる余白があるか。`,
-  emotion_agent:`あなたは感情の動き専門AIです。
-笑い、驚き、心配、応援、共感、違和感、気まずさ、悔しさ、達成感を時系列で拾ってください。
-一番感情が動く瞬間を必ず1つ選んでください。`,
-  reality_agent:`あなたはリアル感・現場感の判定AIです。
-AIっぽさ、作り物感、説明臭さを嫌い、足で稼いだ現場感・家族感・地元感・人間臭さを評価してください。
-中村さんの強みである工場、家族、地域、借金、DIY、失敗、未完成感を見てください。`,
-  db_compare_agent:`あなたは過去投稿DB照合AIです。
-今回の投稿を、過去の伸びた投稿・伸びなかった投稿・参考構造DBと照合してください。
-数字だけでなく、冒頭、感情、未完成性、問題提起、地域性、コメント余白の一致率を見てください。`,
-  reedit_agent:`あなたは撮り直しなし再編集専門AIです。
-素材を撮り直さず、順番変更、カット短縮、冒頭差し替え、テロップ追加、無音視聴対策だけで改善案を出してください。
-必ず「0〜15秒の再構成案」を作ってください。`,
-  copy_agent:`あなたはInstagram用コピーライターです。
-釣りすぎず、リアルで、短く、強い言葉にしてください。
-出力：サムネ文字10個、冒頭テロップ10個、タイトル10個、キャプション案3つ。`,
-  director_agent:`あなたは編集会議の統合ディレクターです。
-各エージェントの意見を統合し、最終判断を出してください。
-出力：一言結論、投稿可否、優先修正3つ、15秒構成、DB保存用タグ、次回検証仮説。`
-};
-function getAgents(){let a=load(AGENT_KEY,null); if(!a){save(AGENT_KEY,defaultAgents); return defaultAgents;} return {...defaultAgents,...a}}
-function firstLine(c=''){const s=(c||'').split('\n').map(x=>x.trim()).find(Boolean)||'無題';return s.length>42?s.slice(0,42)+'…':s}
-function topPosts(limit=8){return [...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0)).slice(0,limit)}
-function bottomPosts(limit=5){return [...posts].sort((a,b)=>Number(a.views||0)-Number(b.views||0)).slice(0,limit)}
-function copyText(text){navigator.clipboard.writeText(text).then(()=>alert('コピーしました'))}
-function downloadText(filename, text, type='text/plain'){const b=new Blob([text],{type});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=filename;a.click();URL.revokeObjectURL(a.href)}
 
-</script></body></html>
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><title>Reel Strategy OS</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#0f1115;color:#f5f7fa;margin:0;padding:0}
+header{padding:20px;background:#171b22;border-bottom:1px solid #2a313d}
+main{max-width:1200px;margin:auto;padding:20px}
+.card{background:#171b22;border:1px solid #2a313d;border-radius:16px;padding:16px;margin-bottom:16px}
+textarea,input,select{width:100%;background:#0d1015;color:#fff;border:1px solid #2a313d;border-radius:10px;padding:10px;margin-top:8px}
+button{background:#6ee7b7;color:#07130f;border:none;padding:10px 16px;border-radius:999px;font-weight:700;cursor:pointer;margin:4px}
+.output{white-space:pre-wrap;background:#0d1015;border:1px solid #2a313d;border-radius:12px;padding:14px;min-height:120px}
+.small{opacity:.7;font-size:12px}
+</style>
+</head>
+<body>
+<header><h1>Reel Strategy OS</h1></header>
+<main>
+<div class="card">
+<h2>メニュー</h2>
+<ul>
+<li><a href="./check.html">投稿前チェック</a></li>
+<li><a href="./compare.html">過去投稿比較</a></li>
+<li><a href="./admin.html">Admin</a></li>
+</ul>
+</div>
+</main>
+</body>
+</html>

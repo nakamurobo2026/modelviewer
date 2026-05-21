@@ -1,131 +1,71 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
-:root{--bg:#0b1016;--panel:#121922;--line:#263445;--text:#eef4ff;--muted:#94a7bc;--accent:#57e0aa;--warn:#ffd166;--bad:#ff6b6b;--blue:#7cc7ff;--r:18px}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.55}
-header{padding:20px 22px;border-bottom:1px solid var(--line);background:#0f151d;position:sticky;top:0;z-index:10}
-h1{margin:0;font-size:24px}h2{margin:0 0 10px;font-size:18px}h3{margin:16px 0 8px;font-size:15px}.sub{color:var(--muted);font-size:13px;margin-top:4px}
-nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}nav a{color:var(--text);text-decoration:none;background:#1b2734;border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:13px;font-weight:800}nav a.active{background:var(--accent);color:#06130f}
-.wrap{max-width:1180px;margin:0 auto;padding:22px}.clean{max-width:980px}.layout{display:grid;grid-template-columns:340px 1fr;gap:18px}@media(max-width:900px){.layout{grid-template-columns:1fr}}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:18px}.mini{padding:12px;border:1px solid var(--line);border-radius:14px;background:#101721;margin:8px 0}
-.homegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}@media(max-width:900px){.homegrid{grid-template-columns:1fr}}
-.homecard{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:22px;text-decoration:none;color:var(--text);display:block;min-height:190px}.homecard:hover{border-color:var(--accent)}.homecard b{font-size:20px}.homecard p{color:var(--muted);font-size:14px}
-.tag{display:inline-block;background:#0b1118;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:4px 9px;font-size:12px;margin:4px 4px 0 0}.tag.ok{color:#06130f;background:var(--accent);border-color:var(--accent)}.tag.warn{color:#221700;background:var(--warn);border-color:var(--warn)}
-input,textarea,select{width:100%;background:#0b1118;border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:12px;font-size:14px}textarea{min-height:120px;resize:vertical}label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
-button,.btn{border:0;background:var(--accent);padding:10px 14px;border-radius:999px;font-weight:800;cursor:pointer;color:#06130f;text-decoration:none;display:inline-flex;font-size:13px;align-items:center;gap:6px}
-button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px solid var(--line)}button.warn,.btn.warn{background:var(--warn);color:#221700}button.danger,.btn.danger{background:#40242a;color:#ffd4d4;border:1px solid #67323b}
-.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.grid2{grid-template-columns:1fr}}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}@media(max-width:900px){.grid3{grid-template-columns:1fr}}
-.item{padding:12px;border:1px solid var(--line);border-radius:14px;background:#101721;cursor:pointer;margin-bottom:8px}.item.active{border-color:var(--accent);box-shadow:0 0 0 1px rgba(87,224,170,.2) inset}
-.small{font-size:12px;color:var(--muted)}.status,.note,.preview{padding:12px;border-radius:12px;background:#0b1118;border:1px solid var(--line);color:var(--muted);font-size:13px;margin-top:10px}
-.output{white-space:pre-wrap;background:#0b1118;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;line-height:1.7;max-height:620px;overflow:auto}
-.hidden{display:none}.score{font-size:30px;font-weight:900}.pillrow{display:flex;gap:8px;flex-wrap:wrap}.kbd{font-family:ui-monospace,Consolas,monospace;background:#0b1118;border:1px solid var(--line);border-radius:8px;padding:2px 6px;color:var(--blue)}
-hr{border:0;border-top:1px solid var(--line);margin:16px 0}
-</style></head><body><header><h1>Reel Strategy OS｜Admin</h1><div class="sub">投稿DB・投稿カルテ・参考構造DB・サブエージェント固定プロンプトを育てる。</div><nav><a href="./index.html">TOP</a><a href="./check.html">投稿前チェック</a><a href="./compare.html">過去投稿比較</a><a class="active" href="./admin.html">Admin</a></nav></header>
-<main class="wrap layout">
-<aside>
-<div class="card"><h2>保存・移行</h2><div class="btns"><button class="secondary" onclick="exportAll()">全DB書出</button><label class="btn secondary" for="importFile">全DB読込</label><input id="importFile" class="hidden" type="file" accept="application/json" onchange="importAll(event)"><button class="danger" onclick="clearAll()">全削除</button></div><div class="note">localStorage保存。定期バックアップ推奨。</div></div>
-<div class="card"><h2>Instagram API</h2><div class="btns"><button class="secondary" onclick="setWorkerUrl()">Worker URL</button><button class="warn" onclick="fetchInstagramPosts()">投稿取得</button></div><div id="status" class="status">待機中。コスパ重視なら手動登録でOK。</div></div>
-<div class="card"><h2>登録済み参考構造</h2><div id="referenceList"></div></div>
-</aside>
-<section>
-<div class="card"><h2>過去投稿DB</h2><div class="grid3"><div><label>投稿タイトル</label><input id="postTitle"></div><div><label>投稿日</label><input id="postDate" type="date"></div><div><label>URL</label><input id="postUrl"></div></div>
-<div class="grid3"><div><label>再生数</label><input id="postViews" type="number"></div><div><label>保存</label><input id="postSaves" type="number"></div><div><label>コメント</label><input id="postComments" type="number"></div></div>
-<label>キャプション</label><textarea id="postCaption"></textarea><div class="btns"><button onclick="savePost()">投稿DBへ保存</button><button class="secondary" onclick="clearPostForm()">入力クリア</button></div><div id="postSummary" class="output"></div><div id="postList"></div></div>
 
-<div class="card"><h2>投稿カルテDB</h2><div class="note">Gemini解析・ChatGPT分析・勝ち筋タグを投稿に紐づけ保存。</div>
-<label>投稿選択</label><select id="cardPostSelect" onchange="loadPostCard()"></select><div class="grid2"><div><label>勝ち筋タグ</label><input id="cardTags" placeholder="例：家族感, 未完成性, 地元感"></div><div><label>投稿タイプ</label><select id="cardType"><option>工場系</option><option>地域ネタ</option><option>家族ネタ</option><option>問題発生系</option><option>制作過程</option><option>AI/ロボ/IP</option><option>その他</option></select></div></div>
-<label>Gemini動画解析</label><textarea id="cardGemini" style="min-height:150px"></textarea><label>ChatGPTマルチエージェント分析結果</label><textarea id="cardAnalysis" style="min-height:200px"></textarea><label>実績メモ・仮説</label><textarea id="cardMemo"></textarea><label>動画ファイル名メモ</label><input id="cardVideoName"><div class="btns"><button onclick="savePostCard()">投稿カルテ保存</button><button class="secondary" onclick="exportPostCard()">カルテJSON書出</button></div><div id="saveStatus" class="preview">未保存</div></div>
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><title>Admin</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#0f1115;color:#f5f7fa;margin:0;padding:0}
+header{padding:20px;background:#171b22;border-bottom:1px solid #2a313d}
+main{max-width:1200px;margin:auto;padding:20px}
+.card{background:#171b22;border:1px solid #2a313d;border-radius:16px;padding:16px;margin-bottom:16px}
+textarea,input,select{width:100%;background:#0d1015;color:#fff;border:1px solid #2a313d;border-radius:10px;padding:10px;margin-top:8px}
+button{background:#6ee7b7;color:#07130f;border:none;padding:10px 16px;border-radius:999px;font-weight:700;cursor:pointer;margin:4px}
+.output{white-space:pre-wrap;background:#0d1015;border:1px solid #2a313d;border-radius:12px;padding:14px;min-height:120px}
+.small{opacity:.7;font-size:12px}
+</style>
+</head>
+<body>
+<header><h1>Admin</h1></header>
+<main>
+<div class="card">
+<h2>参考構造DB</h2>
+<label>参考ファイル読み込み</label>
+<input id="refFileInput" type="file" accept=".txt,.md,.csv,.json">
+<div class="small">txt / md / csv / json 対応</div>
 
-<div class="card"><h2>参考構造DB</h2><div class="grid2"><div><label>参考タイトル</label><input id="refTitle"></div><div><label>投稿者・出典</label><input id="refCreator"></div></div><div class="grid2"><div><label>種別</label><select id="refType"><option>自分の気づき</option><option>Instagram投稿</option><option>商材/教材テキスト</option><option>YouTube/TikTok</option></select></div><div><label>参考URL</label><input id="refUrl"></div></div><label>参考ファイル読み込み</label>
-<input id="refFileInput" type="file" accept=".txt,.md,.csv,.json,text/plain,text/markdown,text/csv,application/json" onchange="importRefFile(event)">
-<div class="note">txt / md / csv / json を読み込み、下の「資料・メモ」に追記します。PDFは一度テキスト化して読み込ませてください。</div>
-<label>資料・メモ</label><textarea id="refMaterial"></textarea><label>抽象化した構造</label><textarea id="refStructure"></textarea><label>自分ジャンルへの翻訳</label><textarea id="refTranslate"></textarea><label>勝ち筋テンプレ名</label><input id="refTemplate"><label>チェックリスト</label><textarea id="refChecklist"></textarea><div class="btns"><button onclick="saveRef()">参考構造DBへ保存</button><button class="secondary" onclick="buildRefPrompt()">構造化プロンプト生成</button><button class="secondary" onclick="clearRefForm()">入力クリア</button></div><div id="refPrompt" class="output">ここに生成されます。</div></div>
+<label>資料・メモ</label>
+<textarea id="refMaterial" style="min-height:260px"></textarea>
 
-<div class="card"><h2>サブエージェント固定プロンプト</h2><div class="note">普段は触らなくてOK。分析を自分向けに寄せたい時に調整。</div><div id="agentEditor"></div><div class="btns"><button onclick="saveAgents()">エージェント保存</button><button class="secondary" onclick="resetAgents()">初期化</button></div></div>
-</section></main><script>
-const POST_KEY='rso_posts_v2';
-const REF_KEY='rso_refs_v2';
-const CARD_KEY='rso_post_cards_v2';
-const AGENT_KEY='rso_agents_v2';
-function $(id){return document.getElementById(id)}
-function v(id){return ($(id)?.value)||''}
-function setv(id,val){if($(id))$(id).value=val||''}
-function esc(s=''){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
-function num(n){return Number(n||0).toLocaleString()}
-function load(key, fallback){try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback))}catch(e){return fallback}}
-function save(key, data){localStorage.setItem(key, JSON.stringify(data))}
-let posts=load(POST_KEY, []);
-let refs=load(REF_KEY, []);
-let cards=load(CARD_KEY, {});
-const defaultAgents={
-  hook_agent:`あなたはInstagramリールの「冒頭0〜2秒」専門分析AIです。
-初見のスクロール停止率だけを評価してください。
-見る項目：最初に映るもの、0.5秒ごとの情報量、音、違和感、続きが気になる理由、離脱リスク。
-禁止：一般論。必ず動画内容またはGemini解析の事実に紐づけてください。`,
-  viewer_agent:`あなたは投稿者を知らない一般視聴者です。
-専門知識なし、3秒で判断、飽きたら即スワイプする前提で見てください。
-見る項目：意味が分かるか、気になるか、人に言いたくなるか、コメントしたくなる余白があるか。`,
-  emotion_agent:`あなたは感情の動き専門AIです。
-笑い、驚き、心配、応援、共感、違和感、気まずさ、悔しさ、達成感を時系列で拾ってください。
-一番感情が動く瞬間を必ず1つ選んでください。`,
-  reality_agent:`あなたはリアル感・現場感の判定AIです。
-AIっぽさ、作り物感、説明臭さを嫌い、足で稼いだ現場感・家族感・地元感・人間臭さを評価してください。
-中村さんの強みである工場、家族、地域、借金、DIY、失敗、未完成感を見てください。`,
-  db_compare_agent:`あなたは過去投稿DB照合AIです。
-今回の投稿を、過去の伸びた投稿・伸びなかった投稿・参考構造DBと照合してください。
-数字だけでなく、冒頭、感情、未完成性、問題提起、地域性、コメント余白の一致率を見てください。`,
-  reedit_agent:`あなたは撮り直しなし再編集専門AIです。
-素材を撮り直さず、順番変更、カット短縮、冒頭差し替え、テロップ追加、無音視聴対策だけで改善案を出してください。
-必ず「0〜15秒の再構成案」を作ってください。`,
-  copy_agent:`あなたはInstagram用コピーライターです。
-釣りすぎず、リアルで、短く、強い言葉にしてください。
-出力：サムネ文字10個、冒頭テロップ10個、タイトル10個、キャプション案3つ。`,
-  director_agent:`あなたは編集会議の統合ディレクターです。
-各エージェントの意見を統合し、最終判断を出してください。
-出力：一言結論、投稿可否、優先修正3つ、15秒構成、DB保存用タグ、次回検証仮説。`
-};
-function getAgents(){let a=load(AGENT_KEY,null); if(!a){save(AGENT_KEY,defaultAgents); return defaultAgents;} return {...defaultAgents,...a}}
-function firstLine(c=''){const s=(c||'').split('\n').map(x=>x.trim()).find(Boolean)||'無題';return s.length>42?s.slice(0,42)+'…':s}
-function topPosts(limit=8){return [...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0)).slice(0,limit)}
-function bottomPosts(limit=5){return [...posts].sort((a,b)=>Number(a.views||0)-Number(b.views||0)).slice(0,limit)}
-function copyText(text){navigator.clipboard.writeText(text).then(()=>alert('コピーしました'))}
-function downloadText(filename, text, type='text/plain'){const b=new Blob([text],{type});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=filename;a.click();URL.revokeObjectURL(a.href)}
+<button onclick="saveRef()">保存</button>
+</div>
 
+<div class="card">
+<h2>投稿DB</h2>
+<input id="postTitle" placeholder="タイトル">
+<input id="postViews" placeholder="再生数">
+<textarea id="postMemo" placeholder="投稿カルテ"></textarea>
+<button onclick="savePost()">保存</button>
+</div>
 
-
-function importRefFile(e){
-  const f=e.target.files[0];
-  if(!f)return;
-  const rd=new FileReader();
-  rd.onload=()=>{
-    const current=v('refMaterial');
-    const block=`--- 取り込みファイル: ${f.name} ---\n${rd.result}\n--- ここまで ---`;
-    setv('refMaterial', current ? current + '\n\n' + block : block);
-    if(!v('refTitle')) setv('refTitle', f.name);
-  };
-  rd.readAsText(f,'utf-8');
+<script>
+function saveRef(){
+ const data=localStorage.getItem('refs')||'[]';
+ const arr=JSON.parse(data);
+ arr.push({text:document.getElementById('refMaterial').value,date:Date.now()});
+ localStorage.setItem('refs',JSON.stringify(arr));
+ alert('保存しました');
 }
-
-let editRefId=null, editPostId=null;
-function renderPosts(){ $('postSummary').textContent='投稿数：'+posts.length+' / 総再生：'+num(posts.reduce((a,p)=>a+Number(p.views||0),0)); $('postList').innerHTML=topPosts(50).map(p=>`<div class="item" onclick="loadPost('${p.id}')"><b>${esc(p.title)}</b><div class="small">再生:${num(p.views)} / 保存:${num(p.saves)} / コメント:${num(p.comments)}</div></div>`).join('')||'<div class="small">投稿なし</div>'; refreshPostCardSelect();}
-function savePost(){const id=editPostId||String(Date.now());const d={id,title:v('postTitle')||'無題',date:v('postDate'),url:v('postUrl'),views:Number(v('postViews')||0),saves:Number(v('postSaves')||0),comments:Number(v('postComments')||0),caption:v('postCaption')};posts=editPostId?posts.map(p=>p.id===id?d:p):[d,...posts];save(POST_KEY,posts);editPostId=null;renderPosts();clearPostForm();}
-function loadPost(id){const p=posts.find(x=>x.id===id);if(!p)return;editPostId=id;setv('postTitle',p.title);setv('postDate',(p.date||'').slice(0,10));setv('postUrl',p.url);setv('postViews',p.views);setv('postSaves',p.saves);setv('postComments',p.comments);setv('postCaption',p.caption);window.scrollTo({top:0,behavior:'smooth'})}
-function clearPostForm(){editPostId=null;['postTitle','postDate','postUrl','postViews','postSaves','postComments','postCaption'].forEach(id=>setv(id,''))}
-function refreshPostCardSelect(){const sel=$('cardPostSelect');sel.innerHTML='<option value="">投稿を選択</option>'+posts.map(p=>`<option value="${p.id}">${esc(p.title)}</option>`).join('')}
-function loadPostCard(){const id=v('cardPostSelect');const c=cards[id]||{};setv('cardTags',c.tags);setv('cardType',c.type||'工場系');setv('cardGemini',c.gemini);setv('cardAnalysis',c.analysis);setv('cardMemo',c.memo);setv('cardVideoName',c.videoName)}
-function savePostCard(){const id=v('cardPostSelect');if(!id){$('saveStatus').textContent='投稿を選択してください';return}cards[id]={tags:v('cardTags'),type:v('cardType'),gemini:v('cardGemini'),analysis:v('cardAnalysis'),memo:v('cardMemo'),videoName:v('cardVideoName'),savedAt:new Date().toISOString()};save(CARD_KEY,cards);$('saveStatus').textContent='保存完了：'+new Date().toLocaleString();}
-function exportPostCard(){const id=v('cardPostSelect');if(!id||!cards[id])return alert('保存済みカルテがありません');downloadText('post_card_'+id+'.json',JSON.stringify(cards[id],null,2),'application/json')}
-function renderRefs(){ $('referenceList').innerHTML=refs.length?refs.map(r=>`<div class="item"><b>${esc(r.template||r.title||'無題')}</b><div class="small">${esc(r.creator||r.type||'')}</div><div class="btns"><button class="secondary" onclick="loadRef('${r.id}')">編集</button><button class="danger" onclick="deleteRef('${r.id}')">削除</button></div></div>`).join(''):'<div class="small">参考構造なし</div>'}
-function saveRef(){const id=editRefId||String(Date.now());const d={id,title:v('refTitle'),creator:v('refCreator'),type:v('refType'),url:v('refUrl'),material:v('refMaterial'),structure:v('refStructure'),translate:v('refTranslate'),template:v('refTemplate'),checklist:v('refChecklist')};refs=editRefId?refs.map(r=>r.id===id?d:r):[d,...refs];save(REF_KEY,refs);editRefId=null;renderRefs();alert('保存しました')}
-function loadRef(id){const r=refs.find(x=>x.id===id);if(!r)return;editRefId=id;setv('refTitle',r.title);setv('refCreator',r.creator);setv('refType',r.type);setv('refUrl',r.url);setv('refMaterial',r.material);setv('refStructure',r.structure);setv('refTranslate',r.translate);setv('refTemplate',r.template);setv('refChecklist',r.checklist)}
-function deleteRef(id){if(!confirm('削除しますか？'))return;refs=refs.filter(r=>r.id!==id);save(REF_KEY,refs);renderRefs()}
-function clearRefForm(){editRefId=null;['refTitle','refCreator','refUrl','refMaterial','refStructure','refTranslate','refTemplate','refChecklist'].forEach(id=>setv(id,''))}
-function buildRefPrompt(){const p=`以下の資料を、SNS投稿DBに保存するために構造化してください。\n\n目的：文章の要約ではなく、投稿構造・視聴者心理・中村さんの工場/地域/家族/AI制作ジャンルへの翻訳を作る。\n\n【参考タイトル】\n${v('refTitle')}\n【出典】\n${v('refCreator')}\n【資料】\n${v('refMaterial')}\n\n出力：抽象化した構造 / 自分ジャンルへの翻訳 / 勝ち筋テンプレ名 / 投稿前チェックリスト / 具体投稿案5つ`; $('refPrompt').textContent=p; return p}
-function renderAgents(){const a=getAgents();$('agentEditor').innerHTML=Object.keys(a).map(k=>`<label>${k}</label><textarea id="agent_${k}" style="min-height:120px">${esc(a[k])}</textarea>`).join('')}
-function saveAgents(){const a=getAgents();Object.keys(a).forEach(k=>a[k]=v('agent_'+k));save(AGENT_KEY,a);alert('保存しました')}
-function resetAgents(){if(confirm('初期プロンプトに戻しますか？')){save(AGENT_KEY,defaultAgents);renderAgents()}}
-function exportAll(){downloadText('rso_backup_v2.json',JSON.stringify({posts,refs,cards,agents:getAgents()},null,2),'application/json')}
-function importAll(e){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{const d=JSON.parse(rd.result);posts=d.posts||[];refs=d.refs||[];cards=d.cards||{};save(POST_KEY,posts);save(REF_KEY,refs);save(CARD_KEY,cards);if(d.agents)save(AGENT_KEY,d.agents);renderPosts();renderRefs();renderAgents()};rd.readAsText(f)}
-function clearAll(){if(!confirm('全DB削除しますか？'))return;posts=[];refs=[];cards={};localStorage.removeItem(POST_KEY);localStorage.removeItem(REF_KEY);localStorage.removeItem(CARD_KEY);renderPosts();renderRefs()}
-function setWorkerUrl(){const cur=localStorage.getItem('worker_url')||'';const u=prompt('Worker URL',cur);if(u!==null)localStorage.setItem('worker_url',u.replace(/\/$/,''));}
-async function fetchInstagramPosts(){const base=localStorage.getItem('worker_url');if(!base)return $('status').textContent='Worker URLを設定してください';$('status').textContent='Instagram API接続中...';try{const r=await fetch(base+'/reels');const j=await r.json();if(j.error)throw new Error(j.error.message||j.error);posts=(j.data||[]).map(p=>({id:String(p.id),title:firstLine(p.caption),caption:p.caption||'',views:p.views||0,reach:p.reach||0,saves:p.saved||p.saves||0,shares:p.shares||0,likes:p.like_count||0,comments:p.comments_count||0,url:p.permalink||'',date:p.timestamp||''}));save(POST_KEY,posts);renderPosts();$('status').textContent='取得成功：'+posts.length+'件'}catch(e){$('status').textContent='取得失敗：'+e.message}}
-renderPosts();renderRefs();renderAgents();
-</script></body></html>
+function savePost(){
+ const data=localStorage.getItem('posts')||'[]';
+ const arr=JSON.parse(data);
+ arr.push({
+  title:document.getElementById('postTitle').value,
+  views:document.getElementById('postViews').value,
+  memo:document.getElementById('postMemo').value,
+  date:Date.now()
+ });
+ localStorage.setItem('posts',JSON.stringify(arr));
+ alert('保存しました');
+}
+document.getElementById('refFileInput').addEventListener('change',e=>{
+ const f=e.target.files[0];
+ if(!f)return;
+ const r=new FileReader();
+ r.onload=()=>{
+   document.getElementById('refMaterial').value += "\n\n--- "+f.name+" ---\n"+r.result;
+ };
+ r.readAsText(f,'utf-8');
+});
+</script>
+</main>
+</body>
+</html>
