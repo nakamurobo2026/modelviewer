@@ -29,7 +29,7 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 <body>
 <header>
   <h1>過去投稿比較｜動画解析付き</h1>
-  <div class="sub">過去動画をGeminiで解析 → DB RAWと一緒にChatGPTへ渡して、なぜ伸びた/伸びなかったかを検証する。</div>
+  <div class="sub">過去動画をGeminiでJSON解析 → DB RAWと一緒にChatGPTへ渡して、なぜ伸びた/伸びなかったかを検証する。</div>
   <nav>
     <a href="./index.html">TOP</a>
     <a href="./check.html">投稿前チェック</a>
@@ -44,8 +44,8 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
       <h2>手順</h2>
       <div class="mini"><span class="tag ok">1</span> 検証する過去投稿を選ぶ</div>
       <div class="mini"><span class="tag ok">2</span> 過去動画をアップする</div>
-      <div class="mini"><span class="tag ok">3</span> Gemini用プロンプトで動画解析</div>
-      <div class="mini"><span class="tag ok">4</span> Gemini結果を貼る</div>
+      <div class="mini"><span class="tag ok">3</span> Gemini用プロンプトでJSON解析</div>
+      <div class="mini"><span class="tag ok">4</span> Gemini JSONを貼る</div>
       <div class="mini"><span class="tag ok">5</span> ChatGPTへ動画＋DB RAWを渡す</div>
     </div>
 
@@ -96,21 +96,21 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
     </div>
 
     <div class="card">
-      <h2>Gemini動画解析</h2>
-      <div class="note">まずGeminiに過去動画を添付し、下のプロンプトを渡します。返ってきた解析結果を次の欄へ貼ります。</div>
+      <h2>Gemini動画JSON解析</h2>
+      <div class="note">Geminiに過去動画を添付し、下のプロンプトを渡します。返ってきたJSONを次の欄へ貼ります。</div>
       <div class="btns">
         <button onclick="buildGeminiPrompt()">Gemini用プロンプト生成</button>
         <button class="secondary" onclick="copyGeminiPrompt()">Gemini用コピー</button>
       </div>
       <div id="geminiPrompt" class="output">ここに生成されます。</div>
 
-      <label>Gemini解析結果</label>
-      <textarea id="geminiResult" style="min-height:220px" placeholder="Geminiの動画解析結果をここに貼る"></textarea>
+      <label>Gemini JSON解析結果</label>
+      <textarea id="geminiResult" style="min-height:260px" placeholder="GeminiのJSON解析結果をここに貼る"></textarea>
     </div>
 
     <div class="card">
       <h2>ChatGPT過去動画マルチエージェント検証</h2>
-      <div class="note">チャット前後文脈やAIの記憶を使わず、添付動画・Gemini解析・DB RAWだけで検証するプロンプトを生成します。</div>
+      <div class="note">チャット前後文脈やAIの記憶を使わず、添付動画・Gemini JSON・DB RAWだけで検証するプロンプトを生成します。</div>
       <div class="btns">
         <button onclick="buildPrompt()">ChatGPT用プロンプト生成</button>
         <button class="secondary" onclick="copyPrompt()">コピー</button>
@@ -129,13 +129,10 @@ const AGENT_KEY='rso_agents_v2';
 
 function $(id){return document.getElementById(id)}
 function v(id){return ($(id)?.value)||''}
-function setv(id,val){if($(id))$(id).value=val||''}
 function esc(s=''){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
 function num(n){return Number(n||0).toLocaleString()}
 function load(key, fallback){try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback))}catch(e){return fallback}}
-function save(key, data){localStorage.setItem(key, JSON.stringify(data))}
 function copyText(text){navigator.clipboard.writeText(text).then(()=>alert('コピーしました'))}
-function downloadText(filename, text, type='text/plain'){const b=new Blob([text],{type});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=filename;a.click();URL.revokeObjectURL(a.href)}
 
 let posts=load(POST_KEY, []);
 let refs=load(REF_KEY, []);
@@ -146,30 +143,14 @@ let selectedAgents=new Set(['hook_agent','viewer_agent','emotion_agent','reality
 let videoName='';
 
 const defaultAgents={
-  hook_agent:`あなたはInstagramリールの「冒頭0〜2秒」専門分析AIです。
-初見のスクロール停止率だけを評価してください。
-見る項目：最初に映るもの、0.5秒ごとの情報量、音、違和感、続きが気になる理由、離脱リスク。
-禁止：一般論。必ず添付動画・Gemini解析・DB RAWの根拠に紐づけてください。`,
-  viewer_agent:`あなたは投稿者を知らない一般視聴者です。
-専門知識なし、3秒で判断、飽きたら即スワイプする前提で見てください。
-見る項目：意味が分かるか、気になるか、人に言いたくなるか、コメントしたくなる余白があるか。`,
-  emotion_agent:`あなたは感情の動き専門AIです。
-笑い、驚き、心配、応援、共感、違和感、気まずさ、悔しさ、達成感を時系列で拾ってください。
-一番感情が動く瞬間を必ず1つ選んでください。`,
-  reality_agent:`あなたはリアル感・現場感の判定AIです。
-AIっぽさ、作り物感、説明臭さを嫌い、足で稼いだ現場感・家族感・地元感・人間臭さを評価してください。`,
-  db_compare_agent:`あなたは過去投稿DB照合AIです。
-今回の投稿を、過去の伸びた投稿・伸びなかった投稿・参考構造DBと照合してください。
-数字だけでなく、冒頭、感情、未完成性、問題提起、地域性、コメント余白の一致率を見てください。`,
-  reedit_agent:`あなたは撮り直しなし再編集専門AIです。
-素材を撮り直さず、順番変更、カット短縮、冒頭差し替え、テロップ追加、無音視聴対策だけで改善案を出してください。
-必ず「0〜15秒の再構成案」を作ってください。`,
-  copy_agent:`あなたはInstagram用コピーライターです。
-釣りすぎず、リアルで、短く、強い言葉にしてください。
-出力：サムネ文字10個、冒頭テロップ10個、タイトル10個、キャプション案3つ。`,
-  director_agent:`あなたは編集会議の統合ディレクターです。
-各エージェントの意見を統合し、最終判断を出してください。
-出力：一言結論、伸びた/伸びなかった仮説、優先修正3つ、15秒構成、DB保存用タグ、次回検証仮説。`
+  hook_agent:`あなたはInstagramリールの「冒頭0〜2秒」専門分析AIです。初見のスクロール停止率だけを評価してください。`,
+  viewer_agent:`あなたは投稿者を知らない一般視聴者です。専門知識なし、3秒で判断、飽きたら即スワイプする前提で見てください。`,
+  emotion_agent:`あなたは感情の動き専門AIです。笑い、驚き、心配、応援、共感、違和感を時系列で拾ってください。`,
+  reality_agent:`あなたはリアル感・現場感の判定AIです。AIっぽさ、作り物感、説明臭さ、現場感・家族感・地元感を評価してください。`,
+  db_compare_agent:`あなたは過去投稿DB照合AIです。数字だけでなく、冒頭、感情、未完成性、問題提起、地域性、コメント余白の一致率を見てください。`,
+  reedit_agent:`あなたは撮り直しなし再編集専門AIです。順番変更、カット短縮、冒頭差し替え、テロップ追加だけで改善案を出してください。`,
+  copy_agent:`あなたはInstagram用コピーライターです。サムネ文字10個、冒頭テロップ10個、タイトル10個、キャプション案3つを出してください。`,
+  director_agent:`あなたは編集会議の統合ディレクターです。各エージェントの意見を統合し、最終判断を出してください。`
 };
 
 const agentMeta={
@@ -185,8 +166,7 @@ const agentMeta={
 
 function getAgents(){
   let a=load(AGENT_KEY,null);
-  if(!a){save(AGENT_KEY,defaultAgents);return defaultAgents}
-  return {...defaultAgents,...a};
+  return a ? {...defaultAgents,...a} : defaultAgents;
 }
 function topPosts(limit=8){return [...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0)).slice(0,limit)}
 function bottomPosts(limit=5){return [...posts].sort((a,b)=>Number(a.views||0)-Number(b.views||0)).slice(0,limit)}
@@ -200,6 +180,9 @@ function previewVideo(e){
   videoName=f.name;
   const u=URL.createObjectURL(f);
   $('videoPreview').innerHTML=`<video src="${u}" controls style="width:100%;border-radius:12px"></video><div class="small">${esc(f.name)}｜動画はGemini/ChatGPTへ別添付</div>`;
+  renderSummary();
+  buildGeminiPrompt();
+  buildPrompt();
 }
 
 function renderAgents(){
@@ -254,16 +237,22 @@ ${rs.length?rs.map(r=>`・${r.template||r.title}`).join('\n'):'未選択'}`;
 function buildGeminiPrompt(){
   const p=postData();
   const c=cardData();
+
   const prompt=`この過去投稿動画を、Instagram分析用に解析してください。
 
 目的：
-この動画が伸びた/伸びなかった理由を、ChatGPTでDB RAWと照合するために、動画内容を事実ベースで構造化する。
+この動画が伸びた/伸びなかった理由を、ChatGPTでDB RAWと照合するために、動画内容を構造化JSONとして出力する。
 
-重要：
-- 推測より観察を優先
-- 投稿者の過去情報やチャット文脈は使わない
-- 添付動画だけを見て判断
-- 「分からない」ものは分からないと書く
+最重要ルール：
+- 感想ではなく「観察」を出力
+- 添付動画だけを根拠にする
+- 推測を減らす
+- 一般論を書かない
+- JSONのみ出力
+- JSON外の文章は禁止
+- 「面白い」「良い」など曖昧語は禁止
+- 動画で確認できない内容は null
+- 動画と矛盾する推測は禁止
 
 【検証する投稿DB】
 ${p?JSON.stringify(p,null,2):'未選択'}
@@ -274,19 +263,43 @@ ${JSON.stringify(c,null,2)}
 【動画ファイル名】
 ${videoName||'別添付動画'}
 
-出力してほしい項目：
-1. 0〜2秒の内容
-2. 0.5秒ごとの冒頭情報量
-3. シーン時系列
-4. 音声/会話/間
-5. テロップ/画面文字
-6. 感情が動く瞬間
-7. 離脱しそうな瞬間
-8. 初見で分かりにくい点
-9. リアル感/作り物感
-10. 一番使うべき面白い場面
-11. なぜ伸びた/伸びなかった可能性があるか
-12. 保存用JSON風まとめ`;
+出力形式：
+{
+  "video_structure": {
+    "total_duration_seconds": null,
+    "first_2_seconds": {
+      "0.0-0.5": {"visual": "", "text": "", "audio": "", "hook_strength": null, "confusion_risk": null},
+      "0.5-1.0": {"visual": "", "text": "", "audio": "", "hook_strength": null, "confusion_risk": null},
+      "1.0-2.0": {"visual": "", "text": "", "audio": "", "hook_strength": null, "confusion_risk": null}
+    },
+    "scene_summary": [
+      {"time": "", "visual": "", "action": "", "text": "", "audio": ""}
+    ],
+    "emotion_points": [
+      {"time": "", "emotion": "", "reason": ""}
+    ],
+    "drop_points": [
+      {"time": "", "reason": "", "severity": null}
+    ],
+    "viewer_confusion": [
+      {"time": "", "reason": ""}
+    ],
+    "reality_notes": [
+      {"time": "", "detail": ""}
+    ],
+    "audio_notes": [
+      {"time": "", "detail": ""}
+    ],
+    "text_overlay": [
+      {"time": "", "text": ""}
+    ],
+    "best_moment": {"time": "", "reason": ""},
+    "climax_scene": {"time": "", "reason": ""},
+    "bottleneck_points": [
+      {"time": "", "reason": ""}
+    ]
+  }
+}`;
   $('geminiPrompt').textContent=prompt;
   return prompt;
 }
@@ -297,8 +310,8 @@ function buildPrompt(){
   const c=cardData();
   const rs=refData();
   const a=getAgents();
-
   const selected=[...selectedAgents];
+
   const agentBlocks=selected.map(id=>`
 ==============================
 【${agentMeta[id]?.name||id}エージェント】
@@ -307,7 +320,7 @@ ${a[id]||''}
 
 出力項目：
 - 判定/点数
-- 根拠ラベル（動画 / Gemini / DB / 不明）
+- 根拠ラベル（動画 / Gemini JSON / DB / 不明）
 - 良かった点
 - ダメだった点
 - 伸びた/伸びなかった理由
@@ -332,14 +345,15 @@ ${a[id]||''}
 最重要ルール：
 - このチャットの前後文脈を使わない。
 - AIの記憶、過去会話、投稿者についての事前知識を使わない。
-- 根拠は【添付動画】【Gemini動画解析結果】【DB RAW JSON】のみ。
+- 根拠は【添付動画】【Gemini JSON解析結果】【DB RAW JSON】のみ。
 - DBにないこと、動画で確認できないことは「不明」と書く。
-- 各指摘には必ず根拠ラベルを付ける：［動画根拠］［Gemini根拠］［DB根拠］［不明］。
+- 各指摘には必ず根拠ラベルを付ける：［動画根拠］［Gemini JSON根拠］［DB根拠］［不明］。
 - DB RAW JSONは要約せず、保存値を忠実に扱う。
+- Gemini JSONは動画観察ログとして扱う。
 - ただの一般論ではなく「なぜこの動画がダメだった/良かったのか」を分析する。
 
 必ず添付された過去動画を見てください。
-Gemini解析結果は補助情報です。動画と矛盾する場合は、動画を優先してください。
+Gemini JSON解析結果は補助情報です。動画と矛盾する場合は、動画を優先してください。
 
 【DB RAW JSON】
 ${JSON.stringify(rawPayload,null,2)}
@@ -394,8 +408,8 @@ async function downloadPack(){
     geminiVideoAnalysis:v('geminiResult'),
     selectedAgents:[...selectedAgents]
   };
-  z.file('README.txt','動画本体はZIPに入っていません。GeminiとChatGPTへ別添付してください。\n手順：1_gemini_video_prompt.txtをGeminiへ → 結果をgemini_resultへ貼る → 2_chatgpt_compare_prompt.txtをChatGPTへ動画と一緒に渡す。');
-  z.file('1_gemini_video_prompt.txt',geminiPrompt);
+  z.file('README.txt','動画本体はZIPに入っていません。GeminiとChatGPTへ別添付してください。\n手順：1_gemini_video_json_prompt.txtをGeminiへ → JSON結果をGemini JSON解析結果欄へ貼る → 2_chatgpt_compare_prompt.txtをChatGPTへ動画と一緒に渡す。');
+  z.file('1_gemini_video_json_prompt.txt',geminiPrompt);
   z.file('2_chatgpt_compare_prompt.txt',chatPrompt);
   z.file('compare_data_raw.json',JSON.stringify(payload,null,2));
   z.file('posts_summary_raw.csv',postsCsv());
@@ -403,7 +417,7 @@ async function downloadPack(){
   const a=document.createElement('a');
   const title=(p?.title||'compare').replace(/[\\/:*?"<>|\s]+/g,'_').slice(0,40);
   a.href=URL.createObjectURL(blob);
-  a.download='past_video_compare_pack_'+title+'.zip';
+  a.download='past_video_compare_json_pack_'+title+'.zip';
   a.click();
   URL.revokeObjectURL(a.href);
 }
@@ -413,6 +427,7 @@ renderPosts();
 renderRefs();
 renderSummary();
 buildGeminiPrompt();
+buildPrompt();
 </script>
 </body>
 </html>
