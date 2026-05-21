@@ -1,68 +1,58 @@
-
-<!doctype html>
-<html lang="ja">
-<head><meta charset="utf-8"><title>投稿前チェック</title>
-<style>
-body{font-family:system-ui,sans-serif;background:#0f1115;color:#f5f7fa;margin:0;padding:0}
-header{padding:20px;background:#171b22;border-bottom:1px solid #2a313d}
-main{max-width:1200px;margin:auto;padding:20px}
-.card{background:#171b22;border:1px solid #2a313d;border-radius:16px;padding:16px;margin-bottom:16px}
-textarea,input,select{width:100%;background:#0d1015;color:#fff;border:1px solid #2a313d;border-radius:10px;padding:10px;margin-top:8px}
-button{background:#6ee7b7;color:#07130f;border:none;padding:10px 16px;border-radius:999px;font-weight:700;cursor:pointer;margin:4px}
-.output{white-space:pre-wrap;background:#0d1015;border:1px solid #2a313d;border-radius:12px;padding:14px;min-height:120px}
-.small{opacity:.7;font-size:12px}
-</style>
-</head>
-<body>
-<header><h1>投稿前チェック</h1></header>
-<main>
-<div class="card">
-<h2>Gemini動画解析</h2>
-<textarea id="geminiResult" style="min-height:300px" placeholder="Gemini JSON解析結果を貼る"></textarea>
-</div>
-
-<div class="card">
-<h2>ChatGPT解析プロンプト</h2>
-<button onclick="build()">生成</button>
-<div id="out" class="output"></div>
-</div>
-
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>投稿前チェック</title><script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script><style>
+:root{--bg:#0b1016;--panel:#121922;--panel2:#101721;--line:#263445;--text:#eef4ff;--muted:#94a7bc;--accent:#57e0aa;--warn:#ffd166;--bad:#ff6b6b;--blue:#7cc7ff;--r:18px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.55}
+header{padding:20px 22px;border-bottom:1px solid var(--line);background:#0f151d;position:sticky;top:0;z-index:10}
+h1{margin:0;font-size:24px}h2{margin:0 0 10px;font-size:18px}h3{margin:14px 0 8px;font-size:15px}.sub{color:var(--muted);font-size:13px;margin-top:4px}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}nav a{color:var(--text);text-decoration:none;background:#1b2734;border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:13px;font-weight:800}nav a.active{background:var(--accent);color:#06130f}
+.wrap{max-width:1180px;margin:0 auto;padding:22px}.clean{max-width:980px}.layout{display:grid;grid-template-columns:340px minmax(0,1fr);gap:18px}@media(max-width:900px){.layout{grid-template-columns:1fr}.wrap{padding:14px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:18px}.mini{padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--panel2);margin:8px 0}
+.homegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}@media(max-width:900px){.homegrid{grid-template-columns:1fr}}
+.homecard{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:22px;text-decoration:none;color:var(--text);display:block;min-height:190px}.homecard:hover{border-color:var(--accent)}.homecard b{font-size:20px}.homecard p{color:var(--muted);font-size:14px}
+.tag{display:inline-block;background:#0b1118;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:4px 9px;font-size:12px;margin:4px 4px 0 0}.tag.ok{color:#06130f;background:var(--accent);border-color:var(--accent)}
+input,textarea,select{width:100%;background:#0b1118;border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:12px;font-size:14px}textarea{min-height:120px;resize:vertical}label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
+button,.btn{border:0;background:var(--accent);padding:10px 14px;border-radius:999px;font-weight:800;cursor:pointer;color:#06130f;text-decoration:none;display:inline-flex;font-size:13px;align-items:center;gap:6px}
+button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px solid var(--line)}button.warn,.btn.warn{background:var(--warn);color:#221700}button.danger,.btn.danger{background:#40242a;color:#ffd4d4;border:1px solid #67323b}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.grid2{grid-template-columns:1fr}}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}@media(max-width:900px){.grid3{grid-template-columns:1fr}}
+.item{padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--panel2);cursor:pointer;margin-bottom:8px}.item.active{border-color:var(--accent);box-shadow:0 0 0 1px rgba(87,224,170,.25) inset}.small{font-size:12px;color:var(--muted)}
+.status,.note,.preview{padding:12px;border-radius:12px;background:#0b1118;border:1px solid var(--line);color:var(--muted);font-size:13px;margin-top:10px}.output{white-space:pre-wrap;background:#0b1118;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;line-height:1.7;max-height:620px;overflow:auto}.hidden{display:none}
+</style></head><body>
+<header><h1>投稿前チェック</h1><div class="sub">投稿前に、Gemini JSON → ChatGPT編集会議 → DB保存までのパックを作る。</div><nav><a href="./index.html">TOP</a><a class="active" href="./check.html">投稿前チェック</a><a href="./compare.html">過去投稿比較</a><a href="./admin.html">Admin</a></nav></header>
+<main class="wrap layout"><aside><div class="card"><h2>手順</h2><div class="mini"><span class="tag ok">1</span> 動画情報を入力</div><div class="mini"><span class="tag ok">2</span> Gemini用プロンプトをコピー</div><div class="mini"><span class="tag ok">3</span> Gemini JSONを貼る</div><div class="mini"><span class="tag ok">4</span> ChatGPT用プロンプト生成</div></div><div class="card"><h2>DB状況</h2><div id="dbStatus" class="output"></div></div></aside>
+<section><div class="card"><h2>次回投稿データ</h2><div class="grid2"><div><label>投稿タイトル / 仮テーマ</label><input id="nextTitle"></div><div><label>投稿目的</label><select id="goal"><option>再生数</option><option>フォロー増</option><option>仕事依頼</option><option>世界観/IP育成</option><option>保存/シェア</option></select></div></div><label>キャプション案</label><textarea id="nextCaption"></textarea><label>サムネ文字 / 冒頭テロップ案</label><input id="hookText"><label>動画ファイル（ZIPには入れません）</label><input id="videoInput" type="file" accept="video/*" onchange="previewVideo(event)"><div id="videoPreview" class="preview">動画をアップしてください</div><label>補足メモ</label><textarea id="extraMemo"></textarea><div class="btns"><button onclick="buildGeminiPrompt()">Gemini用プロンプト生成</button><button class="secondary" onclick="copyText($('geminiPrompt').textContent)">Gemini用コピー</button></div><div id="geminiPrompt" class="output"></div></div>
+<div class="card"><h2>Gemini JSON解析結果を貼る</h2><textarea id="geminiResult" style="min-height:260px"></textarea></div>
+<div class="card"><h2>ChatGPT Deep Multi-Agent分析</h2><div class="btns"><button onclick="buildAgentPrompt()">ChatGPT用プロンプト生成</button><button class="secondary" onclick="copyText($('agentPrompt').textContent)">コピー</button><button class="warn" onclick="downloadPack()">解析パックZIP生成</button></div><div id="agentPrompt" class="output"></div></div></section></main>
 <script>
-function build(){
- const g=document.getElementById('geminiResult').value;
- const prompt=`あなたはマルチエージェント動画分析AIです。
+const POST_KEY='rso_posts_v2', REF_KEY='rso_refs_v2', CARD_KEY='rso_post_cards_v2', AGENT_KEY='rso_agents_v2';
+function $(id){return document.getElementById(id)}
+function v(id){return ($(id)?.value)||''}
+function setv(id,val){if($(id))$(id).value=val||''}
+function esc(s=''){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
+function num(n){return Number(n||0).toLocaleString()}
+function load(key, fallback){try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback))}catch(e){return fallback}}
+function save(key, data){localStorage.setItem(key, JSON.stringify(data))}
+function copyText(text){navigator.clipboard.writeText(text).then(()=>alert('コピーしました'))}
+function downloadText(filename, text, type='text/plain'){const b=new Blob([text],{type});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=filename;a.click();URL.revokeObjectURL(a.href)}
+function topPosts(posts,limit=8){return [...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0)).slice(0,limit)}
+function bottomPosts(posts,limit=5){return [...posts].sort((a,b)=>Number(a.views||0)-Number(b.views||0)).slice(0,limit)}
+const defaultAgents={
+ hook_agent:'冒頭0〜2秒専門。0.5秒ごとの映像・音・テロップ・理解負荷・停止力を分析する。',
+ viewer_agent:'投稿者を知らない初見視聴者。3秒で判断し、意味が分かるか、続きが気になるかを見る。',
+ emotion_agent:'感情の山を専門分析。笑い、驚き、心配、応援、共感、違和感を時系列で拾う。',
+ reality_agent:'リアル感専門。現場感、家族感、地元感、人間臭さ、AI臭さ、作り物感を見る。',
+ db_compare_agent:'DB照合専門。過去投稿DB、参考構造DB、投稿カルテとの一致点とズレを見る。',
+ subtitle_agent:'テロップ専門。文字量、可読性、表示タイミング、無音視聴、0.5秒ごとの文字圧を見る。',
+ reedit_agent:'撮り直しなし再編集専門。順番変更、カット短縮、冒頭差し替え、テロップ追加だけで改善する。',
+ copy_agent:'コピー専門。サムネ、冒頭テロップ、タイトル、コメント誘導、キャプションを作る。',
+ director_agent:'統合ディレクター。各エージェントの矛盾を整理し、最終構成案へまとめる。'
+};
+function getAgents(){let a=load(AGENT_KEY,null); if(!a){save(AGENT_KEY,defaultAgents);return defaultAgents} return {...defaultAgents,...a}}
 
-# ルール
-- 浅い感想禁止
-- 秒数ベースで分析
-- 動画根拠必須
-- Gemini JSON根拠必須
-- 解析結果を削らない
-
-# Gemini JSON
-${g}
-
-# 必須分析
-1. 冒頭2秒分析
-2. 感情分析
-3. リアル感分析
-4. 視聴者心理分析
-5. 離脱ポイント
-6. テロップ改善
-7. 撮り直しなし改善構成案
-8. 15秒構成
-9. 30秒構成
-10. 冒頭差し替え構成
-
-# 各分析には
-- 根拠
-- タイムコード
-- 改善理由
-- テロップ案
-を必ず付ける`;
- document.getElementById('out').textContent=prompt;
-}
-</script>
-</main>
-</body>
-</html>
+let posts=load(POST_KEY,[]), refs=load(REF_KEY,[]), cards=load(CARD_KEY,{}), videoName='';
+function previewVideo(e){const f=e.target.files[0];if(!f)return;videoName=f.name;const u=URL.createObjectURL(f);$('videoPreview').innerHTML=`<video src="${u}" controls style="width:100%;border-radius:12px"></video><div class="small">${esc(f.name)}｜動画は別添付</div>`}
+function renderDbStatus(){$('dbStatus').textContent=`投稿DB：${posts.length}件\n参考構造DB：${refs.length}件\n投稿カルテ：${Object.keys(cards).length}件\n\n上位投稿：\n${topPosts(posts,5).map(p=>`・${p.title}｜再生:${p.views}`).join('\n')||'なし'}`;}
+function buildGeminiPrompt(){const p=`この投稿予定動画をInstagram分析用にJSON解析してください。感想ではなく観察だけを出力。JSON外の文章は禁止。冒頭2秒、シーン時系列、感情、離脱、リアル感、テロップ、音声を構造化してください。\n\n【投稿目的】${v('goal')}\n【仮タイトル】${v('nextTitle')}\n【冒頭テロップ案】${v('hookText')}\n【キャプション案】${v('nextCaption')}\n【補足メモ】${v('extraMemo')}\n\n出力JSON項目：video_structure.total_duration_seconds, first_2_seconds, scene_summary, emotion_points, drop_points, viewer_confusion, reality_notes, audio_notes, text_overlay, best_moment, bottleneck_points`; $('geminiPrompt').textContent=p;return p}
+function buildAgentPrompt(){const db={topPosts:topPosts(posts,8),refs:refs.slice(0,12),gemini:v('geminiResult'),title:v('nextTitle'),goal:v('goal'),caption:v('nextCaption'),hook:v('hookText'),memo:v('extraMemo'),videoName};const p=`あなたはReel Strategy OSのDeep Multi-Agent投稿前分析AIです。\n\nルール：浅い感想禁止、秒数根拠必須、解析結果を削らない、動画/Gemini JSON/DB RAWだけを根拠にする。\n\n【DB RAW JSON】\n${JSON.stringify(db,null,2)}\n\n必須出力：\n## 0. 一言結論\n## 1. 動画の事実確認\n## 2. エージェント別分析\n## 3. エージェント間矛盾チェック\n## 4. 深掘り原因分析\n## 5. 撮り直しなし改善構成案（15秒/30秒/冒頭差し替え・テロップ入り）\n## 6. コピー案\n## 7. DB保存用メモ`; $('agentPrompt').textContent=p;return p}
+async function downloadPack(){const z=new JSZip();z.file('gemini_prompt.txt',buildGeminiPrompt());z.file('chatgpt_prompt.txt',buildAgentPrompt());z.file('data_raw.json',JSON.stringify({posts,refs,cards,gemini:v('geminiResult')},null,2));const blob=await z.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='post_check_pack.zip';a.click();URL.revokeObjectURL(a.href)}
+renderDbStatus();buildGeminiPrompt();buildAgentPrompt();
+</script></body></html>
