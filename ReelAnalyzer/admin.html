@@ -1,31 +1,54 @@
 <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin</title><style>
-:root{--bg:#0b1016;--panel:#121922;--panel2:#101721;--line:#263445;--text:#eef4ff;--muted:#94a7bc;--accent:#57e0aa;--warn:#ffd166;--bad:#ff6b6b;--blue:#7cc7ff;--r:18px}
+:root{
+  --bg:#0b1016;--panel:#121922;--panel2:#101721;--line:#263445;
+  --text:#eef4ff;--muted:#94a7bc;--accent:#57e0aa;--warn:#ffd166;
+  --bad:#ff6b6b;--blue:#7cc7ff;--purple:#c792ea;--orange:#ffb86b;--r:18px
+}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.55}
 header{padding:20px 22px;border-bottom:1px solid var(--line);background:#0f151d;position:sticky;top:0;z-index:10}
-h1{margin:0;font-size:24px}h2{margin:0 0 10px;font-size:18px}h3{margin:14px 0 8px;font-size:15px}.sub{color:var(--muted);font-size:13px;margin-top:4px}
-nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}nav a{color:var(--text);text-decoration:none;background:#1b2734;border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:13px;font-weight:800}nav a.active{background:var(--accent);color:#06130f}
-.wrap{max-width:1180px;margin:0 auto;padding:22px}.clean{max-width:980px}.layout{display:grid;grid-template-columns:340px minmax(0,1fr);gap:18px}@media(max-width:900px){.layout{grid-template-columns:1fr}.wrap{padding:14px}}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:18px}.mini{padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--panel2);margin:8px 0}
+h1{margin:0;font-size:24px}h2{margin:0 0 10px;font-size:18px}h3{margin:14px 0 8px;font-size:15px}
+.sub{color:var(--muted);font-size:13px;margin-top:4px}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+nav a{color:var(--text);text-decoration:none;background:#1b2734;border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:13px;font-weight:800}
+nav a.active{background:var(--accent);color:#06130f}
+.wrap{max-width:1180px;margin:0 auto;padding:22px}.clean{max-width:980px}
+.layout{display:grid;grid-template-columns:340px minmax(0,1fr);gap:18px}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.wrap{padding:14px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:18px}
+.mini{padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--panel2);margin:8px 0}
 .homegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}@media(max-width:900px){.homegrid{grid-template-columns:1fr}}
-.homecard{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:22px;text-decoration:none;color:var(--text);display:block;min-height:190px}.homecard:hover{border-color:var(--accent)}.homecard b{font-size:20px}.homecard p{color:var(--muted);font-size:14px}
-.tag{display:inline-block;background:#0b1118;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:4px 9px;font-size:12px;margin:4px 4px 0 0}.tag.ok{color:#06130f;background:var(--accent);border-color:var(--accent)}
-input,textarea,select{width:100%;background:#0b1118;border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:12px;font-size:14px}textarea{min-height:120px;resize:vertical}label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
+.homecard{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:22px;text-decoration:none;color:var(--text);display:block;min-height:190px}
+.homecard:hover{border-color:var(--accent)}.homecard b{font-size:20px}.homecard p{color:var(--muted);font-size:14px}
+.tag{display:inline-block;background:#0b1118;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:4px 9px;font-size:12px;margin:4px 4px 0 0}
+.tag.ok{color:#06130f;background:var(--accent);border-color:var(--accent)}
+.tag.warn{color:#221700;background:var(--warn);border-color:var(--warn)}
+input,textarea,select{width:100%;background:#0b1118;border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:12px;font-size:14px}
+textarea{min-height:120px;resize:vertical}label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
 button,.btn{border:0;background:var(--accent);padding:10px 14px;border-radius:999px;font-weight:800;cursor:pointer;color:#06130f;text-decoration:none;display:inline-flex;font-size:13px;align-items:center;gap:6px}
-button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px solid var(--line)}button.warn,.btn.warn{background:var(--warn);color:#221700}button.danger,.btn.danger{background:#40242a;color:#ffd4d4;border:1px solid #67323b}
-.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.grid2{grid-template-columns:1fr}}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}@media(max-width:900px){.grid3{grid-template-columns:1fr}}
-.item{padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--panel2);cursor:pointer;margin-bottom:8px}.item.active{border-color:var(--accent);box-shadow:0 0 0 1px rgba(87,224,170,.25) inset}.small{font-size:12px;color:var(--muted)}
-.status,.note,.preview{padding:12px;border-radius:12px;background:#0b1118;border:1px solid var(--line);color:var(--muted);font-size:13px;margin-top:10px}.output{white-space:pre-wrap;background:#0b1118;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;line-height:1.7;max-height:620px;overflow:auto}.hidden{display:none}
+button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px solid var(--line)}
+button.warn,.btn.warn{background:var(--warn);color:#221700}
+button.danger,.btn.danger{background:#40242a;color:#ffd4d4;border:1px solid #67323b}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.grid2{grid-template-columns:1fr}}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}@media(max-width:900px){.grid3{grid-template-columns:1fr}}
+.item{padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--panel2);cursor:pointer;margin-bottom:8px}
+.item.active{border-color:var(--accent);box-shadow:0 0 0 1px rgba(87,224,170,.25) inset}
+.agent-item{position:relative;padding-left:14px}
+.agent-item:before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:4px;border-radius:10px;background:var(--accent)}
+.small{font-size:12px;color:var(--muted)}
+.status,.note,.preview{padding:12px;border-radius:12px;background:#0b1118;border:1px solid var(--line);color:var(--muted);font-size:13px;margin-top:10px}
+.output{white-space:pre-wrap;background:#0b1118;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;line-height:1.7;max-height:620px;overflow:auto}
+.hidden{display:none}
 </style></head><body>
 <header><h1>Reel Strategy OS｜Admin</h1><div class="sub">投稿DB・投稿カルテ・参考構造DB・サブエージェント固定プロンプトを育てる。</div><nav><a href="./index.html">TOP</a><a href="./check.html">投稿前チェック</a><a href="./compare.html">過去投稿比較</a><a class="active" href="./admin.html">Admin</a></nav></header>
-<main class="wrap layout"><aside><div class="card"><h2>保存・移行</h2><div class="btns"><button class="secondary" onclick="exportAll()">全DB書出</button><label class="btn secondary" for="importFile">全DB読込</label><input id="importFile" class="hidden" type="file" accept="application/json" onchange="importAll(event)"><button class="danger" onclick="clearAll()">全削除</button></div><div class="note">localStorage保存。定期バックアップ推奨。</div></div><div class="card"><h2>DB状況</h2><div id="dbStatus" class="output"></div></div><div class="card"><h2>登録済み参考構造</h2><div id="referenceList"></div></div></aside>
+<main class="wrap layout"><aside><div class="card"><h2>保存・移行</h2><div class="btns"><button class="secondary" onclick="exportAll()">全DB書出</button><label class="btn secondary" for="importFile">全DB読込</label><input id="importFile" class="hidden" type="file" accept="application/json" onchange="importAll(event)"><button class="danger" onclick="clearAll()">全削除</button></div></div><div class="card"><h2>DB状況</h2><div id="dbStatus" class="output"></div></div><div class="card"><h2>登録済み参考構造</h2><div id="referenceList"></div></div></aside>
 <section>
 <div class="card"><h2>過去投稿DB</h2><div class="grid3"><div><label>投稿タイトル</label><input id="postTitle"></div><div><label>投稿日</label><input id="postDate" type="date"></div><div><label>URL</label><input id="postUrl"></div></div><div class="grid3"><div><label>再生数</label><input id="postViews" type="number"></div><div><label>保存</label><input id="postSaves" type="number"></div><div><label>コメント</label><input id="postComments" type="number"></div></div><label>キャプション</label><textarea id="postCaption"></textarea><div class="btns"><button onclick="savePost()">投稿DBへ保存</button><button class="secondary" onclick="clearPostForm()">入力クリア</button></div><div id="postList"></div></div>
 <div class="card"><h2>投稿カルテDB</h2><label>投稿選択</label><select id="cardPostSelect" onchange="loadPostCard()"></select><div class="grid2"><div><label>勝ち筋タグ</label><input id="cardTags"></div><div><label>投稿タイプ</label><select id="cardType"><option>工場系</option><option>地域ネタ</option><option>家族ネタ</option><option>問題発生系</option><option>制作過程</option><option>AI/ロボ/IP</option><option>その他</option></select></div></div><label>Gemini JSON動画解析</label><textarea id="cardGemini"></textarea><label>ChatGPT Deep Multi-Agent分析結果</label><textarea id="cardAnalysis" style="min-height:220px"></textarea><label>実績メモ・仮説</label><textarea id="cardMemo"></textarea><label>動画ファイル名メモ</label><input id="cardVideoName"><div class="btns"><button onclick="savePostCard()">投稿カルテ保存</button><button class="secondary" onclick="exportPostCard()">カルテJSON書出</button></div><div id="saveStatus" class="preview">未保存</div></div>
 <div class="card"><h2>参考構造DB</h2><div class="grid2"><div><label>参考タイトル</label><input id="refTitle"></div><div><label>投稿者・出典</label><input id="refCreator"></div></div><div class="grid2"><div><label>種別</label><select id="refType"><option>自分の気づき</option><option>Instagram投稿</option><option>商材/教材テキスト</option><option>YouTube/TikTok</option></select></div><div><label>参考URL</label><input id="refUrl"></div></div><label>参考ファイル読み込み</label><input id="refFileInput" type="file" accept=".txt,.md,.csv,.json,text/plain,text/markdown,text/csv,application/json" onchange="importRefFile(event)"><div class="note">txt / md / csv / json を読み込み、下の「資料・メモ」に追記。</div><label>資料・メモ</label><textarea id="refMaterial"></textarea><label>抽象化した構造</label><textarea id="refStructure"></textarea><label>自分ジャンルへの翻訳</label><textarea id="refTranslate"></textarea><label>勝ち筋テンプレ名</label><input id="refTemplate"><label>チェックリスト</label><textarea id="refChecklist"></textarea><div class="btns"><button onclick="saveRef()">参考構造DBへ保存</button><button class="secondary" onclick="clearRefForm()">入力クリア</button></div></div>
-<div class="card"><h2>サブエージェント固定プロンプト</h2><div id="agentEditor"></div><div class="btns"><button onclick="saveAgents()">エージェント保存</button><button class="secondary" onclick="resetAgents()">初期化</button></div></div>
 </section></main><script>
-const POST_KEY='rso_posts_v2', REF_KEY='rso_refs_v2', CARD_KEY='rso_post_cards_v2', AGENT_KEY='rso_agents_v2';
+const POST_KEY='rso_posts_v2', REF_KEY='rso_refs_v2', CARD_KEY='rso_post_cards_v2', AGENT_KEY='rso_agents_true_v1';
 function $(id){return document.getElementById(id)}
 function v(id){return ($(id)?.value)||''}
 function setv(id,val){if($(id))$(id).value=val||''}
@@ -37,21 +60,85 @@ function copyText(text){navigator.clipboard.writeText(text).then(()=>alert('コ�
 function downloadText(filename, text, type='text/plain'){const b=new Blob([text],{type});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=filename;a.click();URL.revokeObjectURL(a.href)}
 function topPosts(posts,limit=8){return [...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0)).slice(0,limit)}
 function bottomPosts(posts,limit=5){return [...posts].sort((a,b)=>Number(a.views||0)-Number(b.views||0)).slice(0,limit)}
-const defaultAgents={
- hook_agent:'冒頭0〜2秒専門。0.5秒ごとの映像・音・テロップ・理解負荷・停止力を分析する。',
- viewer_agent:'投稿者を知らない初見視聴者。3秒で判断し、意味が分かるか、続きが気になるかを見る。',
- emotion_agent:'感情の山を専門分析。笑い、驚き、心配、応援、共感、違和感を時系列で拾う。',
- reality_agent:'リアル感専門。現場感、家族感、地元感、人間臭さ、AI臭さ、作り物感を見る。',
- db_compare_agent:'DB照合専門。過去投稿DB、参考構造DB、投稿カルテとの一致点とズレを見る。',
- subtitle_agent:'テロップ専門。文字量、可読性、表示タイミング、無音視聴、0.5秒ごとの文字圧を見る。',
- reedit_agent:'撮り直しなし再編集専門。順番変更、カット短縮、冒頭差し替え、テロップ追加だけで改善する。',
- copy_agent:'コピー専門。サムネ、冒頭テロップ、タイトル、コメント誘導、キャプションを作る。',
- director_agent:'統合ディレクター。各エージェントの矛盾を整理し、最終構成案へまとめる。'
+
+const trueAgents={
+ hook_specialist:{
+  name:'HOOK SPECIALIST',
+  jp:'冒頭2秒専門',
+  kpi:'初速CTR / 指止め / 0〜2秒保持',
+  focus:'0:00〜0:02だけを見る。動画全体の良し悪しは評価しない。',
+  logic:'Instagram上で最初の0.3秒に「既視感」を出したら負け。視覚差分・音・人間の動き・テロップ圧で判定する。',
+  output:'冒頭0.5秒ごとの停止力、離脱理由、冒頭差し替え案、冒頭テロップ案'
+ },
+ context_flow_analyzer:{
+  name:'CONTEXT FLOW ANALYZER',
+  jp:'文脈接続専門',
+  kpi:'初見理解 / シーン因果 / 意味の接続',
+  focus:'カット同士の因果関係、視聴者が「何の動画？」にならないかを見る。',
+  logic:'思想より先に、人物・現場・行動・目的を理解させる必要がある。',
+  output:'意味が飛ぶ秒数、文脈の穴、つなぎ直し構成案'
+ },
+ human_emotion_engine:{
+  name:'HUMAN EMOTION ENGINE',
+  jp:'人間感情専門',
+  kpi:'共感 / 表情 / 弱さ / 熱量 / 応援したくなる瞬間',
+  focus:'人の顔、手、声、失敗、照れ、笑い、間、熱量だけを見る。',
+  logic:'SNSで残るのは思想ではなく人間の温度。人間が出た瞬間をフックへ移植する。',
+  output:'感情ピーク、冒頭へ移すべき人間カット、コメント余白'
+ },
+ retention_analyzer:{
+  name:'ALGORITHM RETENTION ANALYZER',
+  jp:'視聴維持専門',
+  kpi:'視聴維持率 / 完読率 / 離脱曲線 / 情報差分',
+  focus:'何秒で脳が処理落ちするか、意味が残るか、同じ情報が続いていないかを見る。',
+  logic:'1秒ごとのテロップが多すぎても少なすぎても離脱する。情報差分と理解負荷を評価する。',
+  output:'離脱危険秒数、情報過多/不足、維持率改善案'
+ },
+ anti_ai_positioning:{
+  name:'ANTI-AI POSITIONING ANALYZER',
+  jp:'反AI/人間価値ポジション専門',
+  kpi:'メッセージと表現の整合性 / 信頼性 / 人間しか撮れないリアル',
+  focus:'AIを語る投稿で、映像表現がAI臭くなっていないかを見る。',
+  logic:'「AIでは作れない価値」を語るなら、冒頭から木屑・手・音・汚れ・現場を出す必要がある。',
+  output:'AI臭さの衝突点、人間現場への置換案'
+ },
+ db_structure_agent:{
+  name:'DB STRUCTURE AGENT',
+  jp:'DB構造照合専門',
+  kpi:'過去勝ち投稿との構造一致 / 失敗パターン一致 / 保存仮説',
+  focus:'DB RAWの勝ち筋、失敗筋、参考構造と動画を照合する。',
+  logic:'数字だけでなく、問題発生・未完成性・地域性・家族感・プロセスエコノミーと照合する。',
+  output:'DB一致点、DBズレ、次回仮説'
+ },
+ subtitle_director:{
+  name:'SUBTITLE DIRECTOR',
+  jp:'テロップ専門',
+  kpi:'可読性 / 文字圧 / 無音視聴 / テロップの刺さり',
+  focus:'0.5秒ごとのテロップ量、言葉の強さ、表示タイミングを見る。',
+  logic:'説明ではなく感情のトリガーを置く。テロップは動画を補足するのではなく、指を止めるために使う。',
+  output:'秒数別テロップ、削る言葉、強い言い換え'
+ },
+ edit_architect:{
+  name:'EDIT ARCHITECT',
+  jp:'再編集構成専門',
+  kpi:'撮り直しなし改善 / 構成変換 / 秒数設計',
+  focus:'既存素材だけで、順番・秒数・テロップ・音の使い方を再構成する。',
+  logic:'「思想→現実」ではなく「現実→違和感→思想」の順に並べる。',
+  output:'15秒版、30秒版、冒頭差し替え版、高速ショート版'
+ },
+ director:{
+  name:'FINAL DIRECTOR',
+  jp:'統合ディレクター',
+  kpi:'矛盾統合 / 最終判断 / 実行優先順位',
+  focus:'各エージェントの矛盾を整理し、最終構成案と保存メモへ落とす。',
+  logic:'各専門家の主張を削らず、階層化して見やすく統合する。',
+  output:'一言結論、最優先修正、DB保存用タグ'
+ }
 };
-function getAgents(){let a=load(AGENT_KEY,null); if(!a){save(AGENT_KEY,defaultAgents);return defaultAgents} return {...defaultAgents,...a}}
+function getAgents(){let a=load(AGENT_KEY,null); if(!a){save(AGENT_KEY,trueAgents);return trueAgents} return {...trueAgents,...a}}
 
 let posts=load(POST_KEY,[]), refs=load(REF_KEY,[]), cards=load(CARD_KEY,{}), editPostId=null, editRefId=null;
-function renderAll(){renderDbStatus();renderPosts();renderRefs();refreshPostCardSelect();renderAgents()}
+function renderAll(){renderDbStatus();renderPosts();renderRefs();refreshPostCardSelect()}
 function renderDbStatus(){$('dbStatus').textContent=`投稿DB：${posts.length}件\n参考構造DB：${refs.length}件\n投稿カルテ：${Object.keys(cards).length}件\n\n上位投稿：\n${topPosts(posts,5).map(p=>`・${p.title}｜${num(p.views)}再生`).join('\n')||'なし'}`;}
 function renderPosts(){$('postList').innerHTML=topPosts(posts,50).map(p=>`<div class="item" onclick="loadPost('${p.id}')"><b>${esc(p.title)}</b><div class="small">再生:${num(p.views)} / 保存:${num(p.saves)} / コメント:${num(p.comments)}</div></div>`).join('')||'<div class="small">投稿なし</div>'}
 function savePost(){const id=editPostId||String(Date.now());const d={id,title:v('postTitle')||'無題',date:v('postDate'),url:v('postUrl'),views:Number(v('postViews')||0),saves:Number(v('postSaves')||0),comments:Number(v('postComments')||0),caption:v('postCaption')};posts=editPostId?posts.map(p=>p.id===id?d:p):[d,...posts];save(POST_KEY,posts);editPostId=null;clearPostForm();renderAll()}
@@ -67,11 +154,8 @@ function loadRef(id){const r=refs.find(x=>x.id===id);if(!r)return;editRefId=id;s
 function deleteRef(id){if(!confirm('削除しますか？'))return;refs=refs.filter(r=>r.id!==id);save(REF_KEY,refs);renderAll()}
 function clearRefForm(){editRefId=null;['refTitle','refCreator','refUrl','refMaterial','refStructure','refTranslate','refTemplate','refChecklist'].forEach(id=>setv(id,''))}
 function importRefFile(e){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{const cur=v('refMaterial');const block=`--- 取り込みファイル: ${f.name} ---\n${rd.result}\n--- ここまで ---`;setv('refMaterial',cur?cur+'\n\n'+block:block);if(!v('refTitle'))setv('refTitle',f.name)};rd.readAsText(f,'utf-8')}
-function renderAgents(){const a=getAgents();$('agentEditor').innerHTML=Object.keys(defaultAgents).map(k=>`<label>${k}</label><textarea data-agent="${k}">${esc(a[k]||'')}</textarea>`).join('')}
-function saveAgents(){const a={};document.querySelectorAll('[data-agent]').forEach(t=>a[t.dataset.agent]=t.value);save(AGENT_KEY,a);alert('保存しました')}
-function resetAgents(){if(confirm('初期化しますか？')){save(AGENT_KEY,defaultAgents);renderAgents()}}
 function exportAll(){downloadText('rso_backup.json',JSON.stringify({posts,refs,cards,agents:getAgents()},null,2),'application/json')}
-function importAll(e){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{const d=JSON.parse(rd.result);posts=d.posts||[];refs=d.refs||[];cards=d.cards||d.postCards||{};save(POST_KEY,posts);save(REF_KEY,refs);save(CARD_KEY,cards);if(d.agents)save(AGENT_KEY,d.agents);renderAll()};rd.readAsText(f)}
+function importAll(e){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{const d=JSON.parse(rd.result);posts=d.posts||[];refs=d.refs||[];cards=d.cards||d.postCards||{};save(POST_KEY,posts);save(REF_KEY,refs);save(CARD_KEY,cards);renderAll()};rd.readAsText(f)}
 function clearAll(){if(!confirm('全DB削除しますか？'))return;posts=[];refs=[];cards={};localStorage.removeItem(POST_KEY);localStorage.removeItem(REF_KEY);localStorage.removeItem(CARD_KEY);renderAll()}
 renderAll();
 </script></body></html>
