@@ -19,8 +19,8 @@ button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px 
 .hidden{display:none}.score{font-size:30px;font-weight:900}.pillrow{display:flex;gap:8px;flex-wrap:wrap}.kbd{font-family:ui-monospace,Consolas,monospace;background:#0b1118;border:1px solid var(--line);border-radius:8px;padding:2px 6px;color:var(--blue)}
 hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 </style></head><body><header><h1>過去投稿比較</h1><div class="sub">1本の過去投稿を、投稿カルテ・参考構造DB・勝ち筋に照らして検証する。</div><nav><a href="./index.html">TOP</a><a href="./check.html">投稿前チェック</a><a class="active" href="./compare.html">過去投稿比較</a><a href="./admin.html">Admin</a></nav></header>
-<main class="wrap layout"><aside><div class="card"><h2>検証する投稿</h2><div class="btns"><button class="secondary" onclick="selectTop()">上位投稿</button><button class="secondary" onclick="selectBottom()">下位投稿</button><button class="secondary" onclick="clearPost()">解除</button></div><div id="postList" style="margin-top:14px"></div></div><div class="card"><h2>照合する参考構造DB</h2><div class="btns"><button class="secondary" onclick="selectAllRefs()">全選択</button><button class="secondary" onclick="clearRefs()">解除</button></div><div id="refList" style="margin-top:14px"></div></div></aside>
-<section><div class="card"><h2>選択中</h2><div id="selectedSummary" class="output">未選択</div></div><div class="card"><h2>比較・照合プロンプト</h2><div class="btns"><button onclick="buildPrompt()">プロンプト生成</button><button class="secondary" onclick="copyPrompt()">コピー</button><button class="warn" onclick="downloadPack()">ZIP生成</button></div><div id="prompt" class="output">ここに生成されます。</div></div></section></main><script>
+<main class="wrap layout"><aside><div class="card"><h2>検証する投稿</h2><div class="note">過去投稿を1本選び、複数の視点で検証します。</div><div class="btns"><button class="secondary" onclick="selectTop()">上位投稿</button><button class="secondary" onclick="selectBottom()">下位投稿</button><button class="secondary" onclick="clearPost()">解除</button></div><div id="postList" style="margin-top:14px"></div></div><div class="card"><h2>照合する参考構造DB</h2><div class="note">参考DBは「答え」ではなく、勝ち構造とのズレを見る材料として使います。</div><div class="btns"><button class="secondary" onclick="selectAllRefs()">全選択</button><button class="secondary" onclick="clearRefs()">解除</button></div><div id="refList" style="margin-top:14px"></div></div><div class="card"><h2>マルチエージェント</h2><div class="note">必要な視点だけ選択。通常は全選択でOK。</div><div class="btns"><button class="secondary" onclick="selectAllAgents()">全選択</button><button class="secondary" onclick="clearAgents()">解除</button></div><div id="agentList" style="margin-top:14px"></div></div></aside>
+<section><div class="card"><h2>選択中</h2><div id="selectedSummary" class="output">未選択</div></div><div class="card"><h2>過去投稿マルチエージェント検証プロンプト</h2><div class="note">選択したエージェントごとに役割を分け、最後に統合ディレクターが結論を出す形式です。</div><div class="btns"><button onclick="buildPrompt()">プロンプト生成</button><button class="secondary" onclick="copyPrompt()">コピー</button><button class="warn" onclick="downloadPack()">ZIP生成</button></div><div id="prompt" class="output">ここに生成されます。</div></div></section></main><script>
 const POST_KEY='rso_posts_v2';
 const REF_KEY='rso_refs_v2';
 const CARD_KEY='rso_post_cards_v2';
@@ -62,6 +62,16 @@ AIっぽさ、作り物感、説明臭さを嫌い、足で稼いだ現場感・
 各エージェントの意見を統合し、最終判断を出してください。
 出力：一言結論、投稿可否、優先修正3つ、15秒構成、DB保存用タグ、次回検証仮説。`
 };
+const agentMeta={
+  hook_agent:{name:'冒頭2秒',desc:'スクロール停止力だけを見る'},
+  viewer_agent:{name:'素人目線',desc:'知らない人が見て分かるか'},
+  emotion_agent:{name:'感情',desc:'笑い・驚き・共感・応援を拾う'},
+  reality_agent:{name:'リアル感',desc:'現場感・人間味・AI臭さを見る'},
+  db_compare_agent:{name:'DB照合',desc:'過去DB/参考構造とのズレを見る'},
+  reedit_agent:{name:'再編集',desc:'撮り直しなしで並べ替える'},
+  copy_agent:{name:'コピー',desc:'サムネ/冒頭/キャプションを作る'},
+  director_agent:{name:'統合',desc:'全意見をまとめて結論化'}
+};
 function getAgents(){let a=load(AGENT_KEY,null); if(!a){save(AGENT_KEY,defaultAgents); return defaultAgents;} return {...defaultAgents,...a}}
 function firstLine(c=''){const s=(c||'').split('\n').map(x=>x.trim()).find(Boolean)||'無題';return s.length>42?s.slice(0,42)+'…':s}
 function topPosts(limit=8){return [...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0)).slice(0,limit)}
@@ -70,7 +80,12 @@ function copyText(text){navigator.clipboard.writeText(text).then(()=>alert('コ�
 function downloadText(filename, text, type='text/plain'){const b=new Blob([text],{type});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=filename;a.click();URL.revokeObjectURL(a.href)}
 
 
-let selectedPostId=null;let selectedRefs=new Set();
+let selectedPostId=null;let selectedRefs=new Set();let selectedAgents=new Set(['hook_agent','viewer_agent','emotion_agent','reality_agent','db_compare_agent','reedit_agent','copy_agent','director_agent']);
+
+function renderAgents(){const a=getAgents();const order=['hook_agent','viewer_agent','emotion_agent','reality_agent','db_compare_agent','reedit_agent','copy_agent','director_agent'];$('agentList').innerHTML=order.map(id=>{const m=agentMeta[id]||{name:id,desc:''};return `<div class="item ${selectedAgents.has(id)?'active':''}" onclick="toggleAgent('${id}')"><b>${esc(m.name)}</b><div class="small">${esc(m.desc)}</div></div>`}).join('')}
+function toggleAgent(id){selectedAgents.has(id)?selectedAgents.delete(id):selectedAgents.add(id);renderAgents();buildPrompt()}
+function selectAllAgents(){selectedAgents=new Set(['hook_agent','viewer_agent','emotion_agent','reality_agent','db_compare_agent','reedit_agent','copy_agent','director_agent']);renderAgents();buildPrompt()}
+function clearAgents(){selectedAgents.clear();renderAgents();buildPrompt()}
 function renderPosts(){const el=$('postList');if(!posts.length){el.innerHTML='<div class="small">Adminで投稿DBを登録してください</div>';return}const sorted=topPosts(100);el.innerHTML=sorted.map(p=>`<div class="item ${selectedPostId===p.id?'active':''}" onclick="selectPost('${p.id}')"><b>${esc(p.title)}</b><div class="small">再生:${num(p.views)} / 保存:${num(p.saves)} / コメント:${num(p.comments)}</div></div>`).join('');renderSummary()}
 function renderRefs(){const el=$('refList');if(!refs.length){el.innerHTML='<div class="small">Adminで参考構造DBを登録してください</div>';return}el.innerHTML=refs.map(r=>`<div class="item ${selectedRefs.has(String(r.id))?'active':''}" onclick="toggleRef('${r.id}')"><b>${esc(r.template||r.title||'無題')}</b><div class="small">${esc(r.creator||r.type||'参考DB')}</div></div>`).join('');renderSummary()}
 function selectPost(id){selectedPostId=id;renderPosts();buildPrompt()}function clearPost(){selectedPostId=null;renderPosts();buildPrompt()}function postData(){return posts.find(p=>p.id===selectedPostId)||null}
@@ -78,9 +93,70 @@ function toggleRef(id){id=String(id);selectedRefs.has(id)?selectedRefs.delete(id
 function selectAllRefs(){selectedRefs=new Set(refs.map(r=>String(r.id)));renderRefs();buildPrompt()}function clearRefs(){selectedRefs.clear();renderRefs();buildPrompt()}
 function selectTop(){const s=topPosts(1);selectedPostId=s[0]?.id||null;renderPosts();buildPrompt()}function selectBottom(){const s=bottomPosts(1);selectedPostId=s[0]?.id||null;renderPosts();buildPrompt()}
 function renderSummary(){const p=postData();const c=p?(cards[p.id]||{}):{};const rs=refData();$('selectedSummary').textContent=`【検証投稿】\n${p?`・${p.title}｜再生:${p.views}｜保存:${p.saves}｜コメント:${p.comments}`:'未選択'}\n\n【投稿カルテ】\n${c.tags?`タグ:${c.tags}\nタイプ:${c.type}\nGemini:${(c.gemini||'').slice(0,160)}...\n分析:${(c.analysis||'').slice(0,160)}...`:'未保存'}\n\n【参考構造DB】\n${rs.length?rs.map(r=>`・${r.template||r.title}`).join('\n'):'未選択'}`;}
-function buildPrompt(){const p=postData();const c=p?(cards[p.id]||{}):{};const rs=refData();const a=getAgents();const postText=p?`タイトル:${p.title}\nURL:${p.url||''}\n日付:${p.date||''}\n再生:${p.views||0}\n保存:${p.saves||0}\nコメント:${p.comments||0}\nキャプション:\n${p.caption||''}`:'未選択'; const cardText=`タグ:${c.tags||''}\nタイプ:${c.type||''}\nGemini解析:\n${c.gemini||''}\nChatGPT分析:\n${c.analysis||''}\nメモ:\n${c.memo||''}`; const refText=rs.map(r=>`【${r.template||r.title}】\n構造:${r.structure||''}\n翻訳:${r.translate||''}\nチェック:${r.checklist||''}`).join('\n\n')||'未選択';
-const pmt=`あなたはReel Strategy OSの過去投稿検証AIです。\n\nこれは投稿同士の単純比較ではありません。1本の過去投稿を、投稿カルテ・参考構造DB・勝ち筋に照らして、次回に使える仮説へ変換してください。\n\n【検証投稿】\n${postText}\n\n【投稿カルテ】\n${cardText}\n\n【照合する参考構造DB】\n${refText}\n\n【過去上位投稿】\n${topPosts(8).map(x=>`・${x.title}｜再生:${x.views}｜保存:${x.saves}｜コメント:${x.comments}`).join('\n')}\n\n--- エージェント視点 ---\n[viewer_agent]\n${a.viewer_agent}\n\n[emotion_agent]\n${a.emotion_agent}\n\n[reality_agent]\n${a.reality_agent}\n\n[db_compare_agent]\n${a.db_compare_agent}\n\n[director_agent]\n${a.director_agent}\n\n出力：一言結論、伸びた/伸びなかった理由の仮説、勝ち構造と一致していた点、ズレていた点、再利用すべき要素、捨てる要素、中村さん専用の勝ち筋タグ、投稿前チェックに追加するチェックリスト、次に試す投稿案5つ、DB保存用1行メモ。`; $('prompt').textContent=pmt;return pmt}
+function buildPrompt(){const p=postData();const c=p?(cards[p.id]||{}):{};const rs=refData();const a=getAgents();const postText=p?`タイトル:${p.title}
+URL:${p.url||''}
+日付:${p.date||''}
+再生:${p.views||0}
+リーチ:${p.reach||0}
+保存:${p.saves||0}
+シェア:${p.shares||0}
+いいね:${p.likes||0}
+コメント:${p.comments||0}
+キャプション:
+${p.caption||''}`:'未選択';
+const cardText=`タグ:${c.tags||''}
+タイプ:${c.type||''}
+Gemini解析:
+${c.gemini||''}
+ChatGPT分析:
+${c.analysis||''}
+メモ:
+${c.memo||''}`;
+const refText=rs.map(r=>`【${r.template||r.title}】
+構造:${r.structure||''}
+翻訳:${r.translate||''}
+チェック:${r.checklist||''}`).join('\n\n')||'未選択';
+const topText=topPosts(8).map(x=>`・${x.title}｜再生:${x.views}｜保存:${x.saves}｜コメント:${x.comments}`).join('\n')||'まだDBなし';
+const selected=[...selectedAgents];
+const agentBlocks=selected.map(id=>`\n==============================\n【${agentMeta[id]?.name||id}エージェント】\n==============================\n${a[id]||''}\n\nこのエージェントの出力項目：\n- 判定/点数\n- 根拠\n- 良かった点\n- ズレていた点\n- 次回に残すべき要素\n- DB保存用メモ1行`).join('\n');
+const pmt=`あなたはReel Strategy OSの「過去投稿マルチエージェント検証AI」です。
+
+これは投稿同士の単純比較ではありません。
+1本の過去投稿を、投稿カルテ・Gemini解析・参考構造DB・過去上位投稿に照らして、次回に使える仮説へ変換してください。
+
+【検証投稿】
+${postText}
+
+【投稿カルテ】
+${cardText}
+
+【照合する参考構造DB】
+${refText}
+
+【過去上位投稿】
+${topText}
+
+--- 選択エージェント ---
+${agentBlocks||'未選択。最低1つ選んでください。'}
+
+--- 最終出力 ---
+1. 一言結論
+2. 伸びた/伸びなかった理由の仮説
+3. 各エージェント別の指摘まとめ
+4. 勝ち構造と一致していた点
+5. ズレていた点
+6. 再利用すべき要素
+7. 捨てる要素
+8. 撮り直しなしの再編集案（0〜15秒構成）
+9. サムネ文字/冒頭テロップ候補
+10. 中村さん専用の勝ち筋タグ
+11. 投稿前チェックに追加するチェックリスト
+12. 次に試す投稿案5つ
+13. DB保存用1行メモ
+
+重要：一般論は禁止。必ず、選択した過去投稿・投稿カルテ・参考構造DB・過去上位投稿のどれに基づく指摘か分かるように書いてください。`;
+$('prompt').textContent=pmt;return pmt}
 function copyPrompt(){copyText($('prompt').textContent)}
-async function downloadPack(){const z=new JSZip();z.file('compare_prompt.txt',buildPrompt());z.file('compare_data.json',JSON.stringify({selectedPost:postData(),selectedCard:postData()?cards[postData().id]||{}:{},selectedRefs:refData()},null,2));const blob=await z.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='rso_compare_pack.zip';a.click();URL.revokeObjectURL(a.href)}
-renderPosts();renderRefs();renderSummary();buildPrompt();
+async function downloadPack(){const z=new JSZip();z.file('compare_prompt.txt',buildPrompt());z.file('compare_data.json',JSON.stringify({selectedPost:postData(),selectedCard:postData()?cards[postData().id]||{}:{},selectedRefs:refData(),selectedAgents:[...selectedAgents]},null,2));const blob=await z.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='rso_compare_pack.zip';a.click();URL.revokeObjectURL(a.href)}
+renderPosts();renderRefs();renderAgents();renderSummary();buildPrompt();
 </script></body></html>
