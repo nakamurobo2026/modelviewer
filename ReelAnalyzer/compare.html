@@ -1,86 +1,290 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script><style>
-:root{--bg:#0b1016;--panel:#121922;--line:#263445;--text:#eef4ff;--muted:#94a7bc;--accent:#57e0aa;--warn:#ffd166;--bad:#ff6b6b;--blue:#7cc7ff;--r:18px}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.55}
-header{padding:20px 22px;border-bottom:1px solid var(--line);background:#0f151d;position:sticky;top:0;z-index:10}
-h1{margin:0;font-size:24px}h2{margin:0 0 10px;font-size:18px}h3{margin:16px 0 8px;font-size:15px}.sub{color:var(--muted);font-size:13px;margin-top:4px}
-nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}nav a{color:var(--text);text-decoration:none;background:#1b2734;border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:13px;font-weight:800}nav a.active{background:var(--accent);color:#06130f}
-.wrap{max-width:1180px;margin:0 auto;padding:22px}.clean{max-width:980px}.layout{display:grid;grid-template-columns:340px 1fr;gap:18px}@media(max-width:900px){.layout{grid-template-columns:1fr}}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:18px}.mini{padding:12px;border:1px solid var(--line);border-radius:14px;background:#101721;margin:8px 0}
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>過去投稿×参考DB検証</title>
+<style>
+:root{
+  --bg:#0b1016;--panel:#121922;--panel2:#0f1720;--line:#263445;--text:#eef4ff;--muted:#94a7bc;
+  --accent:#57e0aa;--accent2:#7aa7ff;--warn:#ffd166;--bad:#ff6b6b;--r:18px;--shadow:0 14px 40px rgba(0,0,0,.22)
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:radial-gradient(circle at 20% -10%,#162638 0,#0b1016 34%,#080d12 100%);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.58}
+header{padding:18px 22px;border-bottom:1px solid var(--line);background:rgba(15,21,29,.94);backdrop-filter:blur(10px);position:sticky;top:0;z-index:10;box-shadow:0 8px 26px rgba(0,0,0,.18)}
+h1{margin:0;font-size:22px;letter-spacing:.01em}.sub{color:var(--muted);font-size:13px;margin-top:4px}
+h2{margin:0 0 12px;font-size:18px}h3{margin:16px 0 8px}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+nav a{color:var(--text);text-decoration:none;background:#1b2734;border:1px solid var(--line);border-radius:999px;padding:8px 13px;font-size:13px;font-weight:800;transition:.15s ease}
+nav a:hover{transform:translateY(-1px);border-color:#3f5670}nav a.active{background:var(--accent);color:#06130f;border-color:var(--accent)}
+.wrap{max-width:1200px;margin:0 auto;padding:22px}.clean{max-width:980px}
+.layout{display:grid;grid-template-columns:340px minmax(0,1fr);gap:18px;align-items:start}@media(max-width:900px){.layout{grid-template-columns:1fr}.wrap{padding:14px}header{padding:16px 14px}}
+aside{position:sticky;top:126px}@media(max-width:900px){aside{position:static}}
+.card{background:linear-gradient(180deg,var(--panel),#101821);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:18px;box-shadow:var(--shadow)}
+.card > h2:first-child{display:flex;align-items:center;gap:8px}.card > h2:first-child:before{content:"";width:8px;height:20px;border-radius:99px;background:var(--accent);display:inline-block}
 .homegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}@media(max-width:900px){.homegrid{grid-template-columns:1fr}}
-.homecard{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:22px;text-decoration:none;color:var(--text);display:block;min-height:190px}.homecard:hover{border-color:var(--accent)}.homecard b{font-size:20px}.homecard p{color:var(--muted);font-size:14px}
-.tag{display:inline-block;background:#0b1118;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:4px 9px;font-size:12px;margin:4px 4px 0 0}.tag.ok{color:#06130f;background:var(--accent);border-color:var(--accent)}.tag.warn{color:#221700;background:var(--warn);border-color:var(--warn)}
-input,textarea,select{width:100%;background:#0b1118;border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:12px;font-size:14px}textarea{min-height:120px;resize:vertical}label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
-button,.btn{border:0;background:var(--accent);padding:10px 14px;border-radius:999px;font-weight:800;cursor:pointer;color:#06130f;text-decoration:none;display:inline-flex;font-size:13px;align-items:center;gap:6px}
-button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px solid var(--line)}button.warn,.btn.warn{background:var(--warn);color:#221700}button.danger,.btn.danger{background:#40242a;color:#ffd4d4;border:1px solid #67323b}
-.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.grid2{grid-template-columns:1fr}}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}@media(max-width:900px){.grid3{grid-template-columns:1fr}}
-.item{padding:12px;border:1px solid var(--line);border-radius:14px;background:#101721;cursor:pointer;margin-bottom:8px}.item.active{border-color:var(--accent);box-shadow:0 0 0 1px rgba(87,224,170,.2) inset}
-.small{font-size:12px;color:var(--muted)}.status,.note,.preview{padding:12px;border-radius:12px;background:#0b1118;border:1px solid var(--line);color:var(--muted);font-size:13px;margin-top:10px}
-.output{white-space:pre-wrap;background:#0b1118;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;line-height:1.7;max-height:620px;overflow:auto}
-.hidden{display:none}.score{font-size:30px;font-weight:900}.pillrow{display:flex;gap:8px;flex-wrap:wrap}.kbd{font-family:ui-monospace,Consolas,monospace;background:#0b1118;border:1px solid var(--line);border-radius:8px;padding:2px 6px;color:var(--blue)}
-hr{border:0;border-top:1px solid var(--line);margin:16px 0}
-</style></head><body><header><h1>過去投稿比較</h1><div class="sub">1本の過去投稿を、投稿カルテ・参考構造DB・勝ち筋に照らして検証する。</div><nav><a href="./index.html">TOP</a><a href="./check.html">投稿前チェック</a><a class="active" href="./compare.html">過去投稿比較</a><a href="./admin.html">Admin</a></nav></header>
-<main class="wrap layout"><aside><div class="card"><h2>検証する投稿</h2><div class="btns"><button class="secondary" onclick="selectTop()">上位投稿</button><button class="secondary" onclick="selectBottom()">下位投稿</button><button class="secondary" onclick="clearPost()">解除</button></div><div id="postList" style="margin-top:14px"></div></div><div class="card"><h2>照合する参考構造DB</h2><div class="btns"><button class="secondary" onclick="selectAllRefs()">全選択</button><button class="secondary" onclick="clearRefs()">解除</button></div><div id="refList" style="margin-top:14px"></div></div></aside>
-<section><div class="card"><h2>選択中</h2><div id="selectedSummary" class="output">未選択</div></div><div class="card"><h2>比較・照合プロンプト</h2><div class="btns"><button onclick="buildPrompt()">プロンプト生成</button><button class="secondary" onclick="copyPrompt()">コピー</button><button class="warn" onclick="downloadPack()">ZIP生成</button></div><div id="prompt" class="output">ここに生成されます。</div></div></section></main><script>
-const POST_KEY='rso_posts_v2';
-const REF_KEY='rso_refs_v2';
-const CARD_KEY='rso_post_cards_v2';
-const AGENT_KEY='rso_agents_v2';
-function $(id){return document.getElementById(id)}
-function v(id){return ($(id)?.value)||''}
-function setv(id,val){if($(id))$(id).value=val||''}
-function esc(s=''){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
+.homecard{background:linear-gradient(180deg,#121c27,#101721);border:1px solid var(--line);border-radius:22px;padding:22px;text-decoration:none;color:var(--text);display:block;min-height:190px;box-shadow:var(--shadow);transition:.16s ease}
+.homecard:hover{border-color:var(--accent);transform:translateY(-2px)}.homecard b{font-size:20px}.homecard p{color:var(--muted);font-size:14px}.tag{display:inline-block;background:#0b1118;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:4px 9px;font-size:12px;margin-top:10px}
+input,textarea,select{width:100%;background:#0b1118;border:1px solid var(--line);color:var(--text);padding:11px 12px;border-radius:12px;font-size:14px;outline:none;transition:.12s ease}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(87,224,170,.12)}
+textarea{min-height:120px;resize:vertical}label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px;font-weight:700}
+button,.btn{border:0;background:var(--accent);padding:10px 15px;border-radius:999px;font-weight:900;cursor:pointer;color:#06130f;text-decoration:none;display:inline-flex;font-size:13px;align-items:center;justify-content:center;min-height:38px;transition:.15s ease}
+button:hover,.btn:hover{transform:translateY(-1px);filter:brightness(1.03)}button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px solid var(--line)}button.warn{background:var(--warn);color:#221700}button.danger{background:#40242a;color:#ffd4d4;border:1px solid #67323b}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.btns button:first-child:not(.secondary):not(.warn):not(.danger){box-shadow:0 8px 22px rgba(87,224,170,.16)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.grid2{grid-template-columns:1fr}}
+.item{padding:12px;border:1px solid var(--line);border-radius:14px;background:#101721;cursor:pointer;margin-bottom:8px;transition:.12s ease}.item:hover{border-color:#46617d;background:#121c27}.item.active{border-color:var(--accent);box-shadow:0 0 0 1px rgba(87,224,170,.45) inset;background:#12221e}
+.small{font-size:12px;color:var(--muted)}.status,.note,.preview{padding:12px;border-radius:12px;background:#0b1118;border:1px solid var(--line);color:var(--muted);font-size:13px;margin-top:10px}.note{border-left:4px solid var(--accent)}
+.output{white-space:pre-wrap;background:#080d12;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;line-height:1.72;max-height:590px;overflow:auto;box-shadow:inset 0 0 0 1px rgba(255,255,255,.015)}
+.hidden{display:none}
+main.wrap.layout > section{min-width:0} main.wrap.layout > aside{min-width:0}
+/* UI-only helpers */
+.card:has(.output){overflow:hidden}.output::-webkit-scrollbar{width:10px}.output::-webkit-scrollbar-thumb{background:#263445;border-radius:99px}.output::-webkit-scrollbar-track{background:#0b1118}
+input[type="file"]{padding:9px;background:#0c131b}select{cursor:pointer}
+@media(max-width:700px){button,.btn{width:100%}.btns{display:grid;grid-template-columns:1fr}.homecard{min-height:auto}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+</head>
+<body>
+<header>
+  <h1>過去投稿×参考DB検証</h1>
+  <div class="sub">選んだ投稿を、蓄積したDB・商材・勝ち筋・過去成功例と照合してAIが改善案を生成します。</div>
+  <nav>
+    <a href="./index.html">TOP</a>
+    <a href="./check.html">投稿前チェック</a>
+    <a class="active" href="./compare.html">過去投稿比較</a>
+    <a href="./admin.html">Admin</a>
+  </nav>
+</header>
+
+<main class="wrap layout">
+  <aside>
+    <div class="card">
+      <h2>検証する過去投稿</h2>
+      <div class="note">ここでは投稿同士を比較しません。1投稿を選び、参考DBと照合します。</div>
+      <div class="btns">
+        <button class="secondary" onclick="selectTop()">上位投稿を選択</button>
+        <button class="secondary" onclick="selectBottom()">下位投稿を選択</button>
+        <button class="secondary" onclick="clearPost()">選択解除</button>
+      </div>
+      <div id="postList" style="margin-top:14px"></div>
+    </div>
+
+    <div class="card">
+      <h2>照合する参考DB</h2>
+      <div class="note">プロンプトには元資料の全文は入れません。保存済みの構造・翻訳・チェックリストだけを使います。</div>
+      <div class="btns">
+        <button class="secondary" onclick="selectAllRefs()">全選択</button>
+        <button class="secondary" onclick="clearRefs()">選択解除</button>
+      </div>
+      <div id="refList" style="margin-top:14px"></div>
+    </div>
+  </aside>
+
+  <section>
+<div class="card"><h2>使い方</h2><div class="note">左で「検証する過去投稿」と「照合する参考DB」を選ぶと、右側にChatGPTへ渡す照合プロンプトが作られます。</div></div>
+
+    <div class="card"><h2>選択中</h2>
+      <div id="selectedSummary" class="output">未選択</div>
+    </div>
+
+    <div class="card">
+      <h2>ChatGPTへ渡す照合プロンプト</h2>
+      <div id="prompt" class="output">ここに生成されます。</div>
+    </div>
+  </section>
+</main>
+
+<script>
+const POST_KEY='rso_posts_v1';
+const REF_KEY='rso_refs_v1';
+const CARD_KEY='rso_post_cards_v1';
+let posts=JSON.parse(localStorage.getItem(POST_KEY)||'[]');
+let refs=JSON.parse(localStorage.getItem(REF_KEY)||'[]');
+let postCards=JSON.parse(localStorage.getItem(CARD_KEY)||'{}');
+let selectedPostId=null;
+let selectedRefs=new Set();
+
+function v(id){return document.getElementById(id).value||''}
 function num(n){return Number(n||0).toLocaleString()}
-function load(key, fallback){try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback))}catch(e){return fallback}}
-function save(key, data){localStorage.setItem(key, JSON.stringify(data))}
-let posts=load(POST_KEY, []);
-let refs=load(REF_KEY, []);
-let cards=load(CARD_KEY, {});
-const defaultAgents={
-  hook_agent:`あなたはInstagramリールの「冒頭0〜2秒」専門分析AIです。
-初見のスクロール停止率だけを評価してください。
-見る項目：最初に映るもの、0.5秒ごとの情報量、音、違和感、続きが気になる理由、離脱リスク。
-禁止：一般論。必ず動画内容またはGemini解析の事実に紐づけてください。`,
-  viewer_agent:`あなたは投稿者を知らない一般視聴者です。
-専門知識なし、3秒で判断、飽きたら即スワイプする前提で見てください。
-見る項目：意味が分かるか、気になるか、人に言いたくなるか、コメントしたくなる余白があるか。`,
-  emotion_agent:`あなたは感情の動き専門AIです。
-笑い、驚き、心配、応援、共感、違和感、気まずさ、悔しさ、達成感を時系列で拾ってください。
-一番感情が動く瞬間を必ず1つ選んでください。`,
-  reality_agent:`あなたはリアル感・現場感の判定AIです。
-AIっぽさ、作り物感、説明臭さを嫌い、足で稼いだ現場感・家族感・地元感・人間臭さを評価してください。
-中村さんの強みである工場、家族、地域、借金、DIY、失敗、未完成感を見てください。`,
-  db_compare_agent:`あなたは過去投稿DB照合AIです。
-今回の投稿を、過去の伸びた投稿・伸びなかった投稿・参考構造DBと照合してください。
-数字だけでなく、冒頭、感情、未完成性、問題提起、地域性、コメント余白の一致率を見てください。`,
-  reedit_agent:`あなたは撮り直しなし再編集専門AIです。
-素材を撮り直さず、順番変更、カット短縮、冒頭差し替え、テロップ追加、無音視聴対策だけで改善案を出してください。
-必ず「0〜15秒の再構成案」を作ってください。`,
-  copy_agent:`あなたはInstagram用コピーライターです。
-釣りすぎず、リアルで、短く、強い言葉にしてください。
-出力：サムネ文字10個、冒頭テロップ10個、タイトル10個、キャプション案3つ。`,
-  director_agent:`あなたは編集会議の統合ディレクターです。
-各エージェントの意見を統合し、最終判断を出してください。
-出力：一言結論、投稿可否、優先修正3つ、15秒構成、DB保存用タグ、次回検証仮説。`
-};
-function getAgents(){let a=load(AGENT_KEY,null); if(!a){save(AGENT_KEY,defaultAgents); return defaultAgents;} return {...defaultAgents,...a}}
-function firstLine(c=''){const s=(c||'').split('\n').map(x=>x.trim()).find(Boolean)||'無題';return s.length>42?s.slice(0,42)+'…':s}
-function topPosts(limit=8){return [...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0)).slice(0,limit)}
-function bottomPosts(limit=5){return [...posts].sort((a,b)=>Number(a.views||0)-Number(b.views||0)).slice(0,limit)}
-function copyText(text){navigator.clipboard.writeText(text).then(()=>alert('コピーしました'))}
-function downloadText(filename, text, type='text/plain'){const b=new Blob([text],{type});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=filename;a.click();URL.revokeObjectURL(a.href)}
+function esc(s=''){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
+
+function renderPosts(){
+  const el=document.getElementById('postList');
+  if(!posts.length){
+    el.innerHTML='<div class="small">AdminでInstagram投稿を取得してください</div>';
+    return;
+  }
+  const sorted=[...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0));
+  el.innerHTML=sorted.map(p=>`
+    <div class="item ${selectedPostId===p.id?'active':''}" onclick="selectPost('${p.id}')">
+      <b>${esc(p.title)}</b>
+      <div class="small">再生:${num(p.views)} / 保存:${num(p.saves)} / コメント:${num(p.comments)}</div>
+    </div>
+  `).join('');
+  renderSummary();
+}
+
+function renderRefs(){
+  const el=document.getElementById('refList');
+  if(!refs.length){
+    el.innerHTML='<div class="small">Adminで参考構造DBを登録してください</div>';
+    return;
+  }
+  el.innerHTML=refs.map(r=>`
+    <div class="item ${selectedRefs.has(String(r.id))?'active':''}" onclick="toggleRef('${r.id}')">
+      <b>${esc(r.template||r.title||'無題')}</b>
+      <div class="small">${esc(r.creator||r.type||'参考DB')}</div>
+    </div>
+  `).join('');
+  renderSummary();
+}
+
+function selectPost(id){selectedPostId=id;renderPosts();}
+function clearPost(){selectedPostId=null;renderPosts();}
+function selectedPostData(){return posts.find(p=>p.id===selectedPostId)||null;}
+
+function toggleRef(id){id=String(id);selectedRefs.has(id)?selectedRefs.delete(id):selectedRefs.add(id);renderRefs();}
+function selectedRefData(){return refs.filter(r=>selectedRefs.has(String(r.id)));}
+function selectAllRefs(){selectedRefs=new Set(refs.map(r=>String(r.id)));renderRefs();}
+function clearRefs(){selectedRefs.clear();renderRefs();}
+
+function selectTop(){
+  const sorted=[...posts].sort((a,b)=>Number(b.views||0)-Number(a.views||0));
+  selectedPostId=sorted[0]?.id||null;
+  renderPosts();
+}
+function selectBottom(){
+  const sorted=[...posts].sort((a,b)=>Number(a.views||0)-Number(b.views||0));
+  selectedPostId=sorted[0]?.id||null;
+  renderPosts();
+}
+
+function renderSummary(){
+  const p=selectedPostData();
+  const rs=selectedRefData();
+  const card=p ? (postCards[p.id]||{}) : {};
+  document.getElementById('selectedSummary').textContent =
+`【検証する過去投稿】
+${p ? `・${p.title}｜再生:${p.views}｜保存:${p.saves}｜コメント:${p.comments}` : '未選択'}
+
+【照合する参考DB】
+${rs.length ? rs.map(r=>`・${r.template||r.title}｜${r.creator||r.type||''}`).join('\n') : '未選択'}`;
+}
+
+function buildPrompt(){
+  const p=selectedPostData();
+  const rs=selectedRefData();
+  const card=p ? (postCards[p.id]||{}) : {};
+
+  const postText=p ? `【中村さんの過去投稿】
+タイトル:${p.title}
+URL:${p.url||''}
+日付:${p.date||''}
+再生:${p.views||0}
+リーチ:${p.reach||0}
+保存:${p.saves||0}
+シェア:${p.shares||0}
+いいね:${p.likes||0}
+コメント:${p.comments||0}
+キャプション:
+${p.caption||''}` : '未選択';
+
+  const refText=rs.map(r=>`【参考DB / 勝ち構造】
+タイトル:${r.title||''}
+テンプレ名:${r.template||''}
+出典:${r.creator||''}
+種別:${r.type||''}
+
+抽象化した構造:
+${r.structure||''}
+
+自分ジャンルへの翻訳:
+${r.translate||''}
+
+チェックリスト:
+${r.checklist||''}
+
+元資料 / 商材本文 / 参考メモ:
+${r.material||''}`).join('\n\n');
+
+  const prompt=`あなたはSNS投稿の照合検証AIです。
+
+これは「過去投稿同士の比較」ではありません。
+1つの【中村さんの過去投稿】を、【参考DB/ノウハウDBの勝ち構造】に照らして検証してください。
+
+【検証目的】
 
 
-let selectedPostId=null;let selectedRefs=new Set();
-function renderPosts(){const el=$('postList');if(!posts.length){el.innerHTML='<div class="small">Adminで投稿DBを登録してください</div>';return}const sorted=topPosts(100);el.innerHTML=sorted.map(p=>`<div class="item ${selectedPostId===p.id?'active':''}" onclick="selectPost('${p.id}')"><b>${esc(p.title)}</b><div class="small">再生:${num(p.views)} / 保存:${num(p.saves)} / コメント:${num(p.comments)}</div></div>`).join('');renderSummary()}
-function renderRefs(){const el=$('refList');if(!refs.length){el.innerHTML='<div class="small">Adminで参考構造DBを登録してください</div>';return}el.innerHTML=refs.map(r=>`<div class="item ${selectedRefs.has(String(r.id))?'active':''}" onclick="toggleRef('${r.id}')"><b>${esc(r.template||r.title||'無題')}</b><div class="small">${esc(r.creator||r.type||'参考DB')}</div></div>`).join('');renderSummary()}
-function selectPost(id){selectedPostId=id;renderPosts();buildPrompt()}function clearPost(){selectedPostId=null;renderPosts();buildPrompt()}function postData(){return posts.find(p=>p.id===selectedPostId)||null}
-function toggleRef(id){id=String(id);selectedRefs.has(id)?selectedRefs.delete(id):selectedRefs.add(id);renderRefs();buildPrompt()}function refData(){return refs.filter(r=>selectedRefs.has(String(r.id)))}
-function selectAllRefs(){selectedRefs=new Set(refs.map(r=>String(r.id)));renderRefs();buildPrompt()}function clearRefs(){selectedRefs.clear();renderRefs();buildPrompt()}
-function selectTop(){const s=topPosts(1);selectedPostId=s[0]?.id||null;renderPosts();buildPrompt()}function selectBottom(){const s=bottomPosts(1);selectedPostId=s[0]?.id||null;renderPosts();buildPrompt()}
-function renderSummary(){const p=postData();const c=p?(cards[p.id]||{}):{};const rs=refData();$('selectedSummary').textContent=`【検証投稿】\n${p?`・${p.title}｜再生:${p.views}｜保存:${p.saves}｜コメント:${p.comments}`:'未選択'}\n\n【投稿カルテ】\n${c.tags?`タグ:${c.tags}\nタイプ:${c.type}\nGemini:${(c.gemini||'').slice(0,160)}...\n分析:${(c.analysis||'').slice(0,160)}...`:'未保存'}\n\n【参考構造DB】\n${rs.length?rs.map(r=>`・${r.template||r.title}`).join('\n'):'未選択'}`;}
-function buildPrompt(){const p=postData();const c=p?(cards[p.id]||{}):{};const rs=refData();const a=getAgents();const postText=p?`タイトル:${p.title}\nURL:${p.url||''}\n日付:${p.date||''}\n再生:${p.views||0}\n保存:${p.saves||0}\nコメント:${p.comments||0}\nキャプション:\n${p.caption||''}`:'未選択'; const cardText=`タグ:${c.tags||''}\nタイプ:${c.type||''}\nGemini解析:\n${c.gemini||''}\nChatGPT分析:\n${c.analysis||''}\nメモ:\n${c.memo||''}`; const refText=rs.map(r=>`【${r.template||r.title}】\n構造:${r.structure||''}\n翻訳:${r.translate||''}\nチェック:${r.checklist||''}`).join('\n\n')||'未選択';
-const pmt=`あなたはReel Strategy OSの過去投稿検証AIです。\n\nこれは投稿同士の単純比較ではありません。1本の過去投稿を、投稿カルテ・参考構造DB・勝ち筋に照らして、次回に使える仮説へ変換してください。\n\n【検証投稿】\n${postText}\n\n【投稿カルテ】\n${cardText}\n\n【照合する参考構造DB】\n${refText}\n\n【過去上位投稿】\n${topPosts(8).map(x=>`・${x.title}｜再生:${x.views}｜保存:${x.saves}｜コメント:${x.comments}`).join('\n')}\n\n--- エージェント視点 ---\n[viewer_agent]\n${a.viewer_agent}\n\n[emotion_agent]\n${a.emotion_agent}\n\n[reality_agent]\n${a.reality_agent}\n\n[db_compare_agent]\n${a.db_compare_agent}\n\n[director_agent]\n${a.director_agent}\n\n出力：一言結論、伸びた/伸びなかった理由の仮説、勝ち構造と一致していた点、ズレていた点、再利用すべき要素、捨てる要素、中村さん専用の勝ち筋タグ、投稿前チェックに追加するチェックリスト、次に試す投稿案5つ、DB保存用1行メモ。`; $('prompt').textContent=pmt;return pmt}
-function copyPrompt(){copyText($('prompt').textContent)}
-async function downloadPack(){const z=new JSZip();z.file('compare_prompt.txt',buildPrompt());z.file('compare_data.json',JSON.stringify({selectedPost:postData(),selectedCard:postData()?cards[postData().id]||{}:{},selectedRefs:refData()},null,2));const blob=await z.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='rso_compare_pack.zip';a.click();URL.revokeObjectURL(a.href)}
-renderPosts();renderRefs();renderSummary();buildPrompt();
-</script></body></html>
+【検証する中村さんの過去投稿】
+${postText}
+
+【照合する参考DB / ノウハウDB】
+${refText || '未選択'}
+
+重要：
+- 投稿同士を比較しないでください。
+- 選択した過去投稿が、参考DBの勝ち構造にどれだけ近いかを評価してください。
+- 参考DBの元資料や商材本文も読み込んだうえで、重要部分と不要部分を選別してください。
+- ただし他者の文章や商材内容をそのままコピーせず、構造・考え方・判断基準として抽象化してください。
+- 商材本文の中にどうでもいい情報が含まれていても、SNS改善に関係ある部分だけを抜き出してください。
+- ど素人ホテル式が含まれる場合は、「ホテル再建」ではなく、中村さんの工場化・職人・地域・AI制作・ナカムロボ物語へ翻訳してください。
+- 数字だけでなく、文脈・問題提起・未完成感・リアル感・コメント余白・続き感・地域性を見てください。
+
+出力：
+1. 照合結果の一言結論
+2. 参考DBに近い点
+3. 参考DBとズレている点
+4. 足りない要素
+5. 伸びた/伸びなかった理由を参考DBで説明
+6. 中村さんジャンルへの翻訳
+7. 次回投稿で使うべき改善点
+8. 保存用の勝ち筋テンプレ名
+9. 投稿前チェック用チェックリスト
+10. 次に試す投稿案5つ`;
+
+  document.getElementById('prompt').textContent=prompt;
+  return prompt;
+}
+
+async function copyPrompt(){
+  await navigator.clipboard.writeText(document.getElementById('prompt').textContent);
+  alert('コピーしました');
+}
+
+async function downloadPack(){
+  if(typeof JSZip==='undefined'){alert('ZIP生成ライブラリが読み込めません');return;}
+  const z=new JSZip();
+  const prompt=buildPrompt();
+  z.file('reference_alignment_prompt.txt',prompt);
+  z.file('reference_alignment_data.json',JSON.stringify({
+    generatedAt:new Date().toISOString(),
+    goal:v('goal'),
+    axis:v('axis'),
+    memo:v('memo'),
+    selectedPost:selectedPostData(),
+    selectedPostCard:selectedPostData()?postCards[selectedPostData().id]||{}:{},
+    selectedReferences:selectedRefData().map(r=>({
+      title:r.title,
+      template:r.template,
+      creator:r.creator,
+      type:r.type,
+      structure:r.structure,
+      translate:r.translate,
+      checklist:r.checklist
+    }))
+  },null,2));
+  const blob=await z.generateAsync({type:'blob'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='reference_alignment_pack.zip';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+renderPosts();
+renderRefs();
+renderSummary();
+</script>
+</body>
+</html>
