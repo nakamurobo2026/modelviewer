@@ -20,7 +20,7 @@ button.secondary,.btn.secondary{background:#1b2734;color:var(--text);border:1px 
 hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 </style></head><body><header><h1>過去投稿比較</h1><div class="sub">1本の過去投稿を、投稿カルテ・参考構造DB・勝ち筋に照らして検証する。</div><nav><a href="./index.html">TOP</a><a href="./check.html">投稿前チェック</a><a class="active" href="./compare.html">過去投稿比較</a><a href="./admin.html">Admin</a></nav></header>
 <main class="wrap layout"><aside><div class="card"><h2>検証する投稿</h2><div class="note">過去投稿を1本選び、複数の視点で検証します。</div><div class="btns"><button class="secondary" onclick="selectTop()">上位投稿</button><button class="secondary" onclick="selectBottom()">下位投稿</button><button class="secondary" onclick="clearPost()">解除</button></div><div id="postList" style="margin-top:14px"></div></div><div class="card"><h2>照合する参考構造DB</h2><div class="note">参考DBは「答え」ではなく、勝ち構造とのズレを見る材料として使います。</div><div class="btns"><button class="secondary" onclick="selectAllRefs()">全選択</button><button class="secondary" onclick="clearRefs()">解除</button></div><div id="refList" style="margin-top:14px"></div></div><div class="card"><h2>マルチエージェント</h2><div class="note">必要な視点だけ選択。通常は全選択でOK。</div><div class="btns"><button class="secondary" onclick="selectAllAgents()">全選択</button><button class="secondary" onclick="clearAgents()">解除</button></div><div id="agentList" style="margin-top:14px"></div></div></aside>
-<section><div class="card"><h2>選択中</h2><div id="selectedSummary" class="output">未選択</div></div><div class="card"><h2>過去投稿マルチエージェント検証プロンプト</h2><div class="note">選択したエージェントごとに役割を分け、最後に統合ディレクターが結論を出す形式です。</div><div class="btns"><button onclick="buildPrompt()">プロンプト生成</button><button class="secondary" onclick="copyPrompt()">コピー</button><button class="warn" onclick="downloadPack()">ZIP生成</button></div><div id="prompt" class="output">ここに生成されます。</div></div></section></main><script>
+<section><div class="card"><h2>選択中</h2><div id="selectedSummary" class="output">未選択</div></div><div class="card"><h2>過去投稿マルチエージェント検証プロンプト</h2><div class="note">選択したDBレコードをJSONのまま渡します。チャットの前後文脈やAIの記憶を使わず、添付動画とDB RAWだけで検証する形式です。</div><div class="btns"><button onclick="buildPrompt()">プロンプト生成</button><button class="secondary" onclick="copyPrompt()">コピー</button><button class="warn" onclick="downloadPack()">ZIP生成</button></div><div id="prompt" class="output">ここに生成されます。</div></div></section></main><script>
 const POST_KEY='rso_posts_v2';
 const REF_KEY='rso_refs_v2';
 const CARD_KEY='rso_post_cards_v2';
@@ -93,25 +93,8 @@ function toggleRef(id){id=String(id);selectedRefs.has(id)?selectedRefs.delete(id
 function selectAllRefs(){selectedRefs=new Set(refs.map(r=>String(r.id)));renderRefs();buildPrompt()}function clearRefs(){selectedRefs.clear();renderRefs();buildPrompt()}
 function selectTop(){const s=topPosts(1);selectedPostId=s[0]?.id||null;renderPosts();buildPrompt()}function selectBottom(){const s=bottomPosts(1);selectedPostId=s[0]?.id||null;renderPosts();buildPrompt()}
 function renderSummary(){const p=postData();const c=p?(cards[p.id]||{}):{};const rs=refData();$('selectedSummary').textContent=`【検証投稿】\n${p?`・${p.title}｜再生:${p.views}｜保存:${p.saves}｜コメント:${p.comments}`:'未選択'}\n\n【投稿カルテ】\n${c.tags?`タグ:${c.tags}\nタイプ:${c.type}\nGemini:${(c.gemini||'').slice(0,160)}...\n分析:${(c.analysis||'').slice(0,160)}...`:'未保存'}\n\n【参考構造DB】\n${rs.length?rs.map(r=>`・${r.template||r.title}`).join('\n'):'未選択'}`;}
-function buildPrompt(){const p=postData();const c=p?(cards[p.id]||{}):{};const rs=refData();const a=getAgents();const postText=p?`タイトル:${p.title}
-URL:${p.url||''}
-日付:${p.date||''}
-再生:${p.views||0}
-リーチ:${p.reach||0}
-保存:${p.saves||0}
-シェア:${p.shares||0}
-いいね:${p.likes||0}
-コメント:${p.comments||0}
-キャプション:
-${p.caption||''}`:'未選択';
-const cardText=`タグ:${c.tags||''}
-タイプ:${c.type||''}
-Gemini解析:
-${c.gemini||''}
-ChatGPT分析:
-${c.analysis||''}
-メモ:
-${c.memo||''}`;
+function buildPrompt(){const p=postData();const c=p?(cards[p.id]||{}):{};const rs=refData();const a=getAgents();const postText=p?JSON.stringify(p,null,2):'未選択';
+const cardText=p?JSON.stringify(c,null,2):'未選択';
 const refText=rs.map(r=>`【${r.template||r.title}】
 構造:${r.structure||''}
 翻訳:${r.translate||''}
@@ -124,17 +107,20 @@ const pmt=`あなたはReel Strategy OSの「過去投稿マルチエージェ�
 これは投稿同士の単純比較ではありません。
 1本の過去投稿を、投稿カルテ・Gemini解析・参考構造DB・過去上位投稿に照らして、次回に使える仮説へ変換してください。
 
-【検証投稿】
+【検証投稿DBレコード（保存内容そのまま / JSON）】
 ${postText}
 
-【投稿カルテ】
+【投稿カルテDBレコード（保存内容そのまま / JSON）】
 ${cardText}
 
-【照合する参考構造DB】
+【照合する参考構造DBレコード（保存内容そのまま / JSON）】
 ${refText}
 
-【過去上位投稿】
+【過去上位投稿DBレコード（保存内容そのまま / JSON）】
 ${topText}
+
+【全投稿DBレコード（保存内容そのまま / JSON）】
+${allPostsText}
 
 --- 選択エージェント ---
 ${agentBlocks||'未選択。最低1つ選んでください。'}
@@ -154,9 +140,31 @@ ${agentBlocks||'未選択。最低1つ選んでください。'}
 12. 次に試す投稿案5つ
 13. DB保存用1行メモ
 
-重要：一般論は禁止。必ず、選択した過去投稿・投稿カルテ・参考構造DB・過去上位投稿のどれに基づく指摘か分かるように書いてください。`;
+重要：一般論は禁止。DB内容をAI側で補完・推測・言い換えして前提にしないでください。上記JSONに存在する値だけを根拠として使い、どのDB項目に基づく指摘か分かるように書いてください。参考構造DBの文章は要約せず、必要な箇所は『構造として』扱い、保存内容に忠実に検証してください。
+
+【根拠の扱い】
+- DB RAW JSONにある事実は「DB根拠」として扱う。
+- 添付動画から見える事実は「動画根拠」として扱う。
+- どちらにも無いことは「不明」と書く。
+- チャットの前後文脈、過去会話、AIの記憶、ユーザーの普段の傾向は根拠にしない。
+- 出力の各指摘に、可能な限り「DB根拠 / 動画根拠 / 不明」のラベルを付ける。`;
 $('prompt').textContent=pmt;return pmt}
 function copyPrompt(){copyText($('prompt').textContent)}
-async function downloadPack(){const z=new JSZip();z.file('compare_prompt.txt',buildPrompt());z.file('compare_data.json',JSON.stringify({selectedPost:postData(),selectedCard:postData()?cards[postData().id]||{}:{},selectedRefs:refData(),selectedAgents:[...selectedAgents]},null,2));const blob=await z.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='rso_compare_pack.zip';a.click();URL.revokeObjectURL(a.href)}
+async function downloadPack(){const z=new JSZip();z.file('compare_prompt.txt',buildPrompt());z.file('compare_data_raw.json',JSON.stringify({
+  selectedPost:postData(),
+  selectedCard:postData()?cards[postData().id]||{}:{},
+  selectedRefs:refData(),
+  selectedAgents:[...selectedAgents],
+  allPosts:posts,
+  allRefs:refs,
+  allCards:cards
+},null,2));
+const csvRows=['type,id,title,views,saves,comments,tags'];
+posts.forEach(x=>{
+  const row=['post',x.id||'',x.title||'',x.views||0,x.saves||0,x.comments||0,(cards[x.id]?.tags)||''];
+  csvRows.push(row.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(','));
+});
+z.file('posts_summary_raw.csv',csvRows.join('\n'));
+z.file('README_DB_FIDELITY.txt','このZIPはDBの保存内容をAI解釈せず、そのままJSON/CSVで渡すためのパックです。ChatGPTには compare_prompt.txt / compare_data_raw.json / 動画 を渡してください。チャットの前後文脈は使わず、DB RAWと動画だけを根拠に検証する設計です。');const blob=await z.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='rso_compare_pack.zip';a.click();URL.revokeObjectURL(a.href)}
 renderPosts();renderRefs();renderAgents();renderSummary();buildPrompt();
 </script></body></html>
