@@ -34,7 +34,10 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 <label>投稿選択</label><select id="cardPostSelect" onchange="loadPostCard()"></select><div class="grid2"><div><label>勝ち筋タグ</label><input id="cardTags" placeholder="例：家族感, 未完成性, 地元感"></div><div><label>投稿タイプ</label><select id="cardType"><option>工場系</option><option>地域ネタ</option><option>家族ネタ</option><option>問題発生系</option><option>制作過程</option><option>AI/ロボ/IP</option><option>その他</option></select></div></div>
 <label>Gemini動画解析</label><textarea id="cardGemini" style="min-height:150px"></textarea><label>ChatGPTマルチエージェント分析結果</label><textarea id="cardAnalysis" style="min-height:200px"></textarea><label>実績メモ・仮説</label><textarea id="cardMemo"></textarea><label>動画ファイル名メモ</label><input id="cardVideoName"><div class="btns"><button onclick="savePostCard()">投稿カルテ保存</button><button class="secondary" onclick="exportPostCard()">カルテJSON書出</button></div><div id="saveStatus" class="preview">未保存</div></div>
 
-<div class="card"><h2>参考構造DB</h2><div class="grid2"><div><label>参考タイトル</label><input id="refTitle"></div><div><label>投稿者・出典</label><input id="refCreator"></div></div><div class="grid2"><div><label>種別</label><select id="refType"><option>自分の気づき</option><option>Instagram投稿</option><option>商材/教材テキスト</option><option>YouTube/TikTok</option></select></div><div><label>参考URL</label><input id="refUrl"></div></div><label>資料・メモ</label><textarea id="refMaterial"></textarea><label>抽象化した構造</label><textarea id="refStructure"></textarea><label>自分ジャンルへの翻訳</label><textarea id="refTranslate"></textarea><label>勝ち筋テンプレ名</label><input id="refTemplate"><label>チェックリスト</label><textarea id="refChecklist"></textarea><div class="btns"><button onclick="saveRef()">参考構造DBへ保存</button><button class="secondary" onclick="buildRefPrompt()">構造化プロンプト生成</button><button class="secondary" onclick="clearRefForm()">入力クリア</button></div><div id="refPrompt" class="output">ここに生成されます。</div></div>
+<div class="card"><h2>参考構造DB</h2><div class="grid2"><div><label>参考タイトル</label><input id="refTitle"></div><div><label>投稿者・出典</label><input id="refCreator"></div></div><div class="grid2"><div><label>種別</label><select id="refType"><option>自分の気づき</option><option>Instagram投稿</option><option>商材/教材テキスト</option><option>YouTube/TikTok</option></select></div><div><label>参考URL</label><input id="refUrl"></div></div><label>参考ファイル読み込み</label>
+<input id="refFileInput" type="file" accept=".txt,.md,.csv,.json,text/plain,text/markdown,text/csv,application/json" onchange="importRefFile(event)">
+<div class="note">txt / md / csv / json を読み込み、下の「資料・メモ」に追記します。PDFは一度テキスト化して読み込ませてください。</div>
+<label>資料・メモ</label><textarea id="refMaterial"></textarea><label>抽象化した構造</label><textarea id="refStructure"></textarea><label>自分ジャンルへの翻訳</label><textarea id="refTranslate"></textarea><label>勝ち筋テンプレ名</label><input id="refTemplate"><label>チェックリスト</label><textarea id="refChecklist"></textarea><div class="btns"><button onclick="saveRef()">参考構造DBへ保存</button><button class="secondary" onclick="buildRefPrompt()">構造化プロンプト生成</button><button class="secondary" onclick="clearRefForm()">入力クリア</button></div><div id="refPrompt" class="output">ここに生成されます。</div></div>
 
 <div class="card"><h2>サブエージェント固定プロンプト</h2><div class="note">普段は触らなくてOK。分析を自分向けに寄せたい時に調整。</div><div id="agentEditor"></div><div class="btns"><button onclick="saveAgents()">エージェント保存</button><button class="secondary" onclick="resetAgents()">初期化</button></div></div>
 </section></main><script>
@@ -86,6 +89,20 @@ function bottomPosts(limit=5){return [...posts].sort((a,b)=>Number(a.views||0)-N
 function copyText(text){navigator.clipboard.writeText(text).then(()=>alert('コピーしました'))}
 function downloadText(filename, text, type='text/plain'){const b=new Blob([text],{type});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=filename;a.click();URL.revokeObjectURL(a.href)}
 
+
+
+function importRefFile(e){
+  const f=e.target.files[0];
+  if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    const current=v('refMaterial');
+    const block=`--- 取り込みファイル: ${f.name} ---\n${rd.result}\n--- ここまで ---`;
+    setv('refMaterial', current ? current + '\n\n' + block : block);
+    if(!v('refTitle')) setv('refTitle', f.name);
+  };
+  rd.readAsText(f,'utf-8');
+}
 
 let editRefId=null, editPostId=null;
 function renderPosts(){ $('postSummary').textContent='投稿数：'+posts.length+' / 総再生：'+num(posts.reduce((a,p)=>a+Number(p.views||0),0)); $('postList').innerHTML=topPosts(50).map(p=>`<div class="item" onclick="loadPost('${p.id}')"><b>${esc(p.title)}</b><div class="small">再生:${num(p.views)} / 保存:${num(p.saves)} / コメント:${num(p.comments)}</div></div>`).join('')||'<div class="small">投稿なし</div>'; refreshPostCardSelect();}
