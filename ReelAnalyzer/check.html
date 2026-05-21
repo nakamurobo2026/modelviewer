@@ -41,10 +41,10 @@ button.danger,.btn.danger{background:#40242a;color:#ffd4d4;border:1px solid #673
 .output{white-space:pre-wrap;background:#0b1118;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;line-height:1.7;max-height:620px;overflow:auto}
 .hidden{display:none}
 </style></head><body>
-<header><h1>投稿前チェック</h1><div class="sub">投稿前に、Gemini JSON → ChatGPT編集会議 → DB保存までのパックを作る。</div><nav><a href="./index.html">TOP</a><a class="active" href="./check.html">投稿前チェック</a><a href="./compare.html">過去投稿比較</a><a href="./admin.html">Admin</a></nav></header>
-<main class="wrap layout"><aside><div class="card"><h2>手順</h2><div class="mini"><span class="tag ok">1</span> 動画情報を入力</div><div class="mini"><span class="tag ok">2</span> Gemini用プロンプトをコピー</div><div class="mini"><span class="tag ok">3</span> Gemini JSONを貼る</div><div class="mini"><span class="tag ok">4</span> ChatGPT用プロンプト生成</div></div><div class="card"><h2>DB状況</h2><div id="dbStatus" class="output"></div></div></aside>
+<header><h1>投稿前チェック</h1><div class="sub">投稿前に、Gemini観測JSON → ChatGPT編集会議 → DB保存までのパックを作る。</div><nav><a href="./index.html">TOP</a><a class="active" href="./check.html">投稿前チェック</a><a href="./compare.html">過去投稿比較</a><a href="./admin.html">Admin</a></nav></header>
+<main class="wrap layout"><aside><div class="card"><h2>手順</h2><div class="mini"><span class="tag ok">1</span> 動画情報を入力</div><div class="mini"><span class="tag ok">2</span> Gemini用プロンプトをコピー</div><div class="mini"><span class="tag ok">3</span> Gemini観測JSONを貼る</div><div class="mini"><span class="tag ok">4</span> ChatGPT用プロンプト生成</div></div><div class="card"><h2>DB状況</h2><div id="dbStatus" class="output"></div></div></aside>
 <section><div class="card"><h2>次回投稿データ</h2><div class="grid2"><div><label>投稿タイトル / 仮テーマ</label><input id="nextTitle"></div><div><label>投稿目的</label><select id="goal"><option>再生数</option><option>フォロー増</option><option>仕事依頼</option><option>世界観/IP育成</option><option>保存/シェア</option></select></div></div><label>キャプション案</label><textarea id="nextCaption"></textarea><label>サムネ文字 / 冒頭テロップ案</label><input id="hookText"><label>動画ファイル（ZIPには入れません）</label><input id="videoInput" type="file" accept="video/*" onchange="previewVideo(event)"><div id="videoPreview" class="preview">動画をアップしてください</div><label>補足メモ</label><textarea id="extraMemo"></textarea><div class="btns"><button onclick="buildGeminiPrompt()">Gemini用プロンプト生成</button><button class="secondary" onclick="copyText($('geminiPrompt').textContent)">Gemini用コピー</button></div><div id="geminiPrompt" class="output"></div></div>
-<div class="card"><h2>Gemini JSON解析結果を貼る</h2><textarea id="geminiResult" style="min-height:260px"></textarea></div>
+<div class="card"><h2>Gemini観測JSON解析結果を貼る</h2><textarea id="geminiResult" style="min-height:260px"></textarea></div>
 <div class="card"><h2>ChatGPT Deep Multi-Agent分析</h2><div class="btns"><button onclick="buildAgentPrompt()">ChatGPT用プロンプト生成</button><button class="secondary" onclick="copyText($('agentPrompt').textContent)">コピー</button><button class="warn" onclick="downloadPack()">解析パックZIP生成</button></div><div id="agentPrompt" class="output"></div></div></section></main>
 <script>
 const POST_KEY='rso_posts_v2', REF_KEY='rso_refs_v2', CARD_KEY='rso_post_cards_v2', AGENT_KEY='rso_agents_true_v1';
@@ -139,8 +139,119 @@ function getAgents(){let a=load(AGENT_KEY,null); if(!a){save(AGENT_KEY,trueAgent
 let posts=load(POST_KEY,[]), refs=load(REF_KEY,[]), cards=load(CARD_KEY,{}), videoName='';
 function previewVideo(e){const f=e.target.files[0];if(!f)return;videoName=f.name;const u=URL.createObjectURL(f);$('videoPreview').innerHTML=`<video src="${u}" controls style="width:100%;border-radius:12px"></video><div class="small">${esc(f.name)}｜動画は別添付</div>`}
 function renderDbStatus(){$('dbStatus').textContent=`投稿DB：${posts.length}件\n参考構造DB：${refs.length}件\n投稿カルテ：${Object.keys(cards).length}件\n\n上位投稿：\n${topPosts(posts,5).map(p=>`・${p.title}｜再生:${p.views}`).join('\n')||'なし'}`;}
-function buildGeminiPrompt(){const p=`この投稿予定動画をInstagram分析用にJSON解析してください。感想ではなく観察だけを出力。JSON外の文章は禁止。冒頭2秒、シーン時系列、感情、離脱、リアル感、テロップ、音声を構造化してください。\n\n【投稿目的】${v('goal')}\n【仮タイトル】${v('nextTitle')}\n【冒頭テロップ案】${v('hookText')}\n【キャプション案】${v('nextCaption')}\n【補足メモ】${v('extraMemo')}\n\n出力JSON項目：video_structure.total_duration_seconds, first_2_seconds, scene_summary, emotion_points, drop_points, viewer_confusion, reality_notes, audio_notes, text_overlay, best_moment, bottleneck_points`; $('geminiPrompt').textContent=p;return p}
-function buildAgentPrompt(){const db={topPosts:topPosts(posts,8),refs:refs.slice(0,12),gemini:v('geminiResult'),title:v('nextTitle'),goal:v('goal'),caption:v('nextCaption'),hook:v('hookText'),memo:v('extraMemo'),videoName};const p=`あなたはReel Strategy OSのDeep Multi-Agent投稿前分析AIです。\n\nルール：浅い感想禁止、秒数根拠必須、解析結果を削らない、動画/Gemini JSON/DB RAWだけを根拠にする。\n\n【DB RAW JSON】\n${JSON.stringify(db,null,2)}\n\n必須出力：\n## 0. 一言結論\n## 1. 動画の事実確認\n## 2. エージェント別分析\n## 3. エージェント間矛盾チェック\n## 4. 深掘り原因分析\n## 5. 撮り直しなし改善構成案（15秒/30秒/冒頭差し替え・テロップ入り）\n## 6. コピー案\n## 7. DB保存用メモ`; $('agentPrompt').textContent=p;return p}
+function buildGeminiPrompt(){const prompt=`この動画をInstagram分析用に解析してください。
+
+目的：
+ChatGPTでDB RAWと照合するため、動画内容を「観測データ」としてJSON化する。
+
+最重要ルール：
+- 感想は禁止
+- 評価は禁止
+- 改善案は禁止
+- バズる/バズらない判断は禁止
+- 視聴者心理の推測は禁止
+- SNS一般論は禁止
+- 添付動画だけを根拠にする
+- 動画で確認できないものは null
+- JSONのみ出力
+- JSON外の文章は禁止
+- 「良い」「悪い」「面白い」「弱い」「強い」など評価語は禁止
+
+解析粒度：
+- 0〜2秒：0.2秒単位
+- 2〜5秒：0.5秒単位
+- 5秒以降：1秒単位
+
+出力JSON：
+{
+  "video_meta": {
+    "total_duration_seconds": null,
+    "aspect_ratio": null,
+    "has_voice": null,
+    "has_bgm": null,
+    "has_subtitles": null
+  },
+  "timeline_observation": [
+    {
+      "time": "",
+      "visual": [],
+      "action": "",
+      "camera_motion": "",
+      "object_motion": "",
+      "text_overlay": "",
+      "audio": [],
+      "people_visible": null,
+      "face_visible": null,
+      "hands_visible": null,
+      "tools_visible": [],
+      "real_world_elements": [],
+      "ai_generated_visual_elements": [],
+      "scene_type": ""
+    }
+  ],
+  "first_2_seconds_detail": [
+    {
+      "time": "",
+      "visual": [],
+      "motion": "",
+      "text_overlay": "",
+      "audio": [],
+      "cut_change": null
+    }
+  ],
+  "feature_metrics": {
+    "face_visible_seconds": null,
+    "hand_closeup_count": null,
+    "real_footage_ratio_percent": null,
+    "ai_generated_visual_ratio_percent": null,
+    "subtitle_density_score": null,
+    "scene_change_count": null,
+    "human_voice_presence": null,
+    "machine_sound_presence": null,
+    "bgm_presence": null,
+    "camera_motion_intensity": null,
+    "text_overlay_count": null
+  },
+  "events": [
+    {
+      "time": "",
+      "type": "",
+      "visible_evidence": ""
+    }
+  ],
+  "text_overlay_log": [
+    {
+      "time": "",
+      "text": ""
+    }
+  ],
+  "audio_log": [
+    {
+      "time": "",
+      "audio_type": "",
+      "detail": ""
+    }
+  ],
+  "uncertain_items": [
+    {
+      "time": "",
+      "item": "",
+      "reason": ""
+    }
+  ]
+}
+
+【投稿目的】
+${v('goal')}
+【仮タイトル】
+${v('nextTitle')}
+【冒頭テロップ案】
+${v('hookText')}
+【キャプション案】
+${v('nextCaption')}
+【補足メモ】
+${v('extraMemo')}`; $('geminiPrompt').textContent=prompt;return prompt}
+function buildAgentPrompt(){const db={topPosts:topPosts(posts,8),refs:refs.slice(0,12),gemini:v('geminiResult'),title:v('nextTitle'),goal:v('goal'),caption:v('nextCaption'),hook:v('hookText'),memo:v('extraMemo'),videoName};const p=`あなたはReel Strategy OSのDeep Multi-Agent投稿前分析AIです。\n\nルール：浅い感想禁止、秒数根拠必須、解析結果を削らない、動画/Gemini観測JSON/DB RAWだけを根拠にする。\n\n【DB RAW JSON】\n${JSON.stringify(db,null,2)}\n\n必須出力：\n## 0. 一言結論\n## 1. 動画の事実確認\n## 2. エージェント別分析\n## 3. エージェント間矛盾チェック\n## 4. 深掘り原因分析\n## 5. 撮り直しなし改善構成案（15秒/30秒/冒頭差し替え・テロップ入り）\n## 6. コピー案\n## 7. DB保存用メモ`; $('agentPrompt').textContent=p;return p}
 async function downloadPack(){const z=new JSZip();z.file('gemini_prompt.txt',buildGeminiPrompt());z.file('chatgpt_prompt.txt',buildAgentPrompt());z.file('data_raw.json',JSON.stringify({posts,refs,cards,gemini:v('geminiResult')},null,2));const blob=await z.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='post_check_pack.zip';a.click();URL.revokeObjectURL(a.href)}
 renderDbStatus();buildGeminiPrompt();buildAgentPrompt();
 </script></body></html>
