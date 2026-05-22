@@ -42,10 +42,10 @@ button.danger,.btn.danger{background:#40242a;color:#ffd4d4;border:1px solid #673
 .hidden{display:none}
 </style></head><body>
 <header><h1>投稿前チェック</h1><div class="sub">投稿前に、Gemini観測JSON → ChatGPT編集会議 → DB保存までのパックを作る。</div><nav><a href="./index.html">TOP</a><a class="active" href="./check.html">投稿前チェック</a><a href="./compare.html">過去投稿比較</a><a href="./admin.html">Admin</a></nav></header>
-<main class="wrap layout"><aside><div class="card"><h2>手順</h2><div class="mini"><span class="tag ok">1</span> 動画情報を入力</div><div class="mini"><span class="tag ok">2</span> Gemini用プロンプトをコピー</div><div class="mini"><span class="tag ok">3</span> Gemini観測JSONを貼る</div><div class="mini"><span class="tag ok">4</span> ChatGPT用プロンプト生成</div></div><div class="card"><h2>DB状況</h2><div id="dbStatus" class="output"></div></div></aside>
+<main class="wrap layout"><aside><div class="card"><h2>手順</h2><div class="mini"><span class="tag ok">1</span> 動画情報を入力</div><div class="mini"><span class="tag ok">2</span> Gemini用プロンプトをコピー</div><div class="mini"><span class="tag ok">3</span> Gemini観測JSONを貼る</div><div class="mini"><span class="tag ok">4</span> 辛口チェックプロンプト生成</div></div><div class="card"><h2>DB状況</h2><div id="dbStatus" class="output"></div></div></aside>
 <section><div class="card"><h2>次回投稿データ</h2><div class="grid2"><div><label>投稿タイトル / 仮テーマ</label><input id="nextTitle"></div><div><label>投稿目的</label><select id="goal"><option>再生数</option><option>フォロー増</option><option>仕事依頼</option><option>世界観/IP育成</option><option>保存/シェア</option></select></div></div><label>キャプション案</label><textarea id="nextCaption"></textarea><label>サムネ文字 / 冒頭テロップ案</label><input id="hookText"><label>動画ファイル（ZIPには入れません）</label><input id="videoInput" type="file" accept="video/*" onchange="previewVideo(event)"><div id="videoPreview" class="preview">動画をアップしてください</div><label>補足メモ</label><textarea id="extraMemo"></textarea><div class="btns"><button onclick="buildGeminiPrompt()">Gemini用プロンプト生成</button><button class="secondary" onclick="copyText($('geminiPrompt').textContent)">Gemini用コピー</button></div><div id="geminiPrompt" class="output"></div></div>
 <div class="card"><h2>Gemini観測JSON解析結果を貼る</h2><textarea id="geminiResult" style="min-height:260px"></textarea></div>
-<div class="card"><h2>ChatGPT Deep Multi-Agent分析</h2><div class="btns"><button onclick="buildAgentPrompt()">ChatGPT用プロンプト生成</button><button class="secondary" onclick="copyText($('agentPrompt').textContent)">コピー</button><button class="warn" onclick="downloadPack()">解析パックZIP生成</button></div><div id="agentPrompt" class="output"></div></div></section></main>
+<div class="card"><h2>ChatGPT Deep Multi-Agent分析</h2><div class="btns"><button onclick="buildAgentPrompt()">辛口チェックプロンプト生成</button><button class="secondary" onclick="copyText($('agentPrompt').textContent)">コピー</button><button class="warn" onclick="downloadPack()">解析パックZIP生成</button></div><div id="agentPrompt" class="output"></div></div></section></main>
 <script>
 const POST_KEY='rso_posts_v2', REF_KEY='rso_refs_v2', CARD_KEY='rso_post_cards_v2', AGENT_KEY='rso_agents_true_v1';
 function $(id){return document.getElementById(id)}
@@ -251,7 +251,182 @@ ${v('hookText')}
 ${v('nextCaption')}
 【補足メモ】
 ${v('extraMemo')}`; $('geminiPrompt').textContent=prompt;return prompt}
-function buildAgentPrompt(){const db={topPosts:topPosts(posts,8),refs:refs.slice(0,12),gemini:v('geminiResult'),title:v('nextTitle'),goal:v('goal'),caption:v('nextCaption'),hook:v('hookText'),memo:v('extraMemo'),videoName};const p=`あなたはReel Strategy OSのDeep Multi-Agent投稿前分析AIです。\n\nルール：浅い感想禁止、秒数根拠必須、解析結果を削らない、動画/Gemini観測JSON/DB RAWだけを根拠にする。\n\n【DB RAW JSON】\n${JSON.stringify(db,null,2)}\n\n必須出力：\n## 0. 一言結論\n## 1. 動画の事実確認\n## 2. エージェント別分析\n## 3. エージェント間矛盾チェック\n## 4. 深掘り原因分析\n## 5. 撮り直しなし改善構成案（15秒/30秒/冒頭差し替え・テロップ入り）\n## 6. コピー案\n## 7. DB保存用メモ`; $('agentPrompt').textContent=p;return p}
+function buildAgentPrompt(){
+const raw={
+  topPosts:topPosts(posts,8),
+  refs:refs.slice(0,12),
+  geminiObservation:v('geminiResult'),
+  title:v('nextTitle'),
+  goal:v('goal'),
+  caption:v('nextCaption'),
+  hook:v('hookText'),
+  memo:v('extraMemo'),
+  videoName
+};
+
+const p=`あなたはReel Strategy OSの投稿前・辛口改善レビューAIです。
+
+# 役割
+これは投稿前の最終チェックです。
+目的は「良いところを見つけて安心させること」ではなく、投稿前に伸びない原因を潰すことです。
+褒めるより、改善点・弱点・離脱原因・伝わらない箇所を優先してください。
+
+# 最重要ルール
+- 良い動画寄りの評価は禁止
+- 無理に褒めない
+- 浅い感想は禁止
+- 「このままでも良い」は原則禁止
+- 投稿前なので、厳しめに見る
+- 改善点を最低10個出す
+- どの秒数をどう直すかまで出す
+- Gemini観測JSONにない映像事実は捏造しない
+- 根拠は Gemini観測JSON / DB RAW / 投稿情報 のみ
+- 解析結果を削らない。整理して見やすくするが情報量を減らさない
+- 撮り直しなし改善を優先。ただし、致命的なら「撮り直し推奨」と明記
+
+# 評価スタンス
+あなたは「伸ばすための編集会議の辛口ディレクター」です。
+以下の視点で、かなり厳しく判定してください。
+
+- 冒頭2秒で本当に指が止まるか
+- 初見で何の動画か分かるか
+- 説明臭くないか
+- 既視感がないか
+- AIっぽさ・作り物感が邪魔していないか
+- 人間のリアルが弱くないか
+- 感情ピークが遅すぎないか
+- テロップが多すぎ/弱すぎないか
+- DBの勝ち投稿と比べて何が足りないか
+- コメントしたくなる余白があるか
+
+# 判定基準
+以下の4段階で必ず判定してください。
+
+A：投稿してよい。軽微な修正のみ。
+B：投稿前に修正推奨。伸びる可能性はある。
+C：このままだと弱い。再編集必須。
+D：投稿しない方がよい。構成から見直し。
+
+甘く判定しないでください。
+迷ったら1段階厳しくしてください。
+
+【DB RAW JSON】
+${JSON.stringify(raw,null,2)}
+
+# 必須出力
+
+## 0. 辛口一言結論
+- 判定：A/B/C/D
+- 理由を1文で
+
+## 1. 致命的な弱点TOP5
+各項目に必ず以下を付ける：
+- 問題
+- 根拠
+- なぜ離脱につながるか
+- 直し方
+- 優先度 HIGH/MID/LOW
+
+## 2. エージェント別・辛口分析
+
+### 2-1. HOOK SPECIALIST
+- 冒頭0〜2秒の弱点
+- 指が止まらない理由
+- 冒頭差し替え案
+- 冒頭テロップ案
+
+### 2-2. CONTEXT FLOW ANALYZER
+- 初見で意味が飛ぶ場所
+- 抽象的すぎる場所
+- つなぎ直し案
+
+### 2-3. HUMAN EMOTION ENGINE
+- 人間味が弱い場所
+- 感情ピークが遅い/弱い理由
+- 冒頭へ移すべきカット
+
+### 2-4. RETENTION ANALYZER
+- 離脱危険秒数
+- 情報差分が少ない箇所
+- テロップ/映像/音の処理落ちポイント
+
+### 2-5. ANTI-AI POSITIONING ANALYZER
+- AI臭さ・既視感・表現の矛盾
+- 人間の現場へ置き換えるべき箇所
+
+### 2-6. DB STRUCTURE AGENT
+- DB勝ち構造と比べて足りない要素
+- 失敗投稿に近い要素
+- 次回DBへ保存すべき仮説
+
+### 2-7. SUBTITLE DIRECTOR
+- 弱いテロップ
+- 説明臭いテロップ
+- 強くする言い換え
+- 0.5秒単位のテロップ案
+
+### 2-8. EDIT ARCHITECT
+- 撮り直しなし再編集案
+- 捨てる秒数
+- 強化する秒数
+- 並び替え案
+
+## 3. 改善点リスト 最低10個
+表形式で：
+番号 / 問題 / 根拠 / 修正案 / 優先度
+
+## 4. 撮り直しなし改善構成案
+
+### A案：15秒辛口改善版
+0:00-0:01：
+- 映像：
+- テロップ：
+- 理由：
+
+0:01-0:02：
+- 映像：
+- テロップ：
+- 理由：
+
+0:02-0:04：
+0:04-0:07：
+0:07-0:10：
+0:10-0:15：
+
+### B案：30秒版
+- 冒頭
+- 展開
+- 感情ピーク
+- コメント余白
+- 締め
+
+### C案：冒頭差し替え版
+- 最初に持ってくるべき場面
+- 理由
+- 冒頭テロップ
+- 2秒後に見せる場面
+
+## 5. サムネ・テロップ案
+- サムネ文字10個
+- 冒頭テロップ10個
+- 捨てるべきテロップ案
+- 使うべきテロップ案
+
+## 6. 投稿可否の最終判断
+- 今すぐ投稿：
+- 修正して投稿：
+- 投稿しない：
+のどれかを選び、理由を書く。
+
+## 7. DB保存用メモ
+- 弱点タグ
+- 勝ち筋に足りない要素
+- 次回検証仮説
+- 同じ失敗を避けるチェックリスト`;
+
+$('agentPrompt').textContent=p;
+return p;
+}
 async function downloadPack(){const z=new JSZip();z.file('gemini_prompt.txt',buildGeminiPrompt());z.file('chatgpt_prompt.txt',buildAgentPrompt());z.file('data_raw.json',JSON.stringify({posts,refs,cards,gemini:v('geminiResult')},null,2));const blob=await z.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='post_check_pack.zip';a.click();URL.revokeObjectURL(a.href)}
 renderDbStatus();buildGeminiPrompt();buildAgentPrompt();
 </script></body></html>
