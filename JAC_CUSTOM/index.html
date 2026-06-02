@@ -1,1 +1,228 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kendama Customizer Sample</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:#f5f5f2; color:#111; }
+    header { position: fixed; top:0; left:0; right:0; z-index:10; display:flex; justify-content:space-between; align-items:center; padding:18px 28px; pointer-events:none; }
+    header h1 { font-size:16px; margin:0; letter-spacing:.04em; }
+    header .price { font-size:14px; margin-top:4px; color:#555; }
+    header button { pointer-events:auto; border:1px solid #ddd; background:white; border-radius:999px; padding:10px 18px; cursor:pointer; font-weight:700; }
+    #app { width:100vw; height:100vh; }
+    .panel { position: fixed; left:0; right:0; bottom:0; z-index:10; background:rgba(255,255,255,.92); backdrop-filter: blur(10px); border-top:1px solid #ddd; padding:18px 24px 22px; }
+    .tabs { display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+    .tab { border:1px solid #ddd; background:#fff; border-radius:999px; padding:9px 16px; cursor:pointer; font-weight:700; }
+    .tab.active { border-color:#111; }
+    .colors { display:flex; justify-content:center; gap:14px; flex-wrap:wrap; }
+    .swatch { width:34px; height:34px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 0 1px #ccc; cursor:pointer; }
+    .swatch.active { box-shadow:0 0 0 3px #111; }
+    .summary { text-align:center; margin-top:12px; font-size:13px; color:#555; }
+    .floating { position:fixed; left:24px; bottom:145px; background:rgba(255,255,255,.8); border:1px solid #ddd; border-radius:16px; padding:12px 14px; font-size:13px; color:#555; line-height:1.6; }
+    @media (max-width:700px){ header{padding:14px 16px}.floating{display:none}.panel{padding:14px 12px 18px}.swatch{width:30px;height:30px} }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>KENDAMA CUSTOM BY YOU</h1>
+      <div class="price">Sample page / Three.js</div>
+    </div>
+    <button id="orderBtn">注文内容</button>
+  </header>
+  <main id="app"></main>
+  <div class="floating">ドラッグ：回転<br>ホイール：拡大縮小<br>下のボタン：パーツ色変更</div>
+  <section class="panel">
+    <div class="tabs" id="tabs"></div>
+    <div class="colors" id="colors"></div>
+    <div class="summary" id="summary"></div>
+  </section>
 
+  <script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+    import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+
+    const app = document.getElementById('app');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf5f5f2);
+
+    const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.1, 100);
+    camera.position.set(3.3, 2.1, 5.5);
+
+    const renderer = new THREE.WebGLRenderer({ antialias:true });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    app.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.target.set(0, .9, 0);
+
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x777777, 2.2));
+    const key = new THREE.DirectionalLight(0xffffff, 2.4);
+    key.position.set(4, 6, 4);
+    key.castShadow = true;
+    scene.add(key);
+
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(12, 12),
+      new THREE.ShadowMaterial({ opacity:.12 })
+    );
+    floor.rotation.x = -Math.PI/2;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    const parts = {};
+    const materials = {
+      ken: new THREE.MeshStandardMaterial({ color:0xc49a6c, roughness:.55, metalness:0 }),
+      sarado: new THREE.MeshStandardMaterial({ color:0x222222, roughness:.5, metalness:0 }),
+      cups: new THREE.MeshStandardMaterial({ color:0xe8dfca, roughness:.55, metalness:0 }),
+      tama: new THREE.MeshStandardMaterial({ color:0xd71920, roughness:.35, metalness:0 }),
+      string: new THREE.MeshStandardMaterial({ color:0xf7f7f7, roughness:.8, metalness:0 }),
+    };
+
+    function addPart(name, mesh){
+      mesh.name = name;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parts[name] = mesh;
+      scene.add(mesh);
+      return mesh;
+    }
+
+    // ken body
+    const ken = addPart('ken', new THREE.Mesh(new THREE.CylinderGeometry(.18, .26, 2.7, 48), materials.ken));
+    ken.position.y = 1.35;
+
+    // spike
+    const spike = addPart('spike', new THREE.Mesh(new THREE.ConeGeometry(.17, .75, 48), materials.ken));
+    spike.position.y = 3.0;
+
+    // grip end
+    const grip = addPart('grip', new THREE.Mesh(new THREE.SphereGeometry(.28, 48, 24), materials.ken));
+    grip.position.y = .12;
+    grip.scale.set(1, .65, 1);
+
+    // sarado cross bar
+    const sarado = addPart('sarado', new THREE.Mesh(new THREE.CylinderGeometry(.17, .17, 1.45, 48), materials.sarado));
+    sarado.rotation.z = Math.PI / 2;
+    sarado.position.y = 2.15;
+
+    // cups
+    const bigCup = addPart('big_cup', new THREE.Mesh(new THREE.SphereGeometry(.38, 48, 24, 0, Math.PI * 2, 0, Math.PI * .58), materials.cups));
+    bigCup.position.set(-.82, 2.15, 0);
+    bigCup.rotation.z = -Math.PI / 2;
+    bigCup.scale.set(1, .55, 1);
+
+    const smallCup = addPart('small_cup', bigCup.clone());
+    smallCup.material = materials.cups;
+    smallCup.position.set(.82, 2.15, 0);
+    smallCup.rotation.z = Math.PI / 2;
+    smallCup.scale.set(.82, .48, .82);
+    scene.add(smallCup);
+    parts.small_cup = smallCup;
+
+    const baseCup = addPart('base_cup', new THREE.Mesh(new THREE.SphereGeometry(.36, 48, 24, 0, Math.PI * 2, 0, Math.PI * .58), materials.cups));
+    baseCup.position.set(0, -.22, 0);
+    baseCup.rotation.x = Math.PI;
+    baseCup.scale.set(1, .5, 1);
+
+    // tama ball
+    const tama = addPart('tama', new THREE.Mesh(new THREE.SphereGeometry(.72, 64, 32), materials.tama));
+    tama.position.set(1.55, 1.05, .15);
+
+    const hole = addPart('tama_hole', new THREE.Mesh(new THREE.CylinderGeometry(.16, .16, .05, 32), new THREE.MeshStandardMaterial({color:0x111111, roughness:.7})));
+    hole.position.set(1.06, 1.05, .15);
+    hole.rotation.z = Math.PI / 2;
+
+    // string as curve tube
+    const curve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(.18, 2.28, 0),
+      new THREE.Vector3(.75, 2.8, .25),
+      new THREE.Vector3(1.62, 2.15, .25),
+      new THREE.Vector3(1.55, 1.77, .16)
+    ]);
+    const string = addPart('string', new THREE.Mesh(new THREE.TubeGeometry(curve, 80, .018, 8, false), materials.string));
+
+    // simple logo line on ball
+    const logo = addPart('logo', new THREE.Mesh(new THREE.TorusGeometry(.22, .018, 8, 64), new THREE.MeshStandardMaterial({color:0xffffff, roughness:.4})));
+    logo.position.set(1.55, 1.05, .88);
+
+    const options = {
+      tama: { label:'玉', target:['tama'], color:'#d71920' },
+      ken: { label:'けん', target:['ken','spike','grip'], color:'#c49a6c' },
+      sarado: { label:'皿胴', target:['sarado'], color:'#222222' },
+      cups: { label:'皿', target:['big_cup','small_cup','base_cup'], color:'#e8dfca' },
+      string: { label:'糸', target:['string'], color:'#f7f7f7' },
+      logo: { label:'ロゴ', target:['logo'], color:'#ffffff' },
+    };
+    const palette = ['#222222','#ffffff','#b9bec2','#e8dfca','#b87333','#001a3d','#51408a','#d71920','#dba8c5','#ffd229','#2f6f4e','#0c7bdc'];
+    let active = 'tama';
+
+    const tabs = document.getElementById('tabs');
+    const colors = document.getElementById('colors');
+    const summary = document.getElementById('summary');
+
+    function renderTabs(){
+      tabs.innerHTML = '';
+      Object.entries(options).forEach(([key, opt]) => {
+        const btn = document.createElement('button');
+        btn.className = 'tab' + (key === active ? ' active' : '');
+        btn.textContent = opt.label;
+        btn.onclick = () => { active = key; renderTabs(); renderColors(); };
+        tabs.appendChild(btn);
+      });
+    }
+
+    function renderColors(){
+      colors.innerHTML = '';
+      palette.forEach(hex => {
+        const sw = document.createElement('button');
+        sw.className = 'swatch' + (options[active].color === hex ? ' active' : '');
+        sw.style.background = hex;
+        sw.title = hex;
+        sw.onclick = () => setColor(active, hex);
+        colors.appendChild(sw);
+      });
+    }
+
+    function setColor(partKey, hex){
+      options[partKey].color = hex;
+      options[partKey].target.forEach(name => {
+        parts[name].material.color.set(hex);
+      });
+      renderColors();
+      renderSummary();
+    }
+
+    function renderSummary(){
+      summary.textContent = Object.values(options).map(o => `${o.label}:${o.color}`).join(' / ');
+    }
+
+    document.getElementById('orderBtn').onclick = () => {
+      const data = Object.fromEntries(Object.entries(options).map(([k,o]) => [k, o.color]));
+      alert('注文データ例\n' + JSON.stringify(data, null, 2));
+    };
+
+    renderTabs();
+    renderColors();
+    renderSummary();
+
+    addEventListener('resize', () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    function animate(){
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
