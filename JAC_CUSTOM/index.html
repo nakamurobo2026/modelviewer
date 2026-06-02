@@ -19,6 +19,8 @@
     .colors { display:flex; justify-content:center; gap:14px; flex-wrap:wrap; }
     .swatch { width:34px; height:34px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 0 1px #ccc; cursor:pointer; }
     .swatch.active { box-shadow:0 0 0 3px #111; }
+    .actions { display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:14px; }
+    .action { border:1px solid #ddd; background:#fff; border-radius:999px; padding:9px 14px; cursor:pointer; font-weight:700; font-size:13px; }
     .summary { text-align:center; margin-top:12px; font-size:13px; color:#555; }
     .floating { position:fixed; left:24px; bottom:155px; background:rgba(255,255,255,.84); border:1px solid #ddd; border-radius:16px; padding:12px 14px; font-size:13px; color:#555; line-height:1.6; max-width:320px; }
     .drop { margin-top:8px; display:block; font-size:12px; color:#777; }
@@ -41,6 +43,12 @@
   <section class="panel">
     <div class="tabs" id="tabs"></div>
     <div class="colors" id="colors"></div>
+    <div class="actions">
+      <button class="action" data-preset="classic">クラシック</button>
+      <button class="action" data-preset="blackred">黒×赤</button>
+      <button class="action" data-preset="setouchi">瀬戸内</button>
+      <button class="action" id="copyBtn">注文データコピー</button>
+    </div>
     <div class="summary" id="summary"></div>
   </section>
 
@@ -94,6 +102,11 @@
       logo: { label:'ロゴ', target:['logo','mark'], color:'#ffffff' },
     };
     const palette = ['#222222','#ffffff','#b9bec2','#e8dfca','#b87333','#001a3d','#51408a','#d71920','#dba8c5','#ffd229','#2f6f4e','#0c7bdc'];
+    const presets = {
+      classic: { tama:'#d71920', ken:'#c49a6c', sarado:'#c49a6c', cups:'#e8dfca', string:'#f7f7f7', logo:'#ffffff' },
+      blackred: { tama:'#d71920', ken:'#222222', sarado:'#222222', cups:'#b9bec2', string:'#ffffff', logo:'#ffd229' },
+      setouchi: { tama:'#0c7bdc', ken:'#e8dfca', sarado:'#001a3d', cups:'#ffffff', string:'#b9bec2', logo:'#ffd229' },
+    };
     let active = 'tama';
 
     function cloneMaterial(mesh){
