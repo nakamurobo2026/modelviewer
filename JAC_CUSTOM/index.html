@@ -6,7 +6,7 @@
   <title>Kendama Customizer Sample</title>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:#f5f5f2; color:#111; }
+    body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:#f5f5f2; color:#111; overflow:hidden; }
     header { position: fixed; top:0; left:0; right:0; z-index:10; display:flex; justify-content:space-between; align-items:center; padding:18px 28px; pointer-events:none; }
     header h1 { font-size:16px; margin:0; letter-spacing:.04em; }
     header .price { font-size:14px; margin-top:4px; color:#555; }
@@ -20,20 +20,24 @@
     .swatch { width:34px; height:34px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 0 1px #ccc; cursor:pointer; }
     .swatch.active { box-shadow:0 0 0 3px #111; }
     .summary { text-align:center; margin-top:12px; font-size:13px; color:#555; }
-    .floating { position:fixed; left:24px; bottom:145px; background:rgba(255,255,255,.8); border:1px solid #ddd; border-radius:16px; padding:12px 14px; font-size:13px; color:#555; line-height:1.6; }
-    @media (max-width:700px){ header{padding:14px 16px}.floating{display:none}.panel{padding:14px 12px 18px}.swatch{width:30px;height:30px} }
+    .floating { position:fixed; left:24px; bottom:155px; background:rgba(255,255,255,.84); border:1px solid #ddd; border-radius:16px; padding:12px 14px; font-size:13px; color:#555; line-height:1.6; max-width:320px; }
+    .drop { margin-top:8px; display:block; font-size:12px; color:#777; }
+    @media (max-width:700px){ header{padding:14px 16px}.floating{display:none}.panel{padding:14px 12px 18px}.swatch{width:30px;height:30px}.tab{padding:8px 12px} }
   </style>
 </head>
 <body>
   <header>
     <div>
       <h1>KENDAMA CUSTOM BY YOU</h1>
-      <div class="price">Sample page / Three.js</div>
+      <div class="price" id="status">model.glb があれば自動読込 / なければ仮モデル</div>
     </div>
     <button id="orderBtn">注文内容</button>
   </header>
   <main id="app"></main>
-  <div class="floating">ドラッグ：回転<br>ホイール：拡大縮小<br>下のボタン：パーツ色変更</div>
+  <div class="floating">
+    ドラッグ：回転<br>ホイール：拡大縮小<br>下のボタン：パーツ色変更
+    <span class="drop">GLBは index.html と同じ階層に <b>model.glb</b> で配置</span>
+  </div>
   <section class="panel">
     <div class="tabs" id="tabs"></div>
     <div class="colors" id="colors"></div>
@@ -43,18 +47,23 @@
   <script type="module">
     import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
     import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+    import { GLTFLoader } from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 
+    const MODEL_URL = './model.glb';
     const app = document.getElementById('app');
+    const status = document.getElementById('status');
+
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf5f5f2);
 
-    const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.1, 100);
+    const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.1, 1000);
     camera.position.set(3.3, 2.1, 5.5);
 
     const renderer = new THREE.WebGLRenderer({ antialias:true });
     renderer.setSize(innerWidth, innerHeight);
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     app.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -67,100 +76,131 @@
     key.castShadow = true;
     scene.add(key);
 
-    const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(12, 12),
-      new THREE.ShadowMaterial({ opacity:.12 })
-    );
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.ShadowMaterial({ opacity:.12 }));
     floor.rotation.x = -Math.PI/2;
     floor.receiveShadow = true;
     scene.add(floor);
 
     const parts = {};
-    const materials = {
-      ken: new THREE.MeshStandardMaterial({ color:0xc49a6c, roughness:.55, metalness:0 }),
-      sarado: new THREE.MeshStandardMaterial({ color:0x222222, roughness:.5, metalness:0 }),
-      cups: new THREE.MeshStandardMaterial({ color:0xe8dfca, roughness:.55, metalness:0 }),
-      tama: new THREE.MeshStandardMaterial({ color:0xd71920, roughness:.35, metalness:0 }),
-      string: new THREE.MeshStandardMaterial({ color:0xf7f7f7, roughness:.8, metalness:0 }),
-    };
-
-    function addPart(name, mesh){
-      mesh.name = name;
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      parts[name] = mesh;
-      scene.add(mesh);
-      return mesh;
-    }
-
-    // ken body
-    const ken = addPart('ken', new THREE.Mesh(new THREE.CylinderGeometry(.18, .26, 2.7, 48), materials.ken));
-    ken.position.y = 1.35;
-
-    // spike
-    const spike = addPart('spike', new THREE.Mesh(new THREE.ConeGeometry(.17, .75, 48), materials.ken));
-    spike.position.y = 3.0;
-
-    // grip end
-    const grip = addPart('grip', new THREE.Mesh(new THREE.SphereGeometry(.28, 48, 24), materials.ken));
-    grip.position.y = .12;
-    grip.scale.set(1, .65, 1);
-
-    // sarado cross bar
-    const sarado = addPart('sarado', new THREE.Mesh(new THREE.CylinderGeometry(.17, .17, 1.45, 48), materials.sarado));
-    sarado.rotation.z = Math.PI / 2;
-    sarado.position.y = 2.15;
-
-    // cups
-    const bigCup = addPart('big_cup', new THREE.Mesh(new THREE.SphereGeometry(.38, 48, 24, 0, Math.PI * 2, 0, Math.PI * .58), materials.cups));
-    bigCup.position.set(-.82, 2.15, 0);
-    bigCup.rotation.z = -Math.PI / 2;
-    bigCup.scale.set(1, .55, 1);
-
-    const smallCup = addPart('small_cup', bigCup.clone());
-    smallCup.material = materials.cups;
-    smallCup.position.set(.82, 2.15, 0);
-    smallCup.rotation.z = Math.PI / 2;
-    smallCup.scale.set(.82, .48, .82);
-    scene.add(smallCup);
-    parts.small_cup = smallCup;
-
-    const baseCup = addPart('base_cup', new THREE.Mesh(new THREE.SphereGeometry(.36, 48, 24, 0, Math.PI * 2, 0, Math.PI * .58), materials.cups));
-    baseCup.position.set(0, -.22, 0);
-    baseCup.rotation.x = Math.PI;
-    baseCup.scale.set(1, .5, 1);
-
-    // tama ball
-    const tama = addPart('tama', new THREE.Mesh(new THREE.SphereGeometry(.72, 64, 32), materials.tama));
-    tama.position.set(1.55, 1.05, .15);
-
-    const hole = addPart('tama_hole', new THREE.Mesh(new THREE.CylinderGeometry(.16, .16, .05, 32), new THREE.MeshStandardMaterial({color:0x111111, roughness:.7})));
-    hole.position.set(1.06, 1.05, .15);
-    hole.rotation.z = Math.PI / 2;
-
-    // string as curve tube
-    const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(.18, 2.28, 0),
-      new THREE.Vector3(.75, 2.8, .25),
-      new THREE.Vector3(1.62, 2.15, .25),
-      new THREE.Vector3(1.55, 1.77, .16)
-    ]);
-    const string = addPart('string', new THREE.Mesh(new THREE.TubeGeometry(curve, 80, .018, 8, false), materials.string));
-
-    // simple logo line on ball
-    const logo = addPart('logo', new THREE.Mesh(new THREE.TorusGeometry(.22, .018, 8, 64), new THREE.MeshStandardMaterial({color:0xffffff, roughness:.4})));
-    logo.position.set(1.55, 1.05, .88);
+    const root = new THREE.Group();
+    scene.add(root);
 
     const options = {
-      tama: { label:'玉', target:['tama'], color:'#d71920' },
-      ken: { label:'けん', target:['ken','spike','grip'], color:'#c49a6c' },
-      sarado: { label:'皿胴', target:['sarado'], color:'#222222' },
-      cups: { label:'皿', target:['big_cup','small_cup','base_cup'], color:'#e8dfca' },
-      string: { label:'糸', target:['string'], color:'#f7f7f7' },
-      logo: { label:'ロゴ', target:['logo'], color:'#ffffff' },
+      tama: { label:'玉', target:['tama','ball'], color:'#d71920' },
+      ken: { label:'けん', target:['ken','ken_body','body','spike','grip'], color:'#c49a6c' },
+      sarado: { label:'皿胴', target:['sarado','cross'], color:'#222222' },
+      cups: { label:'皿', target:['big_cup','small_cup','base_cup','cup','cups'], color:'#e8dfca' },
+      string: { label:'糸', target:['string','ito'], color:'#f7f7f7' },
+      logo: { label:'ロゴ', target:['logo','mark'], color:'#ffffff' },
     };
     const palette = ['#222222','#ffffff','#b9bec2','#e8dfca','#b87333','#001a3d','#51408a','#d71920','#dba8c5','#ffd229','#2f6f4e','#0c7bdc'];
     let active = 'tama';
+
+    function cloneMaterial(mesh){
+      if (Array.isArray(mesh.material)) mesh.material = mesh.material.map(m => m.clone());
+      else if (mesh.material) mesh.material = mesh.material.clone();
+    }
+
+    function registerMesh(mesh){
+      const key = mesh.name || `mesh_${Object.keys(parts).length}`;
+      parts[key] = mesh;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      cloneMaterial(mesh);
+    }
+
+    function fitCameraToObject(object){
+      const box = new THREE.Box3().setFromObject(object);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z) || 3;
+      const distance = maxDim * 1.8;
+      controls.target.copy(center);
+      camera.position.set(center.x + distance*.75, center.y + distance*.45, center.z + distance);
+      camera.near = maxDim / 100;
+      camera.far = maxDim * 100;
+      camera.updateProjectionMatrix();
+      floor.position.y = box.min.y - 0.02;
+    }
+
+    function applyAllColors(){
+      Object.keys(options).forEach(k => setColor(k, options[k].color, false));
+      renderColors();
+      renderSummary();
+    }
+
+    function matchesTarget(meshName, targetName){
+      const a = meshName.toLowerCase();
+      const b = targetName.toLowerCase();
+      return a === b || a.includes(b);
+    }
+
+    function targetMeshes(partKey){
+      const targets = options[partKey].target;
+      return Object.entries(parts)
+        .filter(([name]) => targets.some(t => matchesTarget(name, t)))
+        .map(([,mesh]) => mesh);
+    }
+
+    function setMaterialColor(mat, hex){
+      if (!mat) return;
+      if (mat.color) mat.color.set(hex);
+      mat.needsUpdate = true;
+    }
+
+    function setColor(partKey, hex, refresh=true){
+      options[partKey].color = hex;
+      targetMeshes(partKey).forEach(mesh => {
+        if (Array.isArray(mesh.material)) mesh.material.forEach(m => setMaterialColor(m, hex));
+        else setMaterialColor(mesh.material, hex);
+      });
+      if (refresh){ renderColors(); renderSummary(); }
+    }
+
+    function createFallbackKendama(){
+      const materials = {
+        ken: new THREE.MeshStandardMaterial({ color:0xc49a6c, roughness:.55 }),
+        sarado: new THREE.MeshStandardMaterial({ color:0x222222, roughness:.5 }),
+        cups: new THREE.MeshStandardMaterial({ color:0xe8dfca, roughness:.55 }),
+        tama: new THREE.MeshStandardMaterial({ color:0xd71920, roughness:.35 }),
+        string: new THREE.MeshStandardMaterial({ color:0xf7f7f7, roughness:.8 }),
+      };
+      function add(name, mesh){ mesh.name = name; root.add(mesh); registerMesh(mesh); return mesh; }
+      const ken = add('ken_body', new THREE.Mesh(new THREE.CylinderGeometry(.18, .26, 2.7, 48), materials.ken)); ken.position.y = 1.35;
+      const spike = add('spike', new THREE.Mesh(new THREE.ConeGeometry(.17, .75, 48), materials.ken)); spike.position.y = 3.0;
+      const grip = add('grip', new THREE.Mesh(new THREE.SphereGeometry(.28, 48, 24), materials.ken)); grip.position.y = .12; grip.scale.set(1,.65,1);
+      const sarado = add('sarado', new THREE.Mesh(new THREE.CylinderGeometry(.17,.17,1.45,48), materials.sarado)); sarado.rotation.z = Math.PI/2; sarado.position.y = 2.15;
+      const bigCup = add('big_cup', new THREE.Mesh(new THREE.SphereGeometry(.38,48,24,0,Math.PI*2,0,Math.PI*.58), materials.cups)); bigCup.position.set(-.82,2.15,0); bigCup.rotation.z = -Math.PI/2; bigCup.scale.set(1,.55,1);
+      const smallCup = add('small_cup', bigCup.clone()); smallCup.material = materials.cups.clone(); smallCup.position.set(.82,2.15,0); smallCup.rotation.z = Math.PI/2; smallCup.scale.set(.82,.48,.82);
+      const baseCup = add('base_cup', new THREE.Mesh(new THREE.SphereGeometry(.36,48,24,0,Math.PI*2,0,Math.PI*.58), materials.cups)); baseCup.position.set(0,-.22,0); baseCup.rotation.x = Math.PI; baseCup.scale.set(1,.5,1);
+      const tama = add('tama', new THREE.Mesh(new THREE.SphereGeometry(.72,64,32), materials.tama)); tama.position.set(1.55,1.05,.15);
+      const hole = add('tama_hole', new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.05,32), new THREE.MeshStandardMaterial({color:0x111111, roughness:.7}))); hole.position.set(1.06,1.05,.15); hole.rotation.z = Math.PI/2;
+      const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(.18,2.28,0),new THREE.Vector3(.75,2.8,.25),new THREE.Vector3(1.62,2.15,.25),new THREE.Vector3(1.55,1.77,.16)]);
+      add('string', new THREE.Mesh(new THREE.TubeGeometry(curve,80,.018,8,false), materials.string));
+      const logo = add('logo', new THREE.Mesh(new THREE.TorusGeometry(.22,.018,8,64), new THREE.MeshStandardMaterial({color:0xffffff, roughness:.4}))); logo.position.set(1.55,1.05,.88);
+      status.textContent = '仮モデル表示中：model.glb を同じ階層に置くと差し替わります';
+      fitCameraToObject(root);
+    }
+
+    async function loadGLB(){
+      const loader = new GLTFLoader();
+      try {
+        const gltf = await loader.loadAsync(MODEL_URL);
+        root.clear();
+        Object.keys(parts).forEach(k => delete parts[k]);
+        const model = gltf.scene;
+        root.add(model);
+        model.traverse(obj => { if (obj.isMesh) registerMesh(obj); });
+        status.textContent = 'model.glb 読込済み：メッシュ名で色変更します';
+        fitCameraToObject(root);
+        applyAllColors();
+        console.log('GLB mesh names:', Object.keys(parts));
+      } catch (e) {
+        console.warn('model.glb not loaded. fallback model used.', e);
+        createFallbackKendama();
+        applyAllColors();
+      }
+    }
 
     const tabs = document.getElementById('tabs');
     const colors = document.getElementById('colors');
@@ -189,15 +229,6 @@
       });
     }
 
-    function setColor(partKey, hex){
-      options[partKey].color = hex;
-      options[partKey].target.forEach(name => {
-        parts[name].material.color.set(hex);
-      });
-      renderColors();
-      renderSummary();
-    }
-
     function renderSummary(){
       summary.textContent = Object.values(options).map(o => `${o.label}:${o.color}`).join(' / ');
     }
@@ -210,6 +241,7 @@
     renderTabs();
     renderColors();
     renderSummary();
+    loadGLB();
 
     addEventListener('resize', () => {
       camera.aspect = innerWidth / innerHeight;
