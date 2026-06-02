@@ -52,10 +52,18 @@
     <div class="summary" id="summary"></div>
   </section>
 
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
   <script type="module">
-    import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-    import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js';
-    import { GLTFLoader } from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
     const MODEL_URL = './model.glb';
     const app = document.getElementById('app');
@@ -246,9 +254,25 @@
       summary.textContent = Object.values(options).map(o => `${o.label}:${o.color}`).join(' / ');
     }
 
+    function getOrderData(){
+      return {
+        product: 'kendama_custom',
+        colors: Object.fromEntries(Object.entries(options).map(([k,o]) => [k, o.color]))
+      };
+    }
+
     document.getElementById('orderBtn').onclick = () => {
-      const data = Object.fromEntries(Object.entries(options).map(([k,o]) => [k, o.color]));
-      alert('注文データ例\n' + JSON.stringify(data, null, 2));
+      alert('注文データ例\n' + JSON.stringify(getOrderData(), null, 2));
+    };
+
+    document.getElementById('copyBtn').onclick = async () => {
+      const text = JSON.stringify(getOrderData(), null, 2);
+      try {
+        await navigator.clipboard.writeText(text);
+        alert('注文データをコピーしました');
+      } catch(e) {
+        prompt('コピーしてください', text);
+      }
     };
 
     renderTabs();
