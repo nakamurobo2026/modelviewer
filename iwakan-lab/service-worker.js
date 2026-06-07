@@ -1,8 +1,11 @@
-const CACHE_NAME = "iwakan-lab-v2";
+const CACHE_NAME = "iwakan-lab-v3";
 const ASSETS = [
   "./",
   "./index.html",
   "./style.css",
+  "./storage.js",
+  "./generator.js",
+  "./openai-client.js",
   "./app.js",
   "./manifest.webmanifest"
 ];
