@@ -1,1 +1,73 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0c10">
+  <meta name="description" content="Threads向けの投稿案を50件生成する違和感ノート風PWA">
+  <title>違和感ラボ | Threads投稿案生成</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <p class="eyebrow">IWAKAN LAB</p>
+      <h1>違和感から、Threadsの投稿案をつくる。</h1>
+      <p class="lead">テーマと気分を入れるだけ。共感、違和感、懐かしさ、深夜テンションまで、投稿案を50件まとめて生成します。</p>
+    </header>
 
+    <main>
+      <section class="control-panel" aria-labelledby="generator-title">
+        <div class="section-head">
+          <p class="eyebrow">GENERATOR</p>
+          <h2 id="generator-title">投稿案を生成</h2>
+        </div>
+
+        <label for="themeInput">投稿テーマ</label>
+        <textarea id="themeInput" rows="4" placeholder="例：地方の古い工場をAIで再生する過程 / なんとなく眠れない夜の違和感"></textarea>
+
+        <label for="categorySelect">投稿カテゴリ</label>
+        <select id="categorySelect">
+          <option value="共感">共感</option>
+          <option value="違和感">違和感</option>
+          <option value="懐かしさ">懐かしさ</option>
+          <option value="深夜テンション">深夜テンション</option>
+          <option value="地方感">地方感</option>
+          <option value="ちょい怖">ちょい怖</option>
+        </select>
+
+        <div class="actions">
+          <button id="generateBtn" class="primary" type="button">投稿案を生成</button>
+          <button id="clearBtn" class="ghost" type="button">履歴クリア</button>
+        </div>
+
+        <div class="stats" aria-live="polite">
+          <div><span id="totalCount">0</span><small>生成</small></div>
+          <div><span id="adoptedCount">0</span><small>採用</small></div>
+          <div><span id="rejectedCount">0</span><small>不採用</small></div>
+        </div>
+      </section>
+
+      <section class="result-panel" aria-labelledby="results-title">
+        <div class="section-head row">
+          <div>
+            <p class="eyebrow">THREADS IDEAS</p>
+            <h2 id="results-title">投稿案</h2>
+          </div>
+          <p id="saveStatus" class="save-status">localStorageに保存されます</p>
+        </div>
+
+        <div id="emptyState" class="empty-state">
+          <p>まだ投稿案がありません。</p>
+          <small>テーマを入力して「投稿案を生成」を押してください。</small>
+        </div>
+
+        <div id="ideaList" class="idea-list"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>
