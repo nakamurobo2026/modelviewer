@@ -1,4 +1,4 @@
-const CACHE_NAME = "iwakan-lab-v7";
+const CACHE_NAME = "iwakan-lab-v8";
 const ASSETS = [
   "./",
   "./index.html",
