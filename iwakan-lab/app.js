@@ -40,12 +40,7 @@ const els = {
 };
 
 function normalizeStoredIdeas(ideas) {
-  return ideas.map((idea, index) => ({
-    ...idea,
-    id: idea.id || `stored-${index}`,
-    hookType: idea.hookType || idea.hook || "未分類",
-    status: idea.status || "new"
-  }));
+  return ideas.map((idea, index) => ({ ...idea, id: idea.id || `stored-${index}`, hookType: idea.hookType || idea.hook || "未分類", status: idea.status || "new" }));
 }
 
 function persist() {
@@ -117,12 +112,7 @@ function renderHistory() {
 
 function pushHistory({ theme, category, source }) {
   const history = window.IwakanStorage.getHistory();
-  history.unshift({
-    theme,
-    category,
-    source,
-    time: new Date().toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })
-  });
+  history.unshift({ theme, category, source, time: new Date().toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) });
   window.IwakanStorage.setHistory(history);
 }
 
@@ -180,23 +170,23 @@ async function generatePosts(tune = null) {
 
   const category = tune || els.category.value;
   if (tune) els.category.value = category;
-  const edgeFunctionUrl = window.IwakanStorage.getEdgeFunctionUrl();
+  const workerUrl = window.IwakanStorage.getEdgeFunctionUrl();
   let source = "local";
 
   setLoading(true);
   showError("");
   try {
-    if (edgeFunctionUrl) {
-      const aiResult = await window.AIClient.generate({ endpointUrl: edgeFunctionUrl, theme, category, tune, count: IDEA_COUNT });
+    if (workerUrl) {
+      const aiResult = await window.AIClient.generate({ endpointUrl: workerUrl, theme, category, tune, count: IDEA_COUNT });
       state.ideas = aiResult.ideas.slice(0, IDEA_COUNT).map((idea, index) => window.TemplateGenerator.normalizeIdea(idea, category, index));
-      source = `Supabase Edge ${aiResult.model || "gpt-5-mini"}`;
+      source = `Cloudflare Worker ${aiResult.model || "gpt-5-mini"}`;
       els.saveStatus.textContent = `AI生成完了: ${aiResult.model || "gpt-5-mini"}`;
     } else {
       state.ideas = window.TemplateGenerator.generate({ theme, category, tune, count: IDEA_COUNT });
       els.saveStatus.textContent = "テンプレート生成で作成しました";
     }
   } catch (error) {
-    console.error("Supabase Edge Function generation failed. Falling back to template generation.", {
+    console.error("Cloudflare Worker generation failed. Falling back to template generation.", {
       message: error.message,
       endpoint: error.endpoint,
       status: error.status,
@@ -207,7 +197,7 @@ async function generatePosts(tune = null) {
     state.ideas = window.TemplateGenerator.generate({ theme, category, tune, count: IDEA_COUNT });
     source = "local fallback";
     showError(`AI生成に失敗しました。ローカル生成に切り替えました。${error.message || ""}`);
-    els.saveStatus.textContent = "Edge Function失敗。テンプレート生成へ戻しました";
+    els.saveStatus.textContent = "Cloudflare Worker失敗。テンプレート生成へ戻しました";
   } finally {
     state.singleIndex = 0;
     pushHistory({ theme, category, source });
@@ -269,7 +259,7 @@ els.saveEdgeUrl.addEventListener("click", () => {
   else window.IwakanStorage.clearEdgeFunctionUrl();
   window.IwakanStorage.clearLegacyOpenAISecrets?.();
   closeApiModal();
-  els.saveStatus.textContent = endpointUrl ? "Edge Function URLを保存しました" : "AI未設定です。ローカル生成で動きます";
+  els.saveStatus.textContent = endpointUrl ? "Cloudflare Worker URLを保存しました" : "AI未設定です。ローカル生成で動きます";
 });
 els.toggleEdgeUrl.addEventListener("click", () => {
   const visible = els.edgeUrl.type === "url" || els.edgeUrl.type === "text";
@@ -282,7 +272,7 @@ els.clearEdgeUrl.addEventListener("click", () => {
   window.IwakanStorage.clearLegacyOpenAISecrets?.();
   els.edgeUrl.value = "";
   closeApiModal();
-  els.saveStatus.textContent = "Edge Function URLを削除しました";
+  els.saveStatus.textContent = "Cloudflare Worker URLを削除しました";
 });
 
 if (state.lastInput.theme) els.theme.value = state.lastInput.theme;
