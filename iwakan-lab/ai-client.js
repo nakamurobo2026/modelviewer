@@ -1,9 +1,7 @@
 (function () {
+  const WORKER_BASE_URL = "https://iwakan-lab.nakamura0407.workers.dev";
+  const GENERATE_URL = `${WORKER_BASE_URL}/generate`;
   const TIMEOUT_MS = 15000;
-
-  function cleanEndpoint(url) {
-    return String(url || "").trim().replace(/\/+$/, "");
-  }
 
   function makeError(message, detail = {}) {
     const error = new Error(message);
@@ -11,25 +9,22 @@
     return error;
   }
 
-  async function generate({ endpointUrl, apiKey, theme, category, tune, count }) {
-    const endpoint = cleanEndpoint(endpointUrl || apiKey || window.IwakanStorage?.getEdgeFunctionUrl?.());
-    if (!endpoint) {
-      throw makeError("Supabase Edge Function URL is not configured.", { code: "EDGE_URL_MISSING" });
-    }
-
+  async function generate({ theme, category, mode = "list" }) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
     const startedAt = Date.now();
+
     try {
-      const response = await fetch(endpoint, {
+      const response = await fetch(GENERATE_URL, {
         method: "POST",
         signal: controller.signal,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ theme, category, tune, count })
+        body: JSON.stringify({ theme, category, mode })
       });
+
       const rawText = await response.text();
-      console.groupCollapsed("[Iwakan Lab AI] Edge Function response");
-      console.log("endpoint", endpoint);
+      console.groupCollapsed("[Iwakan Lab AI] Cloudflare Worker response");
+      console.log("endpoint", GENERATE_URL);
       console.log("status", response.status, response.statusText);
       console.log("elapsedMs", Date.now() - startedAt);
       console.log("rawResponse", rawText);
@@ -39,17 +34,17 @@
       try {
         data = JSON.parse(rawText);
       } catch (error) {
-        throw makeError("Edge Function returned non-JSON response.", {
-          endpoint,
+        throw makeError("Cloudflare Worker returned non-JSON response.", {
+          endpoint: GENERATE_URL,
           status: response.status,
           rawResponse: rawText,
           originalError: error
         });
       }
 
-      if (!response.ok || data.ok === false) {
-        throw makeError(data.error || `Edge Function failed: HTTP ${response.status}`, {
-          endpoint,
+      if (!response.ok || data.success !== true) {
+        throw makeError(data.error || `Cloudflare Worker failed: HTTP ${response.status}`, {
+          endpoint: GENERATE_URL,
           status: response.status,
           detail: data.detail,
           rawResponse: rawText,
@@ -59,8 +54,8 @@
 
       const ideas = Array.isArray(data.ideas) ? data.ideas : [];
       if (!ideas.length) {
-        throw makeError("Edge Function response did not include ideas.", {
-          endpoint,
+        throw makeError("Cloudflare Worker response did not include ideas.", {
+          endpoint: GENERATE_URL,
           status: response.status,
           rawResponse: rawText,
           response: data
@@ -68,20 +63,20 @@
       }
 
       ideas.ideas = ideas;
-      ideas.mode = "supabase-edge";
+      ideas.mode = "cloudflare-worker";
       ideas.model = data.model || "gpt-5-mini";
       return ideas;
     } catch (error) {
       if (error.name === "AbortError") {
-        throw makeError("Supabase Edge Function timed out after 15 seconds.", {
-          endpoint,
+        throw makeError("Cloudflare Worker timed out after 15 seconds.", {
+          endpoint: GENERATE_URL,
           timeoutMs: TIMEOUT_MS,
           originalError: error
         });
       }
       if (!error.endpoint && !error.code) {
-        throw makeError("Supabase Edge Function browser fetch failed.", {
-          endpoint,
+        throw makeError("Cloudflare Worker browser fetch failed.", {
+          endpoint: GENERATE_URL,
           originalError: error
         });
       }
@@ -91,5 +86,5 @@
     }
   }
 
-  window.AIClient = { TIMEOUT_MS, generate };
+  window.AIClient = { WORKER_BASE_URL, GENERATE_URL, TIMEOUT_MS, generate };
 })();
