@@ -40,6 +40,7 @@
 
         <div class="actions">
           <button id="generateBtn" class="primary" type="button">投稿案を生成</button>
+          <button id="settingsBtn" class="ghost" type="button">API設定</button>
           <button id="clearBtn" class="ghost" type="button">履歴クリア</button>
         </div>
 
@@ -86,6 +87,32 @@
     </main>
   </div>
 
+  <div id="loadingOverlay" class="loading-overlay" hidden>
+    <div class="loading-box">
+      <span class="loader"></span>
+      <p>深夜の余白を生成中...</p>
+      <small>OpenAI APIが失敗した場合はテンプレート生成に戻ります。</small>
+    </div>
+  </div>
+
+  <dialog id="apiKeyModal" class="api-modal">
+    <form method="dialog" class="api-modal-inner">
+      <p class="eyebrow">OPENAI API</p>
+      <h2>APIキーを設定</h2>
+      <p class="modal-copy">キーはこの端末の localStorage に保存されます。未設定のままでもテンプレート生成で使えます。</p>
+      <label for="apiKeyInput">OpenAI API Key</label>
+      <input id="apiKeyInput" type="password" autocomplete="off" placeholder="sk-...">
+      <div class="modal-actions">
+        <button id="saveApiKeyBtn" class="primary" type="button">保存</button>
+        <button id="skipApiKeyBtn" class="ghost" type="button">あとで</button>
+        <button id="clearApiKeyBtn" class="ghost danger-text" type="button">キー削除</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="./storage.js" defer></script>
+  <script src="./generator.js" defer></script>
+  <script src="./openai-client.js" defer></script>
   <script src="./app.js" defer></script>
 </body>
 </html>
