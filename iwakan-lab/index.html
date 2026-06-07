@@ -15,104 +15,44 @@
     <header class="hero">
       <p class="eyebrow">IWAKAN LAB</p>
       <h1>違和感から、Threadsの投稿案をつくる。</h1>
-      <p class="lead">テーマと気分を入れるだけ。共感、違和感、懐かしさ、深夜テンションまで、投稿案を50件まとめて生成します。</p>
+      <p class="lead">テーマと気分を入れるだけ。静かで、短くて、少しだけ引っかかる投稿案を作ります。</p>
     </header>
 
     <main>
       <section class="control-panel" aria-labelledby="generator-title">
-        <div class="section-head">
-          <p class="eyebrow">GENERATOR</p>
-          <h2 id="generator-title">投稿案を生成</h2>
-        </div>
-
+        <div class="section-head"><p class="eyebrow">GENERATOR</p><h2 id="generator-title">投稿案を生成</h2></div>
         <label for="themeInput">投稿テーマ</label>
         <textarea id="themeInput" rows="4" placeholder="例：地方の古い工場をAIで再生する過程 / なんとなく眠れない夜の違和感"></textarea>
-
         <label for="categorySelect">投稿カテゴリ</label>
-        <select id="categorySelect">
-          <option value="共感">共感</option>
-          <option value="違和感">違和感</option>
-          <option value="懐かしさ">懐かしさ</option>
-          <option value="深夜テンション">深夜テンション</option>
-          <option value="地方感">地方感</option>
-          <option value="ちょい怖">ちょい怖</option>
-        </select>
-
-        <div class="actions">
-          <button id="generateBtn" class="primary" type="button">投稿案を生成</button>
-          <button id="settingsBtn" class="ghost" type="button">API設定</button>
-          <button id="clearBtn" class="ghost" type="button">履歴クリア</button>
-        </div>
-
-        <div class="mode-row" aria-label="表示モード">
-          <button id="showAllBtn" class="mode active" type="button">一覧表示</button>
-          <button id="showOneBtn" class="mode" type="button">1件だけ表示</button>
-        </div>
-
-        <div class="tune-row" aria-label="投稿案の方向性">
-          <button class="tune" type="button" data-tune="共感">もっと共感</button>
-          <button class="tune" type="button" data-tune="違和感">もっと違和感</button>
-          <button class="tune" type="button" data-tune="懐かしさ">もっと懐かしい</button>
-        </div>
-
-        <div class="stats" aria-live="polite">
-          <div><span id="totalCount">0</span><small>生成</small></div>
-          <div><span id="adoptedCount">0</span><small>採用</small></div>
-          <div><span id="rejectedCount">0</span><small>不採用</small></div>
-        </div>
+        <select id="categorySelect"><option value="共感">共感</option><option value="違和感">違和感</option><option value="懐かしさ">懐かしさ</option><option value="深夜テンション">深夜テンション</option><option value="地方感">地方感</option><option value="ちょい怖">ちょい怖</option></select>
+        <div class="actions"><button id="generateBtn" class="primary" type="button">投稿案を生成</button><button id="settingsBtn" class="ghost" type="button">API設定</button><button id="clearBtn" class="ghost" type="button">履歴クリア</button></div>
+        <div class="mode-row" aria-label="表示モード"><button id="showAllBtn" class="mode active" type="button">一覧表示</button><button id="showOneBtn" class="mode" type="button">1件だけ表示</button></div>
+        <div class="tune-row" aria-label="投稿案の方向性"><button class="tune" type="button" data-tune="共感">もっと共感</button><button class="tune" type="button" data-tune="違和感">もっと違和感</button><button class="tune" type="button" data-tune="懐かしさ">もっと懐かしい</button></div>
+        <div class="stats" aria-live="polite"><div><span id="totalCount">0</span><small>生成</small></div><div><span id="adoptedCount">0</span><small>採用</small></div><div><span id="rejectedCount">0</span><small>不採用</small></div></div>
+        <div class="history-panel"><div class="mini-head"><span>LOCAL HISTORY</span><button id="clearHistoryBtn" class="text-btn" type="button">履歴だけ削除</button></div><div id="historyList" class="history-list">履歴はまだありません。</div></div>
       </section>
 
       <section class="result-panel" aria-labelledby="results-title">
-        <div class="section-head row">
-          <div>
-            <p class="eyebrow">THREADS IDEAS</p>
-            <h2 id="results-title">投稿案</h2>
-          </div>
-          <p id="saveStatus" class="save-status">localStorageに保存されます</p>
-        </div>
-
-        <div id="emptyState" class="empty-state">
-          <p>まだ投稿案がありません。</p>
-          <small>テーマを入力して「投稿案を生成」を押してください。</small>
-        </div>
-
-        <div id="singleControls" class="single-controls" hidden>
-          <button id="prevIdeaBtn" class="ghost" type="button">前へ</button>
-          <span id="singleIndex">1 / 1</span>
-          <button id="nextIdeaBtn" class="ghost" type="button">次へ</button>
-        </div>
-
+        <div class="section-head row"><div><p class="eyebrow">THREADS IDEAS</p><h2 id="results-title">投稿案</h2></div><p id="saveStatus" class="save-status">localStorageに保存されます</p></div>
+        <div id="errorMessage" class="error-message" hidden></div>
+        <div id="emptyState" class="empty-state"><p>まだ投稿案がありません。</p><small>テーマを入力して「投稿案を生成」を押してください。</small></div>
+        <div id="singleControls" class="single-controls" hidden><button id="prevIdeaBtn" class="ghost" type="button">前へ</button><span id="singleIndex">1 / 1</span><button id="nextIdeaBtn" class="ghost" type="button">次へ</button></div>
         <div id="ideaList" class="idea-list"></div>
       </section>
     </main>
   </div>
 
-  <div id="loadingOverlay" class="loading-overlay" hidden>
-    <div class="loading-box">
-      <span class="loader"></span>
-      <p>深夜の余白を生成中...</p>
-      <small>OpenAI APIが失敗した場合はテンプレート生成に戻ります。</small>
-    </div>
-  </div>
+  <div id="loadingOverlay" class="loading-overlay" hidden><div class="loading-box"><span class="loader"></span><p>深夜の余白を生成中...</p><small>15秒でタイムアウトし、失敗時はローカル生成に戻ります。</small></div></div>
 
   <dialog id="apiKeyModal" class="api-modal">
     <form method="dialog" class="api-modal-inner">
-      <p class="eyebrow">OPENAI API</p>
-      <h2>APIキーを設定</h2>
-      <p class="modal-copy">キーはこの端末の localStorage に保存されます。未設定のままでもテンプレート生成で使えます。</p>
-      <label for="apiKeyInput">OpenAI API Key</label>
-      <input id="apiKeyInput" type="password" autocomplete="off" placeholder="sk-...">
-      <div class="modal-actions">
-        <button id="saveApiKeyBtn" class="primary" type="button">保存</button>
-        <button id="skipApiKeyBtn" class="ghost" type="button">あとで</button>
-        <button id="clearApiKeyBtn" class="ghost danger-text" type="button">キー削除</button>
-      </div>
+      <p class="eyebrow">OPENAI API</p><h2>API設定</h2><p class="modal-copy">キーとモデル名はこの端末のlocalStorageに保存されます。未設定でも完全ローカル生成で動きます。</p>
+      <label for="apiKeyInput">OpenAI API Key</label><div class="secret-row"><input id="apiKeyInput" type="password" autocomplete="off" placeholder="sk-..."><button id="toggleApiKeyBtn" class="ghost" type="button">表示</button></div>
+      <label for="modelInput">モデル</label><input id="modelInput" type="text" autocomplete="off" placeholder="gpt-5-mini">
+      <div class="modal-actions"><button id="saveApiKeyBtn" class="primary" type="button">保存</button><button id="skipApiKeyBtn" class="ghost" type="button">あとで</button><button id="clearApiKeyBtn" class="ghost danger-text" type="button">キー削除</button></div>
     </form>
   </dialog>
 
-  <script src="./storage.js" defer></script>
-  <script src="./generator.js" defer></script>
-  <script src="./openai-client.js" defer></script>
-  <script src="./app.js" defer></script>
+  <script src="./storage.js" defer></script><script src="./generator.js" defer></script><script src="./openai-client.js" defer></script><script src="./app.js" defer></script>
 </body>
 </html>
