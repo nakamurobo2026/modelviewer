@@ -40,7 +40,7 @@
 
         <div class="actions">
           <button id="generateBtn" class="primary" type="button">投稿案を生成</button>
-          <button id="settingsBtn" class="ghost" type="button">API設定</button>
+          <button id="settingsBtn" class="ghost" type="button">AI設定</button>
           <button id="clearBtn" class="ghost" type="button">履歴クリア</button>
         </div>
 
@@ -100,26 +100,25 @@
     <div class="loading-box">
       <span class="loader"></span>
       <p>深夜の余白を生成中...</p>
-      <small>15秒でタイムアウトし、失敗時はローカル生成に戻ります。</small>
+      <small>Supabase Edge Functionが失敗した場合はローカル生成に戻ります。</small>
     </div>
   </div>
 
   <dialog id="apiKeyModal" class="api-modal">
     <form method="dialog" class="api-modal-inner">
-      <p class="eyebrow">OPENAI API</p>
-      <h2>API設定</h2>
-      <p class="modal-copy">キーとモデル名はこの端末のlocalStorageに保存されます。未設定でも完全ローカル生成で動きます。</p>
-      <label for="apiKeyInput">OpenAI API Key</label>
+      <p class="eyebrow">SUPABASE EDGE</p>
+      <h2>AI生成設定</h2>
+      <p class="modal-copy">OpenAI APIキーはブラウザに保存しません。Supabase Edge FunctionのURLだけをこの端末に保存します。未設定でも完全ローカル生成で動きます。</p>
+      <label for="apiKeyInput">Edge Function URL</label>
       <div class="secret-row">
-        <input id="apiKeyInput" type="password" autocomplete="off" placeholder="sk-...">
+        <input id="apiKeyInput" type="url" autocomplete="off" placeholder="https://xxxx.functions.supabase.co/generate-posts">
         <button id="toggleApiKeyBtn" class="ghost" type="button">表示</button>
       </div>
-      <label for="modelInput">モデル</label>
-      <input id="modelInput" type="text" autocomplete="off" placeholder="gpt-5-mini">
+      <input id="modelInput" type="hidden" value="gpt-5-mini">
       <div class="modal-actions">
         <button id="saveApiKeyBtn" class="primary" type="button">保存</button>
         <button id="skipApiKeyBtn" class="ghost" type="button">あとで</button>
-        <button id="clearApiKeyBtn" class="ghost danger-text" type="button">キー削除</button>
+        <button id="clearApiKeyBtn" class="ghost danger-text" type="button">URL削除</button>
       </div>
     </form>
   </dialog>
