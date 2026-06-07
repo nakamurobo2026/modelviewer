@@ -155,6 +155,8 @@ textarea {
 
 .primary,
 .ghost,
+.mode,
+.tune,
 .mini {
   min-height: 44px;
   border-radius: 8px;
@@ -168,6 +170,8 @@ textarea {
 }
 
 .ghost,
+.mode,
+.tune,
 .mini {
   border: 1px solid var(--line);
   background: var(--panel-2);
@@ -176,8 +180,32 @@ textarea {
 
 .primary:active,
 .ghost:active,
+.mode:active,
+.tune:active,
 .mini:active {
   transform: translateY(1px);
+}
+
+.mode-row,
+.tune-row {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.mode-row {
+  grid-template-columns: 1fr 1fr;
+}
+
+.tune-row {
+  grid-template-columns: 1fr;
+}
+
+.mode.active,
+.tune:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .stats {
@@ -246,9 +274,10 @@ textarea {
 }
 
 .idea-text {
-  margin: 10px 0 12px;
+  margin: 12px 0 14px;
   white-space: pre-wrap;
-  font-size: 15px;
+  font-size: 16px;
+  line-height: 1.72;
 }
 
 .card-top,
@@ -270,6 +299,19 @@ textarea {
   color: var(--accent);
   font-size: 12px;
   font-weight: 900;
+}
+
+.hook {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border-radius: 8px;
+  padding: 4px 8px;
+  background: #0a0c10;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .score {
@@ -295,6 +337,21 @@ textarea {
 
 .mini.reject {
   color: var(--danger);
+}
+
+.single-controls {
+  display: grid;
+  grid-template-columns: 82px 1fr 82px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.single-controls span {
+  color: var(--muted);
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .toast {
@@ -327,6 +384,10 @@ textarea {
   }
 
   .actions {
+    grid-template-columns: 1fr;
+  }
+
+  .mode-row {
     grid-template-columns: 1fr;
   }
 
