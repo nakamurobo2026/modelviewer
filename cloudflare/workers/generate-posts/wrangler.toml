@@ -1,0 +1,7 @@
+name = "iwakan-lab-generate-posts"
+main = "src/index.js"
+compatibility_date = "2026-06-07"
+
+[vars]
+OPENAI_MODEL = "gpt-5-mini"
+ALLOWED_ORIGIN = "https://nakamurobo2026.github.io"
