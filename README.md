@@ -3,7 +3,7 @@
 ## 全乗せ内容
 - カメラ撮影
 - 画像選択
-- OCR解析（Tesseract.js / 初回はネット必要）
+- OCR解析（Tesseract.js / 初回はネット必須）
 - OCR結果の手修正
 - 明細抽出
 - 抽出明細の確認・編集
@@ -17,7 +17,6 @@
 OCRはブラウザ内で動く無料版なので、完璧ではありません。
 実務では「OCR → 確認画面で手直し → 登録」の運用が安全です。
 
-
 ## v2修正
 - 検索後に一覧が真っ白に見える問題を修正
 - 検索0件時に「該当データなし」を表示
@@ -28,23 +27,56 @@ OCRはブラウザ内で動く無料版なので、完璧ではありません�
 GitHub Pagesに上げ替えた後、iPhone側で古い表示が残る場合があります。
 Safariで数回リロード、またはホーム画面アイコンを削除して追加し直してください。
 
-## iwakan-lab: Cloudflare Worker経由のAI生成
+## iwakan-lab: Cloudflare Workers経由のAI生成
 
-`iwakan-lab` はGitHub Pagesから直接OpenAI APIを呼びません。AI生成はCloudflare Worker `iwakan-lab-generate-posts` 経由で行い、ブラウザにはOpenAI APIキーを保存しません。Worker URLが未設定、または通信失敗した場合はローカルテンプレート生成へ自動で戻ります。
+`iwakan-lab` はGitHub Pagesから直接OpenAI APIを呼びません。AI生成は固定のCloudflare Worker経由で行い、ブラウザにはOpenAI APIキーやWorker URLを保存しません。Worker通信に失敗した場合は、現在のローカルテンプレート生成へ自動で戻ります。
 
 ### 構成
 
 ```text
 GitHub Pages
-  -> Cloudflare Worker: iwakan-lab-generate-posts
+  -> Cloudflare Worker: https://iwakan-lab.nakamura0407.workers.dev/generate
     -> OpenAI Responses API
 ```
 
-### 追加ファイル
+### ブラウザ側
 
-- `cloudflare/workers/generate-posts/wrangler.toml`
-- `cloudflare/workers/generate-posts/src/index.js`
-- `iwakan-lab/ai-client.js`
+- `iwakan-lab/ai-client.js` が `POST /generate` を呼びます。
+- タイムアウトは15秒です。
+- 成功時のみAI生成結果を採用します。
+- 失敗時、非JSONレスポンス時、空配列時はローカル生成へフォールバックします。
+- 旧localStorageキー `iwakan_lab_openai_api_key_v1`、`iwakan_lab_openai_model_v1`、`iwakan_lab_openai_api_mode_v1`、`iwakan_lab_edge_function_url_v1` は起動時に削除されます。
+
+### Workerリクエスト
+
+```http
+POST https://iwakan-lab.nakamura0407.workers.dev/generate
+Content-Type: application/json
+```
+
+```json
+{
+  "theme": "地方の古い工場をAIで再生する過程",
+  "category": "違和感",
+  "mode": "list"
+}
+```
+
+### Workerレスポンス
+
+```json
+{
+  "success": true,
+  "ideas": [
+    {
+      "text": "...",
+      "category": "違和感",
+      "score": 87,
+      "hook": "共感"
+    }
+  ]
+}
+```
 
 ### Cloudflareセットアップ
 
@@ -80,20 +112,11 @@ ALLOWED_ORIGIN = "https://nakamurobo2026.github.io"
 npx wrangler deploy
 ```
 
-6. `iwakan-lab` の画面で「AI設定」を開き、Cloudflare Worker URLを保存します。
-
-```text
-https://iwakan-lab-generate-posts.YOUR_SUBDOMAIN.workers.dev
-```
-
 ### Worker仕様
 
+- エンドポイント: `POST /generate`
 - モデル初期値: `gpt-5-mini`
 - OpenAI APIキー: Cloudflare Worker secret `OPENAI_API_KEY`
 - タイムアウト: 15秒
-- 成功時: `{ "ok": true, "model": "gpt-5-mini", "ideas": [...] }`
-- 失敗時: `{ "ok": false, "error": "...", "detail": "..." }`
-
-### ブラウザ側の保存内容
-
-ブラウザのlocalStorageに保存するのはCloudflare Worker URLだけです。過去に保存していた `iwakan_lab_openai_api_key_v1` は起動時に削除されます。
+- 成功時: `{ "success": true, "model": "gpt-5-mini", "ideas": [...] }`
+- 失敗時: `{ "success": false, "error": "...", "detail": "..." }`
