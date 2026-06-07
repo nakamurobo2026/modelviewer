@@ -43,6 +43,17 @@
           <button id="clearBtn" class="ghost" type="button">履歴クリア</button>
         </div>
 
+        <div class="mode-row" aria-label="表示モード">
+          <button id="showAllBtn" class="mode active" type="button">一覧表示</button>
+          <button id="showOneBtn" class="mode" type="button">1件だけ表示</button>
+        </div>
+
+        <div class="tune-row" aria-label="投稿案の方向性">
+          <button class="tune" type="button" data-tune="共感">もっと共感</button>
+          <button class="tune" type="button" data-tune="違和感">もっと違和感</button>
+          <button class="tune" type="button" data-tune="懐かしさ">もっと懐かしい</button>
+        </div>
+
         <div class="stats" aria-live="polite">
           <div><span id="totalCount">0</span><small>生成</small></div>
           <div><span id="adoptedCount">0</span><small>採用</small></div>
@@ -62,6 +73,12 @@
         <div id="emptyState" class="empty-state">
           <p>まだ投稿案がありません。</p>
           <small>テーマを入力して「投稿案を生成」を押してください。</small>
+        </div>
+
+        <div id="singleControls" class="single-controls" hidden>
+          <button id="prevIdeaBtn" class="ghost" type="button">前へ</button>
+          <span id="singleIndex">1 / 1</span>
+          <button id="nextIdeaBtn" class="ghost" type="button">次へ</button>
         </div>
 
         <div id="ideaList" class="idea-list"></div>
