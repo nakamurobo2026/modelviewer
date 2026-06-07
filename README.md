@@ -112,6 +112,18 @@ ALLOWED_ORIGIN = "https://nakamurobo2026.github.io"
 npx wrangler deploy
 ```
 
+### 疎通確認
+
+Cloudflare側に反映されたかは、次のPOSTで確認できます。
+
+```bash
+curl -X POST "https://iwakan-lab.nakamura0407.workers.dev/generate" \
+  -H "Content-Type: application/json" \
+  -d '{"theme":"眠れない夜の違和感","category":"違和感","mode":"list"}'
+```
+
+`"Hello World!"` が返る場合は、Cloudflare上のWorkerがまだ初期コードのままです。このリポジトリ内の `cloudflare/workers/generate-posts/src/index.js` をWorkerへ反映して再デプロイしてください。
+
 ### Worker仕様
 
 - エンドポイント: `POST /generate`
