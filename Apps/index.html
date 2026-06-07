@@ -31,7 +31,15 @@
 <main>
 <section id="searchPanel" class="panel active">
   <div class="searchBox">
-    <input id="search" placeholder="例：MDF / 30x4x8 / ラワン">
+    <input id="search" placeholder="MDF / ラワン / 30x4x8 / 15mm">
+  </div>
+  <div class="quickChips">
+    <button class="chip" data-q="">全件</button>
+    <button class="chip" data-q="MDF">MDF</button>
+    <button class="chip" data-q="ラワン">ラワン</button>
+    <button class="chip" data-q="ベニヤ">ベニヤ</button>
+    <button class="chip" data-q="フブル">フブル</button>
+    <button class="chip" data-q="パイン">パイン</button>
   </div>
   <div class="summary compact">
     <div><strong id="count">0</strong><span>件</span></div>
@@ -41,17 +49,28 @@
   </div>
   <div class="card">
     <h2>価格推移</h2>
+    <div class="graphControls">
+      <label>表示方法
+        <select id="graphMode">
+          <option value="exact">同一商品だけ</option>
+          <option value="thickness">厚み別</option>
+          <option value="sqm">㎡単価</option>
+          <option value="m3">m³単価</option>
+        </select>
+      </label>
+    </div>
+    <p id="graphHint" class="hint"></p>
     <canvas id="chart" height="150"></canvas>
   </div>
   <div class="card">
-    <h2>検索結果</h2>
+    <h2>検索結果</h2><p class="hint">カードは最新順。厚み・規格・㎡単価・m³単価を自動表示します。</p>
     <div id="resultCards" class="resultCards"></div>
   </div>
 </section>
 
 <section id="cameraPanel" class="panel">
   <div class="card">
-    <h2>納品書を撮る</h2>
+    <h2>カメラ入力</h2>
     <p class="hint">撮影 → OCR解析 → 内容確認 → 登録。OCRは完璧ではないので確認してから登録。</p>
     <input id="cameraInput" class="hiddenInput" type="file" accept="image/*" capture="environment">
     <div class="buttonGrid">
@@ -75,7 +94,7 @@
 
 <section id="inputPanel" class="panel">
   <div class="card">
-    <h2>手入力</h2>
+    <h2>手入力</h2><p class="hint">金額を空欄にすると、数量×単価で自動計算します。</p>
     <div class="formStack">
       <label>日付<input id="date" type="text" inputmode="numeric" placeholder="2026-06-07"></label>
       <label>商品名<input id="name" placeholder="例：MDF 30x4x8"></label>

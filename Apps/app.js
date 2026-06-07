@@ -32,6 +32,53 @@ function searchKey(s){
     .replace(/[\/／・#＃\-\s]/g,"")
     .replace(/×/g,"x");
 }
+
+function parseSpec(name){
+ const s = normalize(name);
+ let thickness=null, widthMm=null, lengthMm=null, standard="";
+ if(/4\s*x\s*8|4×8|４×８/.test(s)){standard="4x8";widthMm=1220;lengthMm=2440}
+ else if(/3\s*x\s*6|3×6|３×６/.test(s)){standard="3x6";widthMm=910;lengthMm=1820}
+ const m=s.match(/(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)/i);
+ if(m){
+   thickness=Number(m[1]);
+   const a=Number(m[2]), b=Number(m[3]);
+   if(a<=10 && b<=10){
+     if(a===4 && b===8){widthMm=1220;lengthMm=2440;standard="4x8"}
+     if(a===3 && b===6){widthMm=910;lengthMm=1820;standard="3x6"}
+   }else{widthMm=a;lengthMm=b;standard=`${Math.round(a)}x${Math.round(b)}`}
+ }
+ if(thickness===null){
+   const n=s.match(/\d+(?:\.\d+)?/);
+   if(n) thickness=Number(n[0]);
+ }
+ const areaM2=widthMm&&lengthMm ? (widthMm/1000)*(lengthMm/1000) : null;
+ const volumeM3=areaM2&&thickness ? areaM2*(thickness/1000) : null;
+ const material=s.replace(/\d+(?:\.\d+)?\s*x\s*\d+(?:\.\d+)?\s*x\s*\d+(?:\.\d+)?/ig,"").replace(/\s+/g," ").trim();
+ return {material,thickness,widthMm,lengthMm,standard,areaM2,volumeM3};
+}
+function enrich(r){
+ const spec=parseSpec(r.name);
+ const pricePerM2=spec.areaM2?Math.round(r.unitPrice/spec.areaM2):null;
+ const pricePerM3=spec.volumeM3?Math.round(r.unitPrice/spec.volumeM3):null;
+ return {...r,spec,pricePerM2,pricePerM3};
+}
+function productKey(r){
+ const e=enrich(r);
+ return `${e.spec.material}|${e.spec.thickness||""}|${e.spec.standard||""}|${e.spec.widthMm||""}|${e.spec.lengthMm||""}`;
+}
+function activeGraphRows(rows){
+ const mode=document.getElementById("graphMode")?.value||"exact";
+ let enriched=rows.map(enrich);
+ if(mode==="exact"){
+   const first=enriched[0];
+   if(first){
+     const key=productKey(first);
+     enriched=enriched.filter(r=>productKey(r)===key);
+   }
+ }
+ return enriched;
+}
+
 function filtered(){
  const q=searchKey(el("search").value);
  return records.filter(r=>{
@@ -50,15 +97,23 @@ function render(){
  }
  const cardBox = document.getElementById("resultCards");
  if(cardBox){
-   cardBox.innerHTML = rows.length ? rows.slice().reverse().map(r=>`
+   cardBox.innerHTML = rows.length ? rows.slice().reverse().map(raw=>{
+     const r = enrich(raw);
+     const spec = r.spec;
+     return `
      <div class="itemCard">
        <div class="itemTop">
          <div class="itemName">${r.name}</div>
          <div class="price">¥${yen(r.unitPrice)}</div>
        </div>
        <div class="meta">${r.date}　数量:${r.qty}　金額:¥${yen(r.amount)}　${r.supplier}</div>
-     </div>
-   `).join("") : `<div class="empty">該当データなし</div>`;
+       <div class="itemMetrics">
+         ${spec.thickness ? `<span class="badge">厚み ${spec.thickness}mm</span>` : ""}
+         ${spec.standard ? `<span class="badge">規格 ${spec.standard}</span>` : ""}
+         ${r.pricePerM2 ? `<span class="badge">¥${yen(r.pricePerM2)}/㎡</span>` : ""}
+         ${r.pricePerM3 ? `<span class="badge">¥${yen(r.pricePerM3)}/m³</span>` : ""}
+       </div>
+     </div>`}).join("") : `<div class="empty">該当データなし</div>`;
  }
  const prices=rows.map(r=>r.unitPrice).filter(n=>n>0);
  el("count").textContent=rows.length;
@@ -70,17 +125,52 @@ function render(){
 function drawChart(rows){
  const ctx=el("chart");
  if(chart) chart.destroy();
- if(!rows.length){
+ const mode=document.getElementById("graphMode")?.value||"exact";
+ let graphRows=activeGraphRows(rows);
+ let label="単価";
+ let values=graphRows.map(r=>r.unitPrice);
+ if(mode==="sqm"){
+   label="㎡単価";
+   graphRows=graphRows.filter(r=>r.pricePerM2);
+   values=graphRows.map(r=>r.pricePerM2);
+ }else if(mode==="m3"){
+   label="m³単価";
+   graphRows=graphRows.filter(r=>r.pricePerM3);
+   values=graphRows.map(r=>r.pricePerM3);
+ }else if(mode==="thickness"){
+   label="単価（厚み別）";
+ }else{
+   label="単価（同一商品）";
+ }
+ const hint=document.getElementById("graphHint");
+ if(hint){
+   if(mode==="exact") hint.textContent="検索結果の先頭商品と同じ厚み・規格だけを表示。見積用はこれが安全。";
+   if(mode==="thickness") hint.textContent="厚み違いも含めて表示。傾向確認用。";
+   if(mode==="sqm") hint.textContent="3x6/4x8等を㎡単価に換算。面積違い比較用。";
+   if(mode==="m3") hint.textContent="厚み差も吸収するm³単価。板厚違い比較用。";
+ }
+ if(!graphRows.length||!values.length){
    const c=ctx.getContext("2d");
    c.clearRect(0,0,ctx.width,ctx.height);
    return;
  }
- chart=new Chart(ctx,{type:"line",data:{labels:rows.map(r=>r.date),datasets:[{label:"単価",data:rows.map(r=>r.unitPrice),tension:.25}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:true}},scales:{y:{beginAtZero:false}}}})
+ chart=new Chart(ctx,{type:"line",data:{labels:graphRows.map(r=>r.date),datasets:[{label,data:values,tension:.25}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:true}},scales:{y:{beginAtZero:false}}}})
 }
 function removeRecord(rid){records=records.filter(r=>r.id!==rid);save();render()}
 
 el("addBtn").onclick=()=>{const qty=Number(el("qty").value||0);const unitPrice=Number(el("unitPrice").value||0);const amount=Number(el("amount").value||0)||qty*unitPrice;addRecord({date:el("date").value,name:el("name").value,qty,unitPrice,amount,supplier:el("supplier").value});dedupe();save();render()};
-el("seedBtn").onclick=()=>{SEED_RECORDS.forEach(addRecord);dedupe();save();render();alert(`納品書データを反映しました。現在 ${records.length} 件です。`)};
+el("seedBtn").onclick=()=>{SEED_RECORDS.forEach(addRecord);dedupe();save();
+document.querySelectorAll(".chip").forEach(chip=>{
+  chip.addEventListener("click",()=>{
+    el("search").value = chip.dataset.q || "";
+    render();
+  });
+});
+
+if(document.getElementById("graphMode")){
+  document.getElementById("graphMode").addEventListener("change", render);
+}
+render();alert(`納品書データを反映しました。現在 ${records.length} 件です。`)};
 el("clearBtn").onclick=()=>{if(confirm("全データを削除しますか？")){records=[];save();render()}};
 el("search").oninput=render;
 
