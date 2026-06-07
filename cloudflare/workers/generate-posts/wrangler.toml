@@ -1,4 +1,4 @@
-name = "iwakan-lab-generate-posts"
+name = "iwakan-lab"
 main = "src/index.js"
 compatibility_date = "2026-06-07"
 
