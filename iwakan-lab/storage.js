@@ -5,6 +5,7 @@
     view: "iwakan_lab_view_v1",
     apiKey: "iwakan_lab_openai_api_key_v1",
     model: "iwakan_lab_openai_model_v1",
+    apiMode: "iwakan_lab_openai_api_mode_v1",
     history: "iwakan_lab_history_v1",
     apiModalSeen: "iwakan_lab_api_modal_seen_v1"
   };
@@ -35,6 +36,8 @@
     clearApiKey: () => localStorage.removeItem(keys.apiKey),
     getModel: () => localStorage.getItem(keys.model) || "gpt-5-mini",
     setModel: (model) => localStorage.setItem(keys.model, model || "gpt-5-mini"),
+    getApiMode: () => localStorage.getItem(keys.apiMode) || "",
+    setApiMode: (mode) => localStorage.setItem(keys.apiMode, mode || ""),
     getHistory: () => read(keys.history, []),
     setHistory: (history) => write(keys.history, history.slice(0, 8)),
     clearHistory: () => localStorage.removeItem(keys.history),
