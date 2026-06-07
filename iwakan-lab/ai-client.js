@@ -92,5 +92,4 @@
   }
 
   window.AIClient = { TIMEOUT_MS, generate };
-  window.OpenAIClient = window.AIClient;
 })();
