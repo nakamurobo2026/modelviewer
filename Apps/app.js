@@ -7,6 +7,17 @@ let chart;
 const el=id=>document.getElementById(id);
 const yen=n=>Number(n||0).toLocaleString("ja-JP");
 const normalize=s=>String(s||"").replace(/×/g,"x").replace(/[　]+/g," ").replace(/\s+/g," ").trim();
+
+document.querySelectorAll(".tab").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById(btn.dataset.tab).classList.add("active");
+    setTimeout(()=>render(),50);
+  });
+});
+
 const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
 el("date").value=today();
 
@@ -14,15 +25,58 @@ function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(records))}
 function id(){return crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random())}
 function addRecord(r){records.push({id:id(),date:r.date,name:normalize(r.name),qty:Number(r.qty||0),unitPrice:Number(r.unitPrice||0),amount:Number(r.amount||0),supplier:r.supplier||"ソゴウ"})}
 function dedupe(){const s=new Set();records=records.filter(r=>{const k=[r.date,r.name,r.qty,r.unitPrice,r.amount,r.supplier].join("|");if(s.has(k))return false;s.add(k);return true})}
-function filtered(){const q=normalize(el("search").value).toLowerCase();return records.filter(r=>!q||normalize(`${r.name} ${r.supplier}`).toLowerCase().includes(q)).sort((a,b)=>a.date.localeCompare(b.date))}
+function searchKey(s){
+  return normalize(s)
+    .toLowerCase()
+    .replace(/[（）()]/g,"")
+    .replace(/[\/／・#＃\-\s]/g,"")
+    .replace(/×/g,"x");
+}
+function filtered(){
+ const q=searchKey(el("search").value);
+ return records.filter(r=>{
+   if(!q) return true;
+   const target=searchKey(`${r.date} ${r.name} ${r.supplier} ${r.unitPrice} ${r.amount}`);
+   return target.includes(q);
+ }).sort((a,b)=>a.date.localeCompare(b.date));
+}
 function render(){
  const rows=filtered();
- el("tbody").innerHTML=rows.map(r=>`<tr><td>${r.date}</td><td>${r.name}</td><td>${r.qty}</td><td>¥${yen(r.unitPrice)}</td><td>¥${yen(r.amount)}</td><td>${r.supplier}</td><td><button class="delete" onclick="removeRecord('${r.id}')">削除</button></td></tr>`).join("");
+ const tbody = el("tbody");
+ if(rows.length===0){
+   tbody.innerHTML = `<tr><td colspan="7" class="empty">該当データなし。検索語を短くするか、別表記で試してください。</td></tr>`;
+ } else {
+   tbody.innerHTML=rows.map(r=>`<tr><td>${r.date}</td><td>${r.name}</td><td>${r.qty}</td><td>¥${yen(r.unitPrice)}</td><td>¥${yen(r.amount)}</td><td>${r.supplier}</td><td><button class="delete" onclick="removeRecord('${r.id}')">削除</button></td></tr>`).join("");
+ }
+ const cardBox = document.getElementById("resultCards");
+ if(cardBox){
+   cardBox.innerHTML = rows.length ? rows.slice().reverse().map(r=>`
+     <div class="itemCard">
+       <div class="itemTop">
+         <div class="itemName">${r.name}</div>
+         <div class="price">¥${yen(r.unitPrice)}</div>
+       </div>
+       <div class="meta">${r.date}　数量:${r.qty}　金額:¥${yen(r.amount)}　${r.supplier}</div>
+     </div>
+   `).join("") : `<div class="empty">該当データなし</div>`;
+ }
  const prices=rows.map(r=>r.unitPrice).filter(n=>n>0);
- el("count").textContent=rows.length; el("avg").textContent=prices.length?"¥"+yen(Math.round(prices.reduce((a,b)=>a+b,0)/prices.length)):"0"; el("min").textContent=prices.length?"¥"+yen(Math.min(...prices)):"0"; el("max").textContent=prices.length?"¥"+yen(Math.max(...prices)):"0";
+ el("count").textContent=rows.length;
+ el("avg").textContent=prices.length?"¥"+yen(Math.round(prices.reduce((a,b)=>a+b,0)/prices.length)):"0";
+ el("min").textContent=prices.length?"¥"+yen(Math.min(...prices)):"0";
+ el("max").textContent=prices.length?"¥"+yen(Math.max(...prices)):"0";
  drawChart(rows);
 }
-function drawChart(rows){const ctx=el("chart");if(chart)chart.destroy();chart=new Chart(ctx,{type:"line",data:{labels:rows.map(r=>r.date),datasets:[{label:"単価",data:rows.map(r=>r.unitPrice),tension:.25}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:true}},scales:{y:{beginAtZero:false}}}})}
+function drawChart(rows){
+ const ctx=el("chart");
+ if(chart) chart.destroy();
+ if(!rows.length){
+   const c=ctx.getContext("2d");
+   c.clearRect(0,0,ctx.width,ctx.height);
+   return;
+ }
+ chart=new Chart(ctx,{type:"line",data:{labels:rows.map(r=>r.date),datasets:[{label:"単価",data:rows.map(r=>r.unitPrice),tension:.25}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:true}},scales:{y:{beginAtZero:false}}}})
+}
 function removeRecord(rid){records=records.filter(r=>r.id!==rid);save();render()}
 
 el("addBtn").onclick=()=>{const qty=Number(el("qty").value||0);const unitPrice=Number(el("unitPrice").value||0);const amount=Number(el("amount").value||0)||qty*unitPrice;addRecord({date:el("date").value,name:el("name").value,qty,unitPrice,amount,supplier:el("supplier").value});dedupe();save();render()};
