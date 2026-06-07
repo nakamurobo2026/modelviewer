@@ -10,5 +10,12 @@
   "lang": "ja",
   "orientation": "portrait-primary",
   "categories": ["productivity", "social"],
-  "icons": []
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='96' fill='%23090a0d'/%3E%3Ccircle cx='256' cy='246' r='154' fill='%2311141a' stroke='%23d7ff63' stroke-width='18'/%3E%3Cpath d='M154 264c52-96 154-96 206 0-52 75-154 75-206 0Z' fill='%23d7ff63'/%3E%3Ccircle cx='256' cy='252' r='38' fill='%23090a0d'/%3E%3Cpath d='M159 382h194' stroke='%23f3f1ea' stroke-width='22' stroke-linecap='round'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
