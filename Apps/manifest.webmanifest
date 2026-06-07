@@ -1,7 +1,6 @@
 {
   "name": "材料価格管理",
   "short_name": "材料価格",
-  "description": "材料価格を登録・検索・グラフ化するアプリ",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f5f3ee",

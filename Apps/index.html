@@ -22,7 +22,7 @@
     <section class="card">
       <h2>登録</h2>
       <div class="grid">
-        <label>日付<input id="date" type="date"></label>
+        <label>日付<input id="date" type="text" inputmode="numeric" placeholder="2026-06-07"></label>
         <label>商品名<input id="name" placeholder="例：MDF 30x4x8"></label>
         <label>数量<input id="qty" type="number" step="0.01" value="1"></label>
         <label>単価<input id="unitPrice" type="number" step="1"></label>
@@ -31,10 +31,10 @@
       </div>
       <div class="actions">
         <button id="addBtn">追加</button>
-        <button id="sampleBtn" class="secondary">サンプル</button>
+        <button id="seedBtn" class="secondary">納品書データ反映</button>
         <button id="clearBtn" class="danger">全削除</button>
       </div>
-      <p class="hint">単価だけ入れて金額を空欄にすると、数量×単価で自動計算します。</p>
+      <p class="hint">日付欄のiPhone表示崩れを直しました。YYYY-MM-DD形式で入力。</p>
     </section>
 
     <section class="card">
@@ -50,7 +50,7 @@
 
     <section class="card">
       <h2>価格推移</h2>
-      <canvas id="chart" height="140"></canvas>
+      <canvas id="chart" height="150"></canvas>
     </section>
 
     <section class="card">
@@ -67,15 +67,13 @@
       </div>
       <div class="actions">
         <button id="exportBtn" class="secondary">CSV書き出し</button>
-        <label class="fileBtn">
-          CSV読み込み
-          <input id="importFile" type="file" accept=".csv">
-        </label>
+        <label class="fileBtn">CSV読み込み<input id="importFile" type="file" accept=".csv"></label>
       </div>
     </section>
   </main>
 
   <script src="./chart.umd.min.js"></script>
+  <script src="./seed.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
