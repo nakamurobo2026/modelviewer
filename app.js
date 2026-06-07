@@ -7,6 +7,17 @@ let chart;
 const el=id=>document.getElementById(id);
 const yen=n=>Number(n||0).toLocaleString("ja-JP");
 const normalize=s=>String(s||"").replace(/×/g,"x").replace(/[　]+/g," ").replace(/\s+/g," ").trim();
+
+document.querySelectorAll(".tab").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById(btn.dataset.tab).classList.add("active");
+    setTimeout(()=>render(),50);
+  });
+});
+
 const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
 el("date").value=today();
 
@@ -36,6 +47,18 @@ function render(){
    tbody.innerHTML = `<tr><td colspan="7" class="empty">該当データなし。検索語を短くするか、別表記で試してください。</td></tr>`;
  } else {
    tbody.innerHTML=rows.map(r=>`<tr><td>${r.date}</td><td>${r.name}</td><td>${r.qty}</td><td>¥${yen(r.unitPrice)}</td><td>¥${yen(r.amount)}</td><td>${r.supplier}</td><td><button class="delete" onclick="removeRecord('${r.id}')">削除</button></td></tr>`).join("");
+ }
+ const cardBox = document.getElementById("resultCards");
+ if(cardBox){
+   cardBox.innerHTML = rows.length ? rows.slice().reverse().map(r=>`
+     <div class="itemCard">
+       <div class="itemTop">
+         <div class="itemName">${r.name}</div>
+         <div class="price">¥${yen(r.unitPrice)}</div>
+       </div>
+       <div class="meta">${r.date}　数量:${r.qty}　金額:¥${yen(r.amount)}　${r.supplier}</div>
+     </div>
+   `).join("") : `<div class="empty">該当データなし</div>`;
  }
  const prices=rows.map(r=>r.unitPrice).filter(n=>n>0);
  el("count").textContent=rows.length;
