@@ -1,16 +1,12 @@
 :root{--bg:#f5f3ee;--card:#fff;--ink:#1f2933;--muted:#697386;--line:#e5e0d8}
-*{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;background:var(--bg);color:var(--ink);padding-bottom:env(safe-area-inset-bottom)}
-header{padding:calc(22px + env(safe-area-inset-top)) 18px 20px;background:#202020;color:#fff}
-header h1{margin:0 0 6px;font-size:24px} header p{margin:0;color:#d8d8d8;font-size:14px}
-main{max-width:1100px;margin:0 auto;padding:16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 4px 16px rgba(0,0,0,.04)}
-h2{font-size:18px;margin:0 0 14px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-label{font-size:13px;color:var(--muted)}
-input{width:100%;height:48px;margin-top:5px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:16px;background:#fff;color:#111;line-height:1.2;-webkit-appearance:none;appearance:none;text-align:left}
-button,.fileBtn{display:inline-block;margin:0 8px 0 0;padding:12px 16px;border:0;border-radius:10px;background:#111;color:#fff;font-weight:700;cursor:pointer;font-size:14px}
-.actions{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}.secondary{background:#586575}.danger{background:#b23b3b}.fileBtn input{display:none}
-.hint{font-size:12px;color:var(--muted);margin:12px 0 0}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
-.summary div{background:#f7f7f7;border-radius:12px;padding:14px}.summary strong{display:block;font-size:20px}.summary span{color:var(--muted);font-size:12px}
-.tableWrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:760px}th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;font-size:14px;white-space:nowrap}th{background:#fafafa}.delete{background:#ddd;color:#111;margin:0;padding:7px 10px}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;background:var(--bg);color:var(--ink);padding-bottom:env(safe-area-inset-bottom)}
+header{padding:calc(22px + env(safe-area-inset-top)) 18px 20px;background:#202020;color:#fff}header h1{margin:0 0 6px;font-size:24px}header p{margin:0;color:#d8d8d8;font-size:14px}
+main{max-width:1100px;margin:0 auto;padding:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 4px 16px rgba(0,0,0,.04)}.primary{border:2px solid #202020}
+h2{font-size:18px;margin:0 0 14px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}label{font-size:13px;color:var(--muted)}
+input,textarea{width:100%;margin-top:5px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:16px;background:#fff;color:#111;line-height:1.2;-webkit-appearance:none;appearance:none;text-align:left}
+input{height:48px}textarea{height:150px;font-family:ui-monospace,Menlo,monospace;font-size:13px}.hiddenInput{display:none}
+button,.fileBtn{display:inline-block;margin:0 8px 0 0;padding:12px 16px;border:0;border-radius:10px;background:#111;color:#fff;font-weight:700;cursor:pointer;font-size:14px}.actions{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+.secondary{background:#586575}.danger{background:#b23b3b}.fileBtn input{display:none}.hint{font-size:12px;color:var(--muted);margin:0 0 12px}.status{font-size:13px;color:#333;background:#f7f7f7;border-radius:10px;padding:10px;margin:12px 0}.preview{display:none;max-width:100%;border-radius:12px;margin-top:12px;border:1px solid var(--line)}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}.summary div{background:#f7f7f7;border-radius:12px;padding:14px}.summary strong{display:block;font-size:20px}.summary span{color:var(--muted);font-size:12px}
+.tableWrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:760px}th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;font-size:14px;white-space:nowrap}th{background:#fafafa}.delete{background:#ddd;color:#111;margin:0;padding:7px 10px}.miniInput{height:36px;font-size:13px;padding:6px;width:130px}.nameInput{width:260px}
 @media(max-width:760px){main{padding:12px}.grid,.summary{grid-template-columns:1fr}header h1{font-size:22px}}

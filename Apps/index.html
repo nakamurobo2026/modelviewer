@@ -1,79 +1,103 @@
 <!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#202020" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="材料価格" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>材料価格管理</title>
-  <link rel="manifest" href="./manifest.webmanifest" />
-  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
-  <link rel="stylesheet" href="./style.css" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="theme-color" content="#202020"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="材料価格"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>材料価格管理</title>
+<link rel="manifest" href="./manifest.webmanifest"/>
+<link rel="apple-touch-icon" href="./icons/icon-192.png"/>
+<link rel="stylesheet" href="./style.css"/>
 </head>
 <body>
-  <header>
-    <h1>材料価格管理</h1>
-    <p>材料単価を登録・検索・価格推移グラフ化</p>
-  </header>
+<header>
+  <h1>材料価格管理</h1>
+  <p>撮影 → OCR → 確認 → 登録 → 検索・グラフ</p>
+</header>
 
-  <main>
-    <section class="card">
-      <h2>登録</h2>
-      <div class="grid">
-        <label>日付<input id="date" type="text" inputmode="numeric" placeholder="2026-06-07"></label>
-        <label>商品名<input id="name" placeholder="例：MDF 30x4x8"></label>
-        <label>数量<input id="qty" type="number" step="0.01" value="1"></label>
-        <label>単価<input id="unitPrice" type="number" step="1"></label>
-        <label>金額<input id="amount" type="number" step="1"></label>
-        <label>仕入先<input id="supplier" placeholder="例：ソゴウ"></label>
-      </div>
-      <div class="actions">
-        <button id="addBtn">追加</button>
-        <button id="seedBtn" class="secondary">納品書データ反映</button>
-        <button id="clearBtn" class="danger">全削除</button>
-      </div>
-      <p class="hint">日付欄のiPhone表示崩れを直しました。YYYY-MM-DD形式で入力。</p>
-    </section>
+<main>
+<section class="card primary">
+  <h2>カメラ入力</h2>
+  <p class="hint">納品書を撮影して、OCRで商品名・数量・単価・金額を抽出します。初回はOCRエンジン読込で少し時間がかかります。</p>
+  <input id="cameraInput" class="hiddenInput" type="file" accept="image/*" capture="environment">
+  <div class="actions">
+    <button id="cameraBtn">📷 納品書を撮る</button>
+    <button id="fileBtn" class="secondary">画像を選ぶ</button>
+    <button id="ocrBtn" class="secondary">OCR解析</button>
+  </div>
+  <img id="preview" class="preview" alt="">
+  <div id="ocrStatus" class="status">未読込</div>
+  <textarea id="ocrText" placeholder="OCR結果がここに入ります。手修正もできます。"></textarea>
+  <div class="actions">
+    <button id="parseBtn">OCR結果から明細化</button>
+    <button id="registerParsedBtn" class="secondary">抽出明細を一括登録</button>
+  </div>
+</section>
 
-    <section class="card">
-      <h2>検索</h2>
-      <input id="search" placeholder="MDF、ラワン、30x4x8 などで検索">
-      <div class="summary">
-        <div><strong id="count">0</strong><span>件</span></div>
-        <div><strong id="avg">0</strong><span>平均単価</span></div>
-        <div><strong id="min">0</strong><span>最安</span></div>
-        <div><strong id="max">0</strong><span>最高</span></div>
-      </div>
-    </section>
+<section class="card">
+  <h2>抽出確認</h2>
+  <div class="tableWrap">
+    <table>
+      <thead><tr><th>日付</th><th>商品名</th><th>数量</th><th>単価</th><th>金額</th><th>仕入先</th><th></th></tr></thead>
+      <tbody id="parsedTbody"></tbody>
+    </table>
+  </div>
+</section>
 
-    <section class="card">
-      <h2>価格推移</h2>
-      <canvas id="chart" height="150"></canvas>
-    </section>
+<section class="card">
+  <h2>手入力</h2>
+  <div class="grid">
+    <label>日付<input id="date" type="text" inputmode="numeric" placeholder="2026-06-07"></label>
+    <label>商品名<input id="name" placeholder="例：MDF 30x4x8"></label>
+    <label>数量<input id="qty" type="number" step="0.01" value="1"></label>
+    <label>単価<input id="unitPrice" type="number" step="1"></label>
+    <label>金額<input id="amount" type="number" step="1"></label>
+    <label>仕入先<input id="supplier" placeholder="例：ソゴウ"></label>
+  </div>
+  <div class="actions">
+    <button id="addBtn">追加</button>
+    <button id="seedBtn" class="secondary">納品書データ反映</button>
+    <button id="clearBtn" class="danger">全削除</button>
+  </div>
+</section>
 
-    <section class="card">
-      <h2>一覧</h2>
-      <div class="tableWrap">
-        <table>
-          <thead>
-            <tr>
-              <th>日付</th><th>商品名</th><th>数量</th><th>単価</th><th>金額</th><th>仕入先</th><th></th>
-            </tr>
-          </thead>
-          <tbody id="tbody"></tbody>
-        </table>
-      </div>
-      <div class="actions">
-        <button id="exportBtn" class="secondary">CSV書き出し</button>
-        <label class="fileBtn">CSV読み込み<input id="importFile" type="file" accept=".csv"></label>
-      </div>
-    </section>
-  </main>
+<section class="card">
+  <h2>検索・集計</h2>
+  <input id="search" placeholder="MDF、ラワン、30x4x8 などで検索">
+  <div class="summary">
+    <div><strong id="count">0</strong><span>件</span></div>
+    <div><strong id="avg">0</strong><span>平均単価</span></div>
+    <div><strong id="min">0</strong><span>最安</span></div>
+    <div><strong id="max">0</strong><span>最高</span></div>
+  </div>
+</section>
 
-  <script src="./chart.umd.min.js"></script>
-  <script src="./seed.js"></script>
-  <script src="./app.js"></script>
+<section class="card">
+  <h2>価格推移</h2>
+  <canvas id="chart" height="150"></canvas>
+</section>
+
+<section class="card">
+  <h2>登録済み一覧</h2>
+  <div class="tableWrap">
+    <table>
+      <thead><tr><th>日付</th><th>商品名</th><th>数量</th><th>単価</th><th>金額</th><th>仕入先</th><th></th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <div class="actions">
+    <button id="exportBtn" class="secondary">CSV書き出し</button>
+    <label class="fileBtn">CSV読み込み<input id="importFile" type="file" accept=".csv"></label>
+  </div>
+</section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="./chart.umd.min.js"></script>
+<script src="./seed.js"></script>
+<script src="./app.js"></script>
 </body>
 </html>
