@@ -27,9 +27,14 @@ const els = {
   total: document.getElementById("totalCount"),
   adopted: document.getElementById("adoptedCount"),
   rejected: document.getElementById("rejectedCount"),
+  history: document.getElementById("historyList"),
+  clearHistory: document.getElementById("clearHistoryBtn"),
+  error: document.getElementById("errorMessage"),
   loading: document.getElementById("loadingOverlay"),
   apiModal: document.getElementById("apiKeyModal"),
   apiKey: document.getElementById("apiKeyInput"),
+  model: document.getElementById("modelInput"),
+  toggleApiKey: document.getElementById("toggleApiKeyBtn"),
   saveApiKey: document.getElementById("saveApiKeyBtn"),
   skipApiKey: document.getElementById("skipApiKeyBtn"),
   clearApiKey: document.getElementById("clearApiKeyBtn")
@@ -46,7 +51,10 @@ function normalizeStoredIdeas(ideas) {
 
 function persist() {
   window.IwakanStorage.setIdeas(state.ideas);
-  window.IwakanStorage.setLastInput({ theme: els.theme.value, category: els.category.value });
+  window.IwakanStorage.setLastInput({
+    theme: els.theme.value,
+    category: els.category.value
+  });
   window.IwakanStorage.setView({ mode: state.viewMode });
   els.saveStatus.textContent = `保存済み ${new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}`;
 }
@@ -55,10 +63,19 @@ function render() {
   els.list.innerHTML = "";
   els.empty.hidden = state.ideas.length > 0;
   state.singleIndex = clamp(state.singleIndex, 0, Math.max(0, state.ideas.length - 1));
-  const visibleIdeas = state.viewMode === "one" && state.ideas.length ? [state.ideas[state.singleIndex]] : state.ideas;
-  visibleIdeas.forEach((idea, index) => els.list.appendChild(createIdeaCard(idea, state.viewMode === "one" ? state.singleIndex : index)));
+
+  const visibleIdeas = state.viewMode === "one" && state.ideas.length
+    ? [state.ideas[state.singleIndex]]
+    : state.ideas;
+
+  visibleIdeas.forEach((idea, index) => {
+    const globalIndex = state.viewMode === "one" ? state.singleIndex : index;
+    els.list.appendChild(createIdeaCard(idea, globalIndex));
+  });
+
   renderMode();
   updateStats();
+  renderHistory();
 }
 
 function createIdeaCard(idea, index) {
@@ -76,7 +93,8 @@ function createIdeaCard(idea, index) {
       <button class="mini adopt" data-action="adopt" data-id="${idea.id}">採用</button>
       <button class="mini reject" data-action="reject" data-id="${idea.id}">不採用</button>
     </div>
-    <p class="meta">#${index + 1} / ${statusLabel(idea.status)}</p>`;
+    <p class="meta">#${index + 1} / ${statusLabel(idea.status)}</p>
+  `;
   return card;
 }
 
@@ -94,6 +112,31 @@ function updateStats() {
   els.rejected.textContent = state.ideas.filter((idea) => idea.status === "rejected").length;
 }
 
+function renderHistory() {
+  const history = window.IwakanStorage.getHistory();
+  if (!history.length) {
+    els.history.textContent = "履歴はまだありません。";
+    return;
+  }
+  els.history.innerHTML = history.map((item) => `
+    <div class="history-item">
+      <b>${escapeHtml(item.theme || "無題")}</b>
+      <span>${escapeHtml(item.category || "-")} / ${escapeHtml(item.source || "local")} / ${escapeHtml(item.time || "")}</span>
+    </div>
+  `).join("");
+}
+
+function pushHistory({ theme, category, source }) {
+  const history = window.IwakanStorage.getHistory();
+  history.unshift({
+    theme,
+    category,
+    source,
+    time: new Date().toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })
+  });
+  window.IwakanStorage.setHistory(history);
+}
+
 function statusLabel(status) {
   if (status === "adopted") return "採用済み";
   if (status === "rejected") return "不採用";
@@ -101,7 +144,13 @@ function statusLabel(status) {
 }
 
 function escapeHtml(value) {
-  return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[char]));
+  return String(value).replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;"
+  }[char]));
 }
 
 function clamp(value, min, max) {
@@ -112,11 +161,27 @@ function setLoading(isLoading) {
   state.isLoading = isLoading;
   els.loading.hidden = !isLoading;
   els.generate.disabled = isLoading;
+  els.tuneButtons.forEach((button) => { button.disabled = isLoading; });
+}
+
+function showError(message) {
+  if (!message) {
+    els.error.hidden = true;
+    els.error.textContent = "";
+    return;
+  }
+  els.error.hidden = false;
+  els.error.textContent = message;
 }
 
 function openApiModal() {
   els.apiKey.value = window.IwakanStorage.getApiKey();
-  if (typeof els.apiModal.showModal === "function") els.apiModal.showModal();
+  els.model.value = window.IwakanStorage.getModel();
+  els.apiKey.type = "password";
+  els.toggleApiKey.textContent = "表示";
+  if (typeof els.apiModal.showModal === "function") {
+    els.apiModal.showModal();
+  }
 }
 
 function closeApiModal() {
@@ -135,23 +200,39 @@ async function generatePosts(tune = null) {
   const category = tune || els.category.value;
   if (tune) els.category.value = category;
   const apiKey = window.IwakanStorage.getApiKey();
-  setLoading(true);
+  const model = window.IwakanStorage.getModel();
+  let source = "local";
 
+  setLoading(true);
+  showError("");
   try {
     if (apiKey) {
-      const aiIdeas = await window.OpenAIClient.generate({ apiKey, theme, category, tune, count: IDEA_COUNT });
-      state.ideas = aiIdeas.slice(0, IDEA_COUNT).map((idea, index) => window.TemplateGenerator.normalizeIdea(idea, category, index));
-      els.saveStatus.textContent = `AI生成完了: ${window.OpenAIClient.MODEL}`;
+      const aiIdeas = await window.OpenAIClient.generate({
+        apiKey,
+        model,
+        theme,
+        category,
+        tune,
+        count: IDEA_COUNT
+      });
+      state.ideas = aiIdeas
+        .slice(0, IDEA_COUNT)
+        .map((idea, index) => window.TemplateGenerator.normalizeIdea(idea, category, index));
+      source = `OpenAI ${model}`;
+      els.saveStatus.textContent = `AI生成完了: ${model}`;
     } else {
       state.ideas = window.TemplateGenerator.generate({ theme, category, tune, count: IDEA_COUNT });
       els.saveStatus.textContent = "テンプレート生成で作成しました";
     }
   } catch (error) {
-    console.warn(error);
+    console.error("OpenAI generation failed. Falling back to template generation.", error);
     state.ideas = window.TemplateGenerator.generate({ theme, category, tune, count: IDEA_COUNT });
+    source = "local fallback";
+    showError("OpenAI APIの呼び出しに失敗しました。ローディングを解除し、ローカル生成に切り替えました。");
     els.saveStatus.textContent = "API失敗。テンプレート生成へ戻しました";
   } finally {
     state.singleIndex = 0;
+    pushHistory({ theme, category, source });
     persist();
     render();
     els.list.firstElementChild?.classList.add("toast");
@@ -189,12 +270,24 @@ function setViewMode(mode) {
 
 els.generate.addEventListener("click", () => generatePosts());
 els.clear.addEventListener("click", clearIdeas);
+els.clearHistory.addEventListener("click", () => {
+  window.IwakanStorage.clearHistory();
+  renderHistory();
+});
 els.settings.addEventListener("click", openApiModal);
 els.showAll.addEventListener("click", () => setViewMode("all"));
 els.showOne.addEventListener("click", () => setViewMode("one"));
-els.prevIdea.addEventListener("click", () => { state.singleIndex = clamp(state.singleIndex - 1, 0, Math.max(0, state.ideas.length - 1)); render(); });
-els.nextIdea.addEventListener("click", () => { state.singleIndex = clamp(state.singleIndex + 1, 0, Math.max(0, state.ideas.length - 1)); render(); });
-els.tuneButtons.forEach((button) => button.addEventListener("click", () => generatePosts(button.dataset.tune)));
+els.prevIdea.addEventListener("click", () => {
+  state.singleIndex = clamp(state.singleIndex - 1, 0, Math.max(0, state.ideas.length - 1));
+  render();
+});
+els.nextIdea.addEventListener("click", () => {
+  state.singleIndex = clamp(state.singleIndex + 1, 0, Math.max(0, state.ideas.length - 1));
+  render();
+});
+els.tuneButtons.forEach((button) => {
+  button.addEventListener("click", () => generatePosts(button.dataset.tune));
+});
 els.list.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-action]");
   if (!button) return;
@@ -205,9 +298,17 @@ els.list.addEventListener("click", (event) => {
 });
 els.saveApiKey.addEventListener("click", () => {
   const key = els.apiKey.value.trim();
+  const model = els.model.value.trim() || window.OpenAIClient.DEFAULT_MODEL;
   if (key) window.IwakanStorage.setApiKey(key);
+  else window.IwakanStorage.clearApiKey();
+  window.IwakanStorage.setModel(model);
   closeApiModal();
-  els.saveStatus.textContent = key ? "OpenAI APIキーを保存しました" : "APIキー未設定です";
+  els.saveStatus.textContent = key ? `OpenAI APIキーを保存しました: ${model}` : `APIキー未設定です: ${model}`;
+});
+els.toggleApiKey.addEventListener("click", () => {
+  const visible = els.apiKey.type === "text";
+  els.apiKey.type = visible ? "password" : "text";
+  els.toggleApiKey.textContent = visible ? "表示" : "非表示";
 });
 els.skipApiKey.addEventListener("click", closeApiModal);
 els.clearApiKey.addEventListener("click", () => {
@@ -219,11 +320,16 @@ els.clearApiKey.addEventListener("click", () => {
 
 if (state.lastInput.theme) els.theme.value = state.lastInput.theme;
 if (state.lastInput.category) els.category.value = state.lastInput.category;
-if (!window.IwakanStorage.hasSeenApiModal() && !window.IwakanStorage.getApiKey()) window.addEventListener("load", openApiModal);
+if (!window.IwakanStorage.hasSeenApiModal() && !window.IwakanStorage.getApiKey()) {
+  window.addEventListener("load", openApiModal);
+}
+
 render();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js").catch(() => { els.saveStatus.textContent = "PWA登録に失敗しました"; });
+    navigator.serviceWorker.register("./service-worker.js").catch(() => {
+      els.saveStatus.textContent = "PWA登録に失敗しました";
+    });
   });
 }
