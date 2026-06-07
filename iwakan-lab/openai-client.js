@@ -55,30 +55,7 @@
         },
         body: JSON.stringify({
           model: MODEL,
-          input: buildPrompt({ theme, category, tune, count }),
-          text: {
-            format: {
-              type: "json_schema",
-              name: "threads_posts",
-              strict: true,
-              schema: {
-                type: "array",
-                minItems: count,
-                maxItems: count,
-                items: {
-                  type: "object",
-                  additionalProperties: false,
-                  required: ["text", "category", "score", "hook"],
-                  properties: {
-                    text: { type: "string" },
-                    category: { type: "string" },
-                    score: { type: "number" },
-                    hook: { type: "string" }
-                  }
-                }
-              }
-            }
-          }
+          input: buildPrompt({ theme, category, tune, count })
         })
       });
 
