@@ -207,7 +207,7 @@ async function generatePosts(tune = null) {
   showError("");
   try {
     if (apiKey) {
-      const aiIdeas = await window.OpenAIClient.generate({
+      const aiResult = await window.AIClient.generate({
         apiKey,
         model,
         theme,
@@ -215,20 +215,24 @@ async function generatePosts(tune = null) {
         tune,
         count: IDEA_COUNT
       });
-      state.ideas = aiIdeas
+      state.ideas = aiResult.ideas
         .slice(0, IDEA_COUNT)
         .map((idea, index) => window.TemplateGenerator.normalizeIdea(idea, category, index));
-      source = `OpenAI ${model}`;
-      els.saveStatus.textContent = `AI生成完了: ${model}`;
+      source = `OpenAI ${aiResult.mode} ${model}`;
+      els.saveStatus.textContent = `AI生成完了: ${model} / ${aiResult.mode}`;
     } else {
       state.ideas = window.TemplateGenerator.generate({ theme, category, tune, count: IDEA_COUNT });
       els.saveStatus.textContent = "テンプレート生成で作成しました";
     }
   } catch (error) {
-    console.error("OpenAI generation failed. Falling back to template generation.", error);
+    console.error("OpenAI generation failed. Falling back to template generation.", {
+      message: error.message,
+      attempts: error.attempts,
+      error
+    });
     state.ideas = window.TemplateGenerator.generate({ theme, category, tune, count: IDEA_COUNT });
     source = "local fallback";
-    showError("OpenAI APIの呼び出しに失敗しました。ローディングを解除し、ローカル生成に切り替えました。");
+    showError(`OpenAI APIに失敗しました。ローカル生成に切り替えました。${error.message || ""}`);
     els.saveStatus.textContent = "API失敗。テンプレート生成へ戻しました";
   } finally {
     state.singleIndex = 0;
@@ -298,7 +302,7 @@ els.list.addEventListener("click", (event) => {
 });
 els.saveApiKey.addEventListener("click", () => {
   const key = els.apiKey.value.trim();
-  const model = els.model.value.trim() || window.OpenAIClient.DEFAULT_MODEL;
+  const model = els.model.value.trim() || window.AIClient.DEFAULT_MODEL;
   if (key) window.IwakanStorage.setApiKey(key);
   else window.IwakanStorage.clearApiKey();
   window.IwakanStorage.setModel(model);
