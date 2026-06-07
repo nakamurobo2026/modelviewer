@@ -28,72 +28,72 @@ OCRはブラウザ内で動く無料版なので、完璧ではありません�
 GitHub Pagesに上げ替えた後、iPhone側で古い表示が残る場合があります。
 Safariで数回リロード、またはホーム画面アイコンを削除して追加し直してください。
 
-## iwakan-lab: Supabase Edge Function経由のAI生成
+## iwakan-lab: Cloudflare Worker経由のAI生成
 
-`iwakan-lab` はGitHub Pagesから直接OpenAI APIを呼びません。AI生成はSupabase Edge Function `generate-posts` 経由で行い、ブラウザにはOpenAI APIキーを保存しません。Edge Function URLが未設定、または通信失敗した場合はローカルテンプレート生成へ自動で戻ります。
+`iwakan-lab` はGitHub Pagesから直接OpenAI APIを呼びません。AI生成はCloudflare Worker `iwakan-lab-generate-posts` 経由で行い、ブラウザにはOpenAI APIキーを保存しません。Worker URLが未設定、または通信失敗した場合はローカルテンプレート生成へ自動で戻ります。
 
 ### 構成
 
 ```text
 GitHub Pages
-  -> Supabase Edge Function: generate-posts
+  -> Cloudflare Worker: iwakan-lab-generate-posts
     -> OpenAI Responses API
 ```
 
 ### 追加ファイル
 
-- `supabase/functions/generate-posts/index.ts`
+- `cloudflare/workers/generate-posts/wrangler.toml`
+- `cloudflare/workers/generate-posts/src/index.js`
 - `iwakan-lab/ai-client.js`
 
-### Supabaseセットアップ
+### Cloudflareセットアップ
 
-1. Supabase CLIでログインします。
-
-```bash
-supabase login
-```
-
-2. プロジェクトをリンクします。
+1. Wranglerでログインします。
 
 ```bash
-supabase link --project-ref YOUR_PROJECT_REF
+npx wrangler login
 ```
 
-3. OpenAI APIキーをSupabase secretsに保存します。
+2. Workerディレクトリへ移動します。
 
 ```bash
-supabase secrets set OPENAI_API_KEY=sk-...
+cd cloudflare/workers/generate-posts
 ```
 
-必要ならモデルや許可Originも設定できます。
+3. OpenAI APIキーをCloudflare Worker secretに保存します。
 
 ```bash
-supabase secrets set OPENAI_MODEL=gpt-5-mini
-supabase secrets set ALLOWED_ORIGIN=https://nakamurobo2026.github.io
+npx wrangler secret put OPENAI_API_KEY
 ```
 
-4. Edge Functionをデプロイします。
+4. 必要なら `wrangler.toml` の `ALLOWED_ORIGIN` と `OPENAI_MODEL` を調整します。
+
+```toml
+[vars]
+OPENAI_MODEL = "gpt-5-mini"
+ALLOWED_ORIGIN = "https://nakamurobo2026.github.io"
+```
+
+5. Workerをデプロイします。
 
 ```bash
-supabase functions deploy generate-posts
+npx wrangler deploy
 ```
 
-GitHub Pagesからログインなしで呼び出す運用にする場合は、Supabase側で関数のJWT検証設定をプロジェクト方針に合わせて調整してください。公開関数にする場合でも、OpenAI APIキーはSupabase secret内にだけ置かれ、ブラウザへは送られません。
-
-5. `iwakan-lab` の画面で「AI設定」を開き、Edge Function URLを保存します。
+6. `iwakan-lab` の画面で「AI設定」を開き、Cloudflare Worker URLを保存します。
 
 ```text
-https://YOUR_PROJECT_REF.functions.supabase.co/generate-posts
+https://iwakan-lab-generate-posts.YOUR_SUBDOMAIN.workers.dev
 ```
 
-### Edge Function仕様
+### Worker仕様
 
 - モデル初期値: `gpt-5-mini`
-- OpenAI APIキー: Supabase secret `OPENAI_API_KEY`
+- OpenAI APIキー: Cloudflare Worker secret `OPENAI_API_KEY`
 - タイムアウト: 15秒
 - 成功時: `{ "ok": true, "model": "gpt-5-mini", "ideas": [...] }`
 - 失敗時: `{ "ok": false, "error": "...", "detail": "..." }`
 
 ### ブラウザ側の保存内容
 
-ブラウザのlocalStorageに保存するのはEdge Function URLだけです。過去に保存していた `iwakan_lab_openai_api_key_v1` は起動時に削除されます。
+ブラウザのlocalStorageに保存するのはCloudflare Worker URLだけです。過去に保存していた `iwakan_lab_openai_api_key_v1` は起動時に削除されます。
