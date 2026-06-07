@@ -16,21 +16,17 @@ function json(body, status = 200, env = {}) {
   return new Response(JSON.stringify(body), { status, headers: corsHeaders(env) });
 }
 
-function clampCount(value) {
-  const count = Number(value) || MAX_COUNT;
-  return Math.max(1, Math.min(MAX_COUNT, count));
-}
-
-function buildPrompt({ theme, category, tune, count }) {
-  const direction = tune || category;
+function buildPrompt({ theme, category, mode }) {
+  const count = mode === "one" ? 1 : MAX_COUNT;
   return [
     "Threads向けの短い投稿案をJSON配列だけで生成してください。",
     `テーマ: ${theme}`,
-    `方向性: ${direction}`,
+    `カテゴリ: ${category}`,
     `件数: ${count}`,
-    "条件: AIっぽくしない。20〜90文字中心。短文中心。コメントしたくなる余白。静か、深夜、少し違和感、なんか分かる。",
-    "含める空気: 共感、違和感、懐かしさ、深夜テンション、地方感、少し静か。",
-    "出力は必ずJSON配列のみ。説明文やMarkdownは禁止。",
+    "条件: AIっぽくしない。20〜90文字中心。短文中心。コメントしたくなる余白を残す。",
+    "空気感: 静か、深夜、少し違和感、共感、懐かしさ、地方感、なんか分かる。",
+    "禁止: 説明文、Markdown、ハッシュタグの乱用、過剰なポエム、長い結論。",
+    "出力は必ずJSON配列のみ。",
     "形式: [{\"text\":\"...\",\"category\":\"...\",\"score\":87,\"hook\":\"共感\"}]"
   ].join("\n");
 }
@@ -52,6 +48,7 @@ function parseIdeas(text) {
   const candidates = [trimmed];
   const match = trimmed.match(/\[[\s\S]*\]/);
   if (match) candidates.push(match[0]);
+
   for (const candidate of candidates) {
     try {
       const parsed = JSON.parse(candidate);
@@ -59,7 +56,7 @@ function parseIdeas(text) {
       if (Array.isArray(parsed.ideas)) return parsed.ideas;
       if (Array.isArray(parsed.posts)) return parsed.posts;
     } catch {
-      // Try next candidate.
+      // Try the next candidate.
     }
   }
   return [];
@@ -76,25 +73,26 @@ function normalizeIdea(idea, fallbackCategory, index) {
 
 export default {
   async fetch(request, env) {
+    const url = new URL(request.url);
     if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(env) });
-    if (request.method !== "POST") return json({ ok: false, error: "Method not allowed." }, 405, env);
+    if (url.pathname !== "/generate") return json({ success: false, error: "Not found. Use POST /generate." }, 404, env);
+    if (request.method !== "POST") return json({ success: false, error: "Method not allowed." }, 405, env);
 
     if (!env.OPENAI_API_KEY) {
-      return json({ ok: false, error: "OPENAI_API_KEY is not configured." }, 500, env);
+      return json({ success: false, error: "OPENAI_API_KEY is not configured." }, 500, env);
     }
 
     let payload;
     try {
       payload = await request.json();
     } catch {
-      return json({ ok: false, error: "Request body must be JSON." }, 400, env);
+      return json({ success: false, error: "Request body must be JSON." }, 400, env);
     }
 
     const theme = String(payload.theme || "").trim();
     const category = String(payload.category || "違和感").trim();
-    const tune = payload.tune ? String(payload.tune).trim() : "";
-    const count = clampCount(payload.count);
-    if (!theme) return json({ ok: false, error: "theme is required." }, 400, env);
+    const mode = payload.mode === "one" ? "one" : "list";
+    if (!theme) return json({ success: false, error: "theme is required." }, 400, env);
 
     const model = env.OPENAI_MODEL || DEFAULT_MODEL;
     const controller = new AbortController();
@@ -111,39 +109,39 @@ export default {
         },
         body: JSON.stringify({
           model,
-          input: buildPrompt({ theme, category, tune, count }),
-          max_output_tokens: 2400
+          input: buildPrompt({ theme, category, mode }),
+          max_output_tokens: mode === "one" ? 500 : 2400
         })
       });
 
       const rawOpenAI = await openaiResponse.text();
       if (!openaiResponse.ok) {
         console.error("OpenAI API error", { status: openaiResponse.status, rawOpenAI });
-        return json({ ok: false, error: "OpenAI API request failed.", status: openaiResponse.status, detail: rawOpenAI.slice(0, 1200) }, 502, env);
+        return json({ success: false, error: "OpenAI API request failed.", status: openaiResponse.status, detail: rawOpenAI.slice(0, 1200) }, 502, env);
       }
 
       let openaiData;
       try {
         openaiData = JSON.parse(rawOpenAI);
       } catch {
-        return json({ ok: false, error: "OpenAI response was not JSON.", detail: rawOpenAI.slice(0, 1200) }, 502, env);
+        return json({ success: false, error: "OpenAI response was not JSON.", detail: rawOpenAI.slice(0, 1200) }, 502, env);
       }
 
       const ideas = parseIdeas(extractText(openaiData))
-        .slice(0, count)
+        .slice(0, mode === "one" ? 1 : MAX_COUNT)
         .map((idea, index) => normalizeIdea(idea, category, index))
         .filter((idea) => idea.text);
 
       if (!ideas.length) {
-        return json({ ok: false, error: "OpenAI response did not include usable post ideas.", detail: rawOpenAI.slice(0, 1200) }, 502, env);
+        return json({ success: false, error: "OpenAI response did not include usable post ideas.", detail: rawOpenAI.slice(0, 1200) }, 502, env);
       }
 
-      return json({ ok: true, model, count: ideas.length, elapsedMs: Date.now() - startedAt, ideas }, 200, env);
+      return json({ success: true, model, count: ideas.length, elapsedMs: Date.now() - startedAt, ideas }, 200, env);
     } catch (error) {
       const isAbort = error instanceof DOMException && error.name === "AbortError";
-      console.error("generate-posts worker failed", error);
+      console.error("iwakan-lab worker failed", error);
       return json({
-        ok: false,
+        success: false,
         error: isAbort ? "OpenAI request timed out after 15 seconds." : "Cloudflare Worker failed.",
         detail: error instanceof Error ? error.message : String(error)
       }, isAbort ? 504 : 500, env);
