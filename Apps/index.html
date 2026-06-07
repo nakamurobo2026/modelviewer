@@ -47,10 +47,13 @@
     <div><strong id="min">0</strong><span>最安</span></div>
     <div><strong id="max">0</strong><span>最高</span></div>
   </div>
-  <div class="card">
-    <h2>価格推移</h2>
+  <div class="card chartCard">
+    <div class="sectionHead">
+      <h2>価格推移</h2>
+      <span id="chartCount" class="smallPill">0件</span>
+    </div>
     <div class="graphControls">
-      <label>表示方法
+      <label>比較方法
         <select id="graphMode">
           <option value="exact">同一商品だけ</option>
           <option value="thickness">厚み別</option>
@@ -60,7 +63,10 @@
       </label>
     </div>
     <p id="graphHint" class="hint"></p>
-    <canvas id="chart" height="150"></canvas>
+    <div class="chartShell">
+      <canvas id="chart" height="260"></canvas>
+    </div>
+    <div id="chartFallback" class="chartFallback"></div>
   </div>
   <div class="card">
     <h2>検索結果</h2><p class="hint">カードは最新順。厚み・規格・㎡単価・m³単価を自動表示します。</p>

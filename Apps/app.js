@@ -124,11 +124,15 @@ function render(){
 }
 function drawChart(rows){
  const ctx=el("chart");
+ const fallback=document.getElementById("chartFallback");
+ const countPill=document.getElementById("chartCount");
  if(chart) chart.destroy();
+
  const mode=document.getElementById("graphMode")?.value||"exact";
  let graphRows=activeGraphRows(rows);
  let label="単価";
  let values=graphRows.map(r=>r.unitPrice);
+
  if(mode==="sqm"){
    label="㎡単価";
    graphRows=graphRows.filter(r=>r.pricePerM2);
@@ -142,29 +146,72 @@ function drawChart(rows){
  }else{
    label="単価（同一商品）";
  }
+
  const hint=document.getElementById("graphHint");
  if(hint){
-   if(mode==="exact") hint.textContent="検索結果の先頭商品と同じ厚み・規格だけを表示。見積用はこれが安全。";
-   if(mode==="thickness") hint.textContent="厚み違いも含めて表示。傾向確認用。";
-   if(mode==="sqm") hint.textContent="3x6/4x8等を㎡単価に換算。面積違い比較用。";
-   if(mode==="m3") hint.textContent="厚み差も吸収するm³単価。板厚違い比較用。";
+   if(mode==="exact") hint.textContent="同じ厚み・規格だけを表示します。見積判断はこの表示が安全。";
+   if(mode==="thickness") hint.textContent="厚み違いも含めて表示します。材料全体の傾向確認用。";
+   if(mode==="sqm") hint.textContent="3x6/4x8などを㎡単価に換算。面積違いの比較用。";
+   if(mode==="m3") hint.textContent="厚み差まで吸収するm³単価。板厚違いの比較用。";
  }
+
+ if(countPill) countPill.textContent = `${graphRows.length}件`;
+
  if(!graphRows.length||!values.length){
    const c=ctx.getContext("2d");
    c.clearRect(0,0,ctx.width,ctx.height);
+   if(fallback) fallback.innerHTML=`<div class="empty">グラフ化できるデータがありません</div>`;
    return;
  }
- chart=new Chart(ctx,{type:"line",data:{labels:graphRows.map(r=>r.date),datasets:[{label,data:values,tension:.25}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:true}},scales:{y:{beginAtZero:false}}}})
+
+ const min=Math.min(...values);
+ const max=Math.max(...values);
+ const range=max-min || max || 1;
+ if(fallback){
+   fallback.innerHTML=graphRows.slice(-8).map((r,i)=>{
+     const v=values[values.length-graphRows.slice(-8).length+i];
+     const pct=Math.max(4, Math.round(((v-min)/range)*100));
+     return `<div class="chartRow">
+       <div>${r.date.slice(5)}</div>
+       <div class="chartBarWrap"><div class="chartBar" style="width:${pct}%"></div></div>
+       <div class="chartValue">¥${yen(v)}</div>
+     </div>`;
+   }).join("");
+ }
+
+ try{
+   chart=new Chart(ctx,{
+     type:"line",
+     data:{
+       labels:graphRows.map(r=>r.date),
+       datasets:[{
+         label,
+         data:values,
+         tension:.25,
+         pointRadius:4,
+         borderWidth:3
+       }]
+     },
+     options:{
+       responsive:true,
+       maintainAspectRatio:false,
+       plugins:{
+         legend:{display:true, labels:{boxWidth:12, font:{size:12}}},
+       },
+       scales:{
+         x:{ticks:{maxRotation:45,minRotation:0,autoSkip:true,font:{size:11}}},
+         y:{beginAtZero:false,ticks:{font:{size:11},callback:(v)=>"¥"+Number(v).toLocaleString("ja-JP")}}
+       }
+     }
+   });
+ }catch(e){
+   console.warn("chart error", e);
+ }
 }
 function removeRecord(rid){records=records.filter(r=>r.id!==rid);save();render()}
 
 el("addBtn").onclick=()=>{const qty=Number(el("qty").value||0);const unitPrice=Number(el("unitPrice").value||0);const amount=Number(el("amount").value||0)||qty*unitPrice;addRecord({date:el("date").value,name:el("name").value,qty,unitPrice,amount,supplier:el("supplier").value});dedupe();save();render()};
 el("seedBtn").onclick=()=>{SEED_RECORDS.forEach(addRecord);dedupe();save();
-document.querySelectorAll(".chip").forEach(chip=>{
-  chip.addEventListener("click",()=>{
-    el("search").value = chip.dataset.q || "";
-    render();
-  });
 });
 
 if(document.getElementById("graphMode")){
@@ -251,4 +298,19 @@ el("importFile").onchange=e=>{const file=e.target.files[0];if(!file)return;const
 
 if(records.length===0){SEED_RECORDS.forEach(addRecord);dedupe();save()}
 if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js"))}
+
+function initUiEvents(){
+ document.querySelectorAll(".chip").forEach(chip=>{
+   chip.onclick=()=>{
+     document.querySelectorAll(".chip").forEach(c=>c.classList.remove("active"));
+     chip.classList.add("active");
+     el("search").value = chip.dataset.q || "";
+     render();
+   };
+ });
+ const gm=document.getElementById("graphMode");
+ if(gm) gm.onchange=render;
+}
+initUiEvents();
+
 render();

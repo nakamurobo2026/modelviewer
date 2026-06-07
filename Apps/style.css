@@ -323,3 +323,80 @@ tbody tr:nth-child(even){background:#fcfcfc}
   .price{font-size:20px}
   th,td{font-size:12px;padding:8px}
 }
+
+/* v5 chart and chip fixes */
+.sectionHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:10px;
+}
+.sectionHead h2{margin:0}
+.smallPill{
+  background:#111827;
+  color:#fff;
+  border-radius:999px;
+  padding:5px 9px;
+  font-size:11px;
+  font-weight:900;
+}
+.quickChips{
+  scrollbar-width:none;
+}
+.quickChips::-webkit-scrollbar{display:none}
+.chip.active{
+  background:#111827;
+  color:#fff;
+  border-color:#111827;
+}
+.chartCard{
+  padding-bottom:18px;
+}
+.chartShell{
+  width:100%;
+  height:300px;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:10px;
+  overflow:hidden;
+}
+#chart{
+  display:block;
+  width:100% !important;
+  height:280px !important;
+  max-height:none !important;
+}
+.chartFallback{
+  margin-top:10px;
+  display:grid;
+  gap:8px;
+}
+.chartRow{
+  display:grid;
+  grid-template-columns:82px 1fr 88px;
+  gap:8px;
+  align-items:center;
+  font-size:12px;
+}
+.chartBarWrap{
+  height:12px;
+  border-radius:999px;
+  background:#edf0f3;
+  overflow:hidden;
+}
+.chartBar{
+  height:100%;
+  background:#111827;
+  border-radius:999px;
+}
+.chartValue{
+  text-align:right;
+  font-weight:900;
+}
+@media(max-width:760px){
+  .chartShell{height:320px;padding:8px}
+  #chart{height:300px !important}
+  .chartRow{grid-template-columns:74px 1fr 76px}
+}
