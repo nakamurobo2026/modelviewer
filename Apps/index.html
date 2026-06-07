@@ -1,137 +1,136 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<meta name="theme-color" content="#111827"/>
-<meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-title" content="材料価格"/>
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="材料価格">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>材料価格管理</title>
-<link rel="manifest" href="./manifest.webmanifest"/>
-<link rel="apple-touch-icon" href="./icons/icon-192.png"/>
-<link rel="stylesheet" href="./style.css"/>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="stylesheet" href="./style.css">
 </head>
 <body>
 <header class="appHeader">
   <div>
     <h1>材料価格</h1>
-    <p>納品書・材料単価の管理</p>
+    <p>検索・撮影・入力・一覧</p>
   </div>
-  <button id="seedBtn" class="ghostBtn">データ反映</button>
+  <button id="restoreBtn" class="ghostBtn">データ復元</button>
 </header>
 
 <nav class="tabs">
-  <button class="tab active" data-tab="searchPanel">検索</button>
-  <button class="tab" data-tab="cameraPanel">撮影</button>
-  <button class="tab" data-tab="inputPanel">入力</button>
-  <button class="tab" data-tab="listPanel">一覧</button>
+  <button class="tab active" data-panel="searchPanel">検索</button>
+  <button class="tab" data-panel="cameraPanel">撮影</button>
+  <button class="tab" data-panel="inputPanel">入力</button>
+  <button class="tab" data-panel="listPanel">一覧</button>
 </nav>
 
 <main>
 <section id="searchPanel" class="panel active">
-  <div class="searchBox">
-    <input id="search" placeholder="MDF / ラワン / 30x4x8 / 15mm">
-  </div>
-  <div class="quickChips">
-    <button class="chip" data-q="">全件</button>
+  <input id="search" class="searchInput" placeholder="MDF / ラワン / 30x4x8 / 15mm">
+  <div class="chips">
+    <button class="chip active" data-q="">全件</button>
     <button class="chip" data-q="MDF">MDF</button>
     <button class="chip" data-q="ラワン">ラワン</button>
     <button class="chip" data-q="ベニヤ">ベニヤ</button>
     <button class="chip" data-q="フブル">フブル</button>
     <button class="chip" data-q="パイン">パイン</button>
+    <button class="chip" data-q="ジナ">ジナ</button>
   </div>
-  <div class="summary compact">
+
+  <div class="summary">
     <div><strong id="count">0</strong><span>件</span></div>
     <div><strong id="avg">0</strong><span>平均</span></div>
     <div><strong id="min">0</strong><span>最安</span></div>
     <div><strong id="max">0</strong><span>最高</span></div>
   </div>
-  <div class="card chartCard">
-    <div class="sectionHead">
-      <h2>価格推移</h2>
-      <span id="chartCount" class="smallPill">0件</span>
-    </div>
-    <div class="graphControls">
-      <label>比較方法
-        <select id="graphMode">
-          <option value="exact">同一商品だけ</option>
-          <option value="thickness">厚み別</option>
-          <option value="sqm">㎡単価</option>
-          <option value="m3">m³単価</option>
-        </select>
-      </label>
-    </div>
-    <p id="graphHint" class="hint"></p>
-    <div class="chartShell">
-      <canvas id="chart" height="260"></canvas>
-    </div>
-    <div id="chartFallback" class="chartFallback"></div>
-  </div>
+
   <div class="card">
-    <h2>検索結果</h2><p class="hint">カードは最新順。厚み・規格・㎡単価・m³単価を自動表示します。</p>
-    <div id="resultCards" class="resultCards"></div>
+    <div class="headLine">
+      <h2>価格推移</h2>
+      <span id="chartCount" class="pill">0件</span>
+    </div>
+    <label class="label">比較方法
+      <select id="graphMode">
+        <option value="exact">同一商品だけ</option>
+        <option value="thickness">厚み別</option>
+        <option value="sqm">㎡単価</option>
+        <option value="m3">m³単価</option>
+      </select>
+    </label>
+    <p id="graphHint" class="hint"></p>
+    <div class="chartBox">
+      <canvas id="chart" width="900" height="320"></canvas>
+    </div>
+    <div id="barChart" class="barChart"></div>
+  </div>
+
+  <div class="card">
+    <h2>検索結果</h2>
+    <div id="cards" class="cards"></div>
   </div>
 </section>
 
 <section id="cameraPanel" class="panel">
   <div class="card">
     <h2>カメラ入力</h2>
-    <p class="hint">撮影 → OCR解析 → 内容確認 → 登録。OCRは完璧ではないので確認してから登録。</p>
-    <input id="cameraInput" class="hiddenInput" type="file" accept="image/*" capture="environment">
+    <p class="hint">撮影→OCR→確認→登録。OCR結果は必ず確認してください。</p>
+    <input id="imageInput" type="file" accept="image/*" capture="environment" hidden>
     <div class="buttonGrid">
-      <button id="cameraBtn" class="mainBtn">📷 カメラ</button>
-      <button id="fileBtn" class="subBtn">画像選択</button>
-      <button id="ocrBtn" class="subBtn">OCR解析</button>
+      <button id="cameraBtn" class="mainBtn">📷 撮影</button>
+      <button id="imageBtn" class="subBtn">画像選択</button>
+      <button id="ocrBtn" class="subBtn">OCR</button>
     </div>
-    <img id="preview" class="preview" alt="">
+    <img id="preview" class="preview">
     <div id="ocrStatus" class="status">未読込</div>
-    <textarea id="ocrText" placeholder="OCR結果。ここで手修正できます。"></textarea>
+    <textarea id="ocrText" placeholder="OCR結果がここに入ります。"></textarea>
     <div class="buttonGrid">
       <button id="parseBtn" class="mainBtn">明細化</button>
-      <button id="registerParsedBtn" class="subBtn">一括登録</button>
+      <button id="addParsedBtn" class="subBtn">一括登録</button>
     </div>
   </div>
   <div class="card">
     <h2>抽出確認</h2>
-    <div class="tableWrap"><table><thead><tr><th>日付</th><th>商品名</th><th>数量</th><th>単価</th><th>金額</th><th>仕入先</th><th></th></tr></thead><tbody id="parsedTbody"></tbody></table></div>
+    <div id="parsedCards" class="cards"></div>
   </div>
 </section>
 
 <section id="inputPanel" class="panel">
   <div class="card">
-    <h2>手入力</h2><p class="hint">金額を空欄にすると、数量×単価で自動計算します。</p>
-    <div class="formStack">
-      <label>日付<input id="date" type="text" inputmode="numeric" placeholder="2026-06-07"></label>
-      <label>商品名<input id="name" placeholder="例：MDF 30x4x8"></label>
-      <div class="twoCol">
+    <h2>手入力</h2>
+    <div class="form">
+      <label>日付<input id="date" inputmode="numeric" placeholder="2026-06-07"></label>
+      <label>商品名<input id="name" placeholder="MDF 30x4x8"></label>
+      <div class="two">
         <label>数量<input id="qty" type="number" step="0.01" value="1"></label>
         <label>単価<input id="unitPrice" type="number" step="1"></label>
       </div>
-      <div class="twoCol">
+      <div class="two">
         <label>金額<input id="amount" type="number" step="1"></label>
         <label>仕入先<input id="supplier" placeholder="ソゴウ"></label>
       </div>
     </div>
     <button id="addBtn" class="wideBtn">追加する</button>
-    <button id="clearBtn" class="dangerText">全削除</button>
+    <button id="clearBtn" class="dangerBtn">全削除</button>
   </div>
 </section>
 
 <section id="listPanel" class="panel">
   <div class="card">
     <h2>登録済み一覧</h2>
-    <div class="actions">
+    <div class="buttonGrid twoButtons">
       <button id="exportBtn" class="subBtn">CSV書き出し</button>
-      <label class="fileBtn">CSV読み込み<input id="importFile" type="file" accept=".csv"></label>
+      <label class="fileBtn">CSV読み込み<input id="csvInput" type="file" accept=".csv" hidden></label>
     </div>
-    <div class="tableWrap"><table><thead><tr><th>日付</th><th>商品名</th><th>数量</th><th>単価</th><th>金額</th><th>仕入先</th><th></th></tr></thead><tbody id="tbody"></tbody></table></div>
+    <div id="listCards" class="cards"></div>
   </div>
 </section>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="./chart.umd.min.js"></script>
 <script src="./seed.js"></script>
 <script src="./app.js"></script>
 </body>

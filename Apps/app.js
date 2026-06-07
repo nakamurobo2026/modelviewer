@@ -1,316 +1,428 @@
-const STORAGE_KEY="material_price_records_full_v1";
-let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
-let parsedRows=[];
-let currentImage=null;
-let chart;
+const STORAGE_KEY = "material_price_records_v6_stable";
+let records = [];
+let parsedRows = [];
+let imageFile = null;
 
-const el=id=>document.getElementById(id);
-const yen=n=>Number(n||0).toLocaleString("ja-JP");
-const normalize=s=>String(s||"").replace(/×/g,"x").replace(/[　]+/g," ").replace(/\s+/g," ").trim();
+const $ = id => document.getElementById(id);
+const yen = n => Number(n || 0).toLocaleString("ja-JP");
 
-document.querySelectorAll(".tab").forEach(btn=>{
-  btn.addEventListener("click",()=>{
-    document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
-    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
-    btn.classList.add("active");
-    document.getElementById(btn.dataset.tab).classList.add("active");
-    setTimeout(()=>render(),50);
-  });
-});
-
-const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
-el("date").value=today();
-
-function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(records))}
-function id(){return crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random())}
-function addRecord(r){records.push({id:id(),date:r.date,name:normalize(r.name),qty:Number(r.qty||0),unitPrice:Number(r.unitPrice||0),amount:Number(r.amount||0),supplier:r.supplier||"ソゴウ"})}
-function dedupe(){const s=new Set();records=records.filter(r=>{const k=[r.date,r.name,r.qty,r.unitPrice,r.amount,r.supplier].join("|");if(s.has(k))return false;s.add(k);return true})}
+function normalize(s){
+  return String(s || "").replace(/×/g,"x").replace(/[　]+/g," ").replace(/\s+/g," ").trim();
+}
 function searchKey(s){
-  return normalize(s)
-    .toLowerCase()
-    .replace(/[（）()]/g,"")
-    .replace(/[\/／・#＃\-\s]/g,"")
-    .replace(/×/g,"x");
+  return normalize(s).toLowerCase().replace(/[（）()\/／・#＃\-\s]/g,"");
+}
+function today(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+function uid(){
+  return (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random()));
+}
+function load(){
+  try{
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    if(Array.isArray(saved) && saved.length){
+      records = saved;
+    }else{
+      restoreSeed(false);
+    }
+  }catch(e){
+    restoreSeed(false);
+  }
+}
+function save(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+}
+function addRecord(r){
+  records.push({
+    id: uid(),
+    date: r.date || today(),
+    name: normalize(r.name),
+    qty: Number(r.qty || 1),
+    unitPrice: Number(r.unitPrice || 0),
+    amount: Number(r.amount || 0),
+    supplier: r.supplier || "ソゴウ"
+  });
+}
+function restoreSeed(showAlert=true){
+  records = SEED_RECORDS.map(r => ({
+    id: uid(),
+    date: r.date,
+    name: normalize(r.name),
+    qty: Number(r.qty),
+    unitPrice: Number(r.unitPrice),
+    amount: Number(r.amount),
+    supplier: r.supplier || "ソゴウ"
+  }));
+  save();
+  if(showAlert) alert("納品書データを復元しました。");
+  render();
+}
+function dedupe(){
+  const seen = new Set();
+  records = records.filter(r=>{
+    const key = [r.date,r.name,r.qty,r.unitPrice,r.amount,r.supplier].join("|");
+    if(seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function parseSpec(name){
- const s = normalize(name);
- let thickness=null, widthMm=null, lengthMm=null, standard="";
- if(/4\s*x\s*8|4×8|４×８/.test(s)){standard="4x8";widthMm=1220;lengthMm=2440}
- else if(/3\s*x\s*6|3×6|３×６/.test(s)){standard="3x6";widthMm=910;lengthMm=1820}
- const m=s.match(/(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)/i);
- if(m){
-   thickness=Number(m[1]);
-   const a=Number(m[2]), b=Number(m[3]);
-   if(a<=10 && b<=10){
-     if(a===4 && b===8){widthMm=1220;lengthMm=2440;standard="4x8"}
-     if(a===3 && b===6){widthMm=910;lengthMm=1820;standard="3x6"}
-   }else{widthMm=a;lengthMm=b;standard=`${Math.round(a)}x${Math.round(b)}`}
- }
- if(thickness===null){
-   const n=s.match(/\d+(?:\.\d+)?/);
-   if(n) thickness=Number(n[0]);
- }
- const areaM2=widthMm&&lengthMm ? (widthMm/1000)*(lengthMm/1000) : null;
- const volumeM3=areaM2&&thickness ? areaM2*(thickness/1000) : null;
- const material=s.replace(/\d+(?:\.\d+)?\s*x\s*\d+(?:\.\d+)?\s*x\s*\d+(?:\.\d+)?/ig,"").replace(/\s+/g," ").trim();
- return {material,thickness,widthMm,lengthMm,standard,areaM2,volumeM3};
+  const s = normalize(name);
+  let thickness = null, widthMm = null, lengthMm = null, standard = "";
+  const m = s.match(/(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)/i);
+  if(m){
+    thickness = Number(m[1]);
+    const a = Number(m[2]);
+    const b = Number(m[3]);
+    if(a <= 10 && b <= 10){
+      if(a === 4 && b === 8){ widthMm = 1220; lengthMm = 2440; standard = "4x8"; }
+      if(a === 3 && b === 6){ widthMm = 910; lengthMm = 1820; standard = "3x6"; }
+    }else{
+      widthMm = a; lengthMm = b; standard = `${Math.round(a)}x${Math.round(b)}`;
+    }
+  }
+  if(!standard){
+    if(/4\s*x\s*8|4×8|４×８/.test(s)){ widthMm = 1220; lengthMm = 2440; standard = "4x8"; }
+    if(/3\s*x\s*6|3×6|３×６/.test(s)){ widthMm = 910; lengthMm = 1820; standard = "3x6"; }
+  }
+  if(thickness === null){
+    const n = s.match(/\d+(?:\.\d+)?/);
+    if(n) thickness = Number(n[0]);
+  }
+  const areaM2 = widthMm && lengthMm ? (widthMm/1000) * (lengthMm/1000) : null;
+  const volumeM3 = areaM2 && thickness ? areaM2 * (thickness/1000) : null;
+  const material = s.replace(/\d+(?:\.\d+)?\s*x\s*\d+(?:\.\d+)?\s*x\s*\d+(?:\.\d+)?/ig,"").replace(/\s+/g," ").trim();
+  return { material, thickness, widthMm, lengthMm, standard, areaM2, volumeM3 };
 }
 function enrich(r){
- const spec=parseSpec(r.name);
- const pricePerM2=spec.areaM2?Math.round(r.unitPrice/spec.areaM2):null;
- const pricePerM3=spec.volumeM3?Math.round(r.unitPrice/spec.volumeM3):null;
- return {...r,spec,pricePerM2,pricePerM3};
+  const spec = parseSpec(r.name);
+  return {
+    ...r,
+    spec,
+    pricePerM2: spec.areaM2 ? Math.round(r.unitPrice / spec.areaM2) : null,
+    pricePerM3: spec.volumeM3 ? Math.round(r.unitPrice / spec.volumeM3) : null
+  };
 }
 function productKey(r){
- const e=enrich(r);
- return `${e.spec.material}|${e.spec.thickness||""}|${e.spec.standard||""}|${e.spec.widthMm||""}|${e.spec.lengthMm||""}`;
+  const e = enrich(r);
+  return `${e.spec.material}|${e.spec.thickness||""}|${e.spec.standard||""}|${e.spec.widthMm||""}|${e.spec.lengthMm||""}`;
 }
-function activeGraphRows(rows){
- const mode=document.getElementById("graphMode")?.value||"exact";
- let enriched=rows.map(enrich);
- if(mode==="exact"){
-   const first=enriched[0];
-   if(first){
-     const key=productKey(first);
-     enriched=enriched.filter(r=>productKey(r)===key);
-   }
- }
- return enriched;
-}
-
 function filtered(){
- const q=searchKey(el("search").value);
- return records.filter(r=>{
-   if(!q) return true;
-   const target=searchKey(`${r.date} ${r.name} ${r.supplier} ${r.unitPrice} ${r.amount}`);
-   return target.includes(q);
- }).sort((a,b)=>a.date.localeCompare(b.date));
+  const q = searchKey($("search").value);
+  return records
+    .filter(r => !q || searchKey(`${r.date} ${r.name} ${r.supplier} ${r.unitPrice} ${r.amount}`).includes(q))
+    .sort((a,b)=>a.date.localeCompare(b.date));
 }
+function graphRowsFor(rows){
+  const mode = $("graphMode").value;
+  let rows2 = rows.map(enrich);
+  if(mode === "exact" && rows2.length){
+    const key = productKey(rows2[0]);
+    rows2 = rows2.filter(r => productKey(r) === key);
+  }
+  if(mode === "sqm") rows2 = rows2.filter(r => r.pricePerM2);
+  if(mode === "m3") rows2 = rows2.filter(r => r.pricePerM3);
+  return rows2;
+}
+function graphValue(r){
+  const mode = $("graphMode").value;
+  if(mode === "sqm") return r.pricePerM2;
+  if(mode === "m3") return r.pricePerM3;
+  return r.unitPrice;
+}
+function graphLabel(){
+  const mode = $("graphMode").value;
+  if(mode === "exact") return "同一商品";
+  if(mode === "thickness") return "厚み別";
+  if(mode === "sqm") return "㎡単価";
+  return "m³単価";
+}
+
 function render(){
- const rows=filtered();
- const tbody = el("tbody");
- if(rows.length===0){
-   tbody.innerHTML = `<tr><td colspan="7" class="empty">該当データなし。検索語を短くするか、別表記で試してください。</td></tr>`;
- } else {
-   tbody.innerHTML=rows.map(r=>`<tr><td>${r.date}</td><td>${r.name}</td><td>${r.qty}</td><td>¥${yen(r.unitPrice)}</td><td>¥${yen(r.amount)}</td><td>${r.supplier}</td><td><button class="delete" onclick="removeRecord('${r.id}')">削除</button></td></tr>`).join("");
- }
- const cardBox = document.getElementById("resultCards");
- if(cardBox){
-   cardBox.innerHTML = rows.length ? rows.slice().reverse().map(raw=>{
-     const r = enrich(raw);
-     const spec = r.spec;
-     return `
-     <div class="itemCard">
-       <div class="itemTop">
-         <div class="itemName">${r.name}</div>
-         <div class="price">¥${yen(r.unitPrice)}</div>
-       </div>
-       <div class="meta">${r.date}　数量:${r.qty}　金額:¥${yen(r.amount)}　${r.supplier}</div>
-       <div class="itemMetrics">
-         ${spec.thickness ? `<span class="badge">厚み ${spec.thickness}mm</span>` : ""}
-         ${spec.standard ? `<span class="badge">規格 ${spec.standard}</span>` : ""}
-         ${r.pricePerM2 ? `<span class="badge">¥${yen(r.pricePerM2)}/㎡</span>` : ""}
-         ${r.pricePerM3 ? `<span class="badge">¥${yen(r.pricePerM3)}/m³</span>` : ""}
-       </div>
-     </div>`}).join("") : `<div class="empty">該当データなし</div>`;
- }
- const prices=rows.map(r=>r.unitPrice).filter(n=>n>0);
- el("count").textContent=rows.length;
- el("avg").textContent=prices.length?"¥"+yen(Math.round(prices.reduce((a,b)=>a+b,0)/prices.length)):"0";
- el("min").textContent=prices.length?"¥"+yen(Math.min(...prices)):"0";
- el("max").textContent=prices.length?"¥"+yen(Math.max(...prices)):"0";
- drawChart(rows);
+  const rows = filtered();
+  renderSummary(rows);
+  renderCards(rows);
+  renderList(rows);
+  drawChart(rows);
 }
+function renderSummary(rows){
+  const prices = rows.map(r=>r.unitPrice).filter(v=>v>0);
+  $("count").textContent = rows.length;
+  $("avg").textContent = prices.length ? "¥" + yen(Math.round(prices.reduce((a,b)=>a+b,0)/prices.length)) : "0";
+  $("min").textContent = prices.length ? "¥" + yen(Math.min(...prices)) : "0";
+  $("max").textContent = prices.length ? "¥" + yen(Math.max(...prices)) : "0";
+}
+function cardHtml(raw, showDelete=false){
+  const r = enrich(raw);
+  return `<div class="itemCard">
+    <div class="itemTop">
+      <div class="itemName">${r.name}</div>
+      <div class="price">¥${yen(r.unitPrice)}</div>
+    </div>
+    <div class="meta">${r.date}　数量:${r.qty}　金額:¥${yen(r.amount)}　${r.supplier}</div>
+    <div class="badges">
+      ${r.spec.thickness ? `<span class="badge">厚み ${r.spec.thickness}mm</span>` : ""}
+      ${r.spec.standard ? `<span class="badge">規格 ${r.spec.standard}</span>` : ""}
+      ${r.pricePerM2 ? `<span class="badge">¥${yen(r.pricePerM2)}/㎡</span>` : ""}
+      ${r.pricePerM3 ? `<span class="badge">¥${yen(r.pricePerM3)}/m³</span>` : ""}
+    </div>
+    ${showDelete ? `<button class="dangerBtn" onclick="deleteRecord('${r.id}')">削除</button>` : ""}
+  </div>`;
+}
+function renderCards(rows){
+  $("cards").innerHTML = rows.length ? rows.slice().reverse().map(r=>cardHtml(r,false)).join("") : `<div class="empty">該当データなし</div>`;
+}
+function renderList(rows){
+  $("listCards").innerHTML = records.length ? records.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(r=>cardHtml(r,true)).join("") : `<div class="empty">登録データなし</div>`;
+}
+function deleteRecord(id){
+  records = records.filter(r=>r.id !== id);
+  save();
+  render();
+}
+
 function drawChart(rows){
- const ctx=el("chart");
- const fallback=document.getElementById("chartFallback");
- const countPill=document.getElementById("chartCount");
- if(chart) chart.destroy();
+  const canvas = $("chart");
+  const ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(320, rect.width * dpr);
+  canvas.height = 320 * dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const w = canvas.width/dpr;
+  const h = 320;
+  ctx.clearRect(0,0,w,h);
 
- const mode=document.getElementById("graphMode")?.value||"exact";
- let graphRows=activeGraphRows(rows);
- let label="単価";
- let values=graphRows.map(r=>r.unitPrice);
+  const gr = graphRowsFor(rows);
+  $("chartCount").textContent = gr.length + "件";
+  const hintMap = {
+    exact:"同じ厚み・規格だけを表示。見積判断はこれが安全。",
+    thickness:"厚み違いも含めて表示。材料全体の傾向確認用。",
+    sqm:"3x6/4x8を㎡単価に換算。面積違い比較用。",
+    m3:"厚み差まで吸収するm³単価。板厚違い比較用。"
+  };
+  $("graphHint").textContent = hintMap[$("graphMode").value];
 
- if(mode==="sqm"){
-   label="㎡単価";
-   graphRows=graphRows.filter(r=>r.pricePerM2);
-   values=graphRows.map(r=>r.pricePerM2);
- }else if(mode==="m3"){
-   label="m³単価";
-   graphRows=graphRows.filter(r=>r.pricePerM3);
-   values=graphRows.map(r=>r.pricePerM3);
- }else if(mode==="thickness"){
-   label="単価（厚み別）";
- }else{
-   label="単価（同一商品）";
- }
+  if(!gr.length){
+    $("barChart").innerHTML = `<div class="empty">グラフ化できるデータがありません</div>`;
+    return;
+  }
 
- const hint=document.getElementById("graphHint");
- if(hint){
-   if(mode==="exact") hint.textContent="同じ厚み・規格だけを表示します。見積判断はこの表示が安全。";
-   if(mode==="thickness") hint.textContent="厚み違いも含めて表示します。材料全体の傾向確認用。";
-   if(mode==="sqm") hint.textContent="3x6/4x8などを㎡単価に換算。面積違いの比較用。";
-   if(mode==="m3") hint.textContent="厚み差まで吸収するm³単価。板厚違いの比較用。";
- }
+  const values = gr.map(graphValue);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const pad = 38;
+  const range = max - min || max || 1;
 
- if(countPill) countPill.textContent = `${graphRows.length}件`;
+  ctx.strokeStyle = "#e5e7eb";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pad, 18);
+  ctx.lineTo(pad, h-pad);
+  ctx.lineTo(w-12, h-pad);
+  ctx.stroke();
 
- if(!graphRows.length||!values.length){
-   const c=ctx.getContext("2d");
-   c.clearRect(0,0,ctx.width,ctx.height);
-   if(fallback) fallback.innerHTML=`<div class="empty">グラフ化できるデータがありません</div>`;
-   return;
- }
+  ctx.fillStyle = "#6b7280";
+  ctx.font = "11px sans-serif";
+  ctx.fillText("¥" + yen(max), 4, 24);
+  ctx.fillText("¥" + yen(min), 4, h-pad);
 
- const min=Math.min(...values);
- const max=Math.max(...values);
- const range=max-min || max || 1;
- if(fallback){
-   fallback.innerHTML=graphRows.slice(-8).map((r,i)=>{
-     const v=values[values.length-graphRows.slice(-8).length+i];
-     const pct=Math.max(4, Math.round(((v-min)/range)*100));
-     return `<div class="chartRow">
-       <div>${r.date.slice(5)}</div>
-       <div class="chartBarWrap"><div class="chartBar" style="width:${pct}%"></div></div>
-       <div class="chartValue">¥${yen(v)}</div>
-     </div>`;
-   }).join("");
- }
+  ctx.strokeStyle = "#111827";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  gr.forEach((r,i)=>{
+    const x = pad + (w-pad-18) * (gr.length === 1 ? 0.5 : i/(gr.length-1));
+    const y = (h-pad) - ((values[i]-min)/range) * (h-pad-24);
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
 
- try{
-   chart=new Chart(ctx,{
-     type:"line",
-     data:{
-       labels:graphRows.map(r=>r.date),
-       datasets:[{
-         label,
-         data:values,
-         tension:.25,
-         pointRadius:4,
-         borderWidth:3
-       }]
-     },
-     options:{
-       responsive:true,
-       maintainAspectRatio:false,
-       plugins:{
-         legend:{display:true, labels:{boxWidth:12, font:{size:12}}},
-       },
-       scales:{
-         x:{ticks:{maxRotation:45,minRotation:0,autoSkip:true,font:{size:11}}},
-         y:{beginAtZero:false,ticks:{font:{size:11},callback:(v)=>"¥"+Number(v).toLocaleString("ja-JP")}}
-       }
-     }
-   });
- }catch(e){
-   console.warn("chart error", e);
- }
+  ctx.fillStyle = "#111827";
+  gr.forEach((r,i)=>{
+    const x = pad + (w-pad-18) * (gr.length === 1 ? 0.5 : i/(gr.length-1));
+    const y = (h-pad) - ((values[i]-min)/range) * (h-pad-24);
+    ctx.beginPath();
+    ctx.arc(x,y,4,0,Math.PI*2);
+    ctx.fill();
+  });
+
+  ctx.fillStyle = "#111827";
+  ctx.font = "12px sans-serif";
+  ctx.fillText(graphLabel(), pad, 14);
+
+  const lastRows = gr.slice(-8);
+  const lastValues = values.slice(-8);
+  $("barChart").innerHTML = lastRows.map((r,i)=>{
+    const v = lastValues[i];
+    const pct = Math.max(4, Math.round(((v-min)/range)*100));
+    return `<div class="barRow"><div>${r.date.slice(5)}</div><div class="barWrap"><div class="bar" style="width:${pct}%"></div></div><div class="barVal">¥${yen(v)}</div></div>`;
+  }).join("");
 }
-function removeRecord(rid){records=records.filter(r=>r.id!==rid);save();render()}
-
-el("addBtn").onclick=()=>{const qty=Number(el("qty").value||0);const unitPrice=Number(el("unitPrice").value||0);const amount=Number(el("amount").value||0)||qty*unitPrice;addRecord({date:el("date").value,name:el("name").value,qty,unitPrice,amount,supplier:el("supplier").value});dedupe();save();render()};
-el("seedBtn").onclick=()=>{SEED_RECORDS.forEach(addRecord);dedupe();save();
-});
-
-if(document.getElementById("graphMode")){
-  document.getElementById("graphMode").addEventListener("change", render);
-}
-render();alert(`納品書データを反映しました。現在 ${records.length} 件です。`)};
-el("clearBtn").onclick=()=>{if(confirm("全データを削除しますか？")){records=[];save();render()}};
-el("search").oninput=render;
-
-el("cameraBtn").onclick=()=>{el("cameraInput").setAttribute("capture","environment");el("cameraInput").click()};
-el("fileBtn").onclick=()=>{el("cameraInput").removeAttribute("capture");el("cameraInput").click()};
-el("cameraInput").onchange=e=>{
- const file=e.target.files[0]; if(!file)return;
- currentImage=file;
- const url=URL.createObjectURL(file); el("preview").src=url; el("preview").style.display="block"; el("ocrStatus").textContent="画像を読み込みました。OCR解析を押してください。";
-};
 
 function parseDate(text){
- const m=text.match(/20\d{2}[年\/\-\.]\s*\d{1,2}[月\/\-\.]\s*\d{1,2}/);
- if(!m)return today();
- const nums=m[0].match(/\d+/g);
- return `${nums[0]}-${String(nums[1]).padStart(2,"0")}-${String(nums[2]).padStart(2,"0")}`;
+  const m = text.match(/20\d{2}[年\/\-.]\s*\d{1,2}[月\/\-.]\s*\d{1,2}/);
+  if(!m) return today();
+  const nums = m[0].match(/\d+/g);
+  return `${nums[0]}-${String(nums[1]).padStart(2,"0")}-${String(nums[2]).padStart(2,"0")}`;
 }
-function cleanNum(s){return Number(String(s||"").replace(/[^\d]/g,""))||0}
-function likelyProduct(line){
- const l=normalize(line);
- if(!l)return false;
- if(/合計|税|PAGE|TEL|FAX|納品|売上日|御中|住所|担当|伝票|商品コード|数量|単価|金額/.test(l))return false;
- if(/[A-Za-zＡ-Ｚａ-ｚ]|ベニヤ|MDF|集成|フブル|パイン|ジナ|ゴム|ラワン|メルク|#|SCP/.test(l) && /(\d+\s*x\s*\d+|\d+\s*×\s*\d+|#\d+|MDF|L\/C|ベニヤ|集成|パイン|ジナ)/.test(l))return true;
- return false;
-}
+function cleanNum(s){ return Number(String(s||"").replace(/[^\d]/g,"")) || 0; }
 function parseOCR(text){
- const date=parseDate(text);
- const supplier=/ソゴウ/.test(text)?"ソゴウ":"";
- const lines=text.split(/\n/).map(normalize).filter(Boolean);
- let out=[];
- for(let i=0;i<lines.length;i++){
-   const line=lines[i];
-   if(!likelyProduct(line))continue;
-   const joined=[line,lines[i+1]||"",lines[i+2]||""].join(" ");
-   const nums=joined.match(/\d{1,3}(?:,\d{3})+|\d{3,6}/g)||[];
-   let qty=1, unit=0, amount=0;
-   const money=nums.map(cleanNum).filter(n=>n>=100);
-   if(money.length>=2){ unit=money[money.length-2]; amount=money[money.length-1]; }
-   else if(money.length==1){ unit=money[0]; amount=unit; }
-   const qtyM=joined.match(/(\d+(?:\.\d+)?)\s*(枚|本|個)/);
-   if(qtyM) qty=Number(qtyM[1]);
-   if(amount && unit && amount>=unit && Math.round(amount/unit)>1 && !qtyM) qty=Math.round(amount/unit);
-   let name=line.replace(/\s+\d{1,3}(?:,\d{3})+.*/,"").trim();
-   out.push({date,name,qty,unitPrice:unit,amount:amount||qty*unit,supplier});
- }
- return out;
+  const date = parseDate(text);
+  const supplier = /ソゴウ/.test(text) ? "ソゴウ" : "ソゴウ";
+  const lines = text.split(/\n/).map(normalize).filter(Boolean);
+  const out = [];
+  for(let i=0;i<lines.length;i++){
+    const line = lines[i];
+    if(!/(MDF|L\/C|ベニヤ|集成|パイン|ジナ|ラワン|フブル|ゴム|SCP|#)/i.test(line)) continue;
+    if(/合計|税|納品|数量|単価|金額|PAGE|TEL|FAX/.test(line)) continue;
+    const joined = [line, lines[i+1]||"", lines[i+2]||""].join(" ");
+    const nums = joined.match(/\d{1,3}(?:,\d{3})+|\d{3,6}/g) || [];
+    const money = nums.map(cleanNum).filter(n=>n>=100);
+    let qty = 1, unitPrice = 0, amount = 0;
+    if(money.length >= 2){ unitPrice = money[money.length-2]; amount = money[money.length-1]; }
+    else if(money.length === 1){ unitPrice = money[0]; amount = unitPrice; }
+    if(unitPrice){
+      if(amount >= unitPrice && Math.round(amount/unitPrice) > 1) qty = Math.round(amount/unitPrice);
+      const name = line.replace(/\s+\d{1,3}(?:,\d{3})+.*/,"").trim();
+      out.push({date,name,qty,unitPrice,amount:amount||qty*unitPrice,supplier});
+    }
+  }
+  return out;
 }
-
-el("ocrBtn").onclick=async()=>{
- if(!currentImage){alert("先に納品書を撮影または選択してください。");return}
- if(!window.Tesseract){alert("OCRエンジンを読み込めません。ネット接続を確認してください。");return}
- el("ocrStatus").textContent="OCR解析中... 30秒〜数分かかる場合があります。";
- try{
-   const result=await Tesseract.recognize(currentImage,"jpn+eng",{logger:m=>{if(m.status)el("ocrStatus").textContent=`OCR: ${m.status} ${m.progress?Math.round(m.progress*100)+"%":""}`}});
-   el("ocrText").value=result.data.text;
-   el("ocrStatus").textContent="OCR完了。抽出内容を確認してください。";
-   parsedRows=parseOCR(result.data.text);
-   renderParsed();
- }catch(e){el("ocrStatus").textContent="OCR失敗: "+e.message}
-};
-el("parseBtn").onclick=()=>{parsedRows=parseOCR(el("ocrText").value);renderParsed()};
-
 function renderParsed(){
- el("parsedTbody").innerHTML=parsedRows.map((r,i)=>`<tr>
- <td><input class="miniInput" value="${r.date}" onchange="parsedRows[${i}].date=this.value"></td>
- <td><input class="miniInput nameInput" value="${r.name}" onchange="parsedRows[${i}].name=this.value"></td>
- <td><input class="miniInput" value="${r.qty}" onchange="parsedRows[${i}].qty=this.value"></td>
- <td><input class="miniInput" value="${r.unitPrice}" onchange="parsedRows[${i}].unitPrice=this.value"></td>
- <td><input class="miniInput" value="${r.amount}" onchange="parsedRows[${i}].amount=this.value"></td>
- <td><input class="miniInput" value="${r.supplier||'ソゴウ'}" onchange="parsedRows[${i}].supplier=this.value"></td>
- <td><button class="delete" onclick="parsedRows.splice(${i},1);renderParsed()">削除</button></td>
- </tr>`).join("");
+  $("parsedCards").innerHTML = parsedRows.length ? parsedRows.map((r,i)=>`
+    <div class="itemCard">
+      <div class="editGrid">
+        <input value="${r.date}" onchange="parsedRows[${i}].date=this.value">
+        <input value="${r.name}" onchange="parsedRows[${i}].name=this.value">
+        <input value="${r.qty}" onchange="parsedRows[${i}].qty=this.value">
+        <input value="${r.unitPrice}" onchange="parsedRows[${i}].unitPrice=this.value">
+        <input value="${r.amount}" onchange="parsedRows[${i}].amount=this.value">
+        <input value="${r.supplier}" onchange="parsedRows[${i}].supplier=this.value">
+      </div>
+      <button class="dangerBtn" onclick="parsedRows.splice(${i},1);renderParsed()">削除</button>
+    </div>
+  `).join("") : `<div class="empty">抽出データなし</div>`;
 }
-el("registerParsedBtn").onclick=()=>{parsedRows.forEach(addRecord);dedupe();save();render();alert(`${parsedRows.length}件を登録しました。`)};
 
-el("exportBtn").onclick=()=>{const header=["日付","商品名","数量","単価","金額","仕入先"];const csv=[header,...records.map(r=>[r.date,r.name,r.qty,r.unitPrice,r.amount,r.supplier])].map(row=>row.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="material_prices.csv";a.click()};
-el("importFile").onchange=e=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{const lines=reader.result.split(/\r?\n/).filter(Boolean);lines.slice(1).forEach(line=>{const cols=line.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g)?.map(v=>v.replace(/^"|"$/g,"").replaceAll('""','"'))||[];if(cols.length>=5)addRecord({date:cols[0],name:cols[1],qty:cols[2],unitPrice:cols[3],amount:cols[4],supplier:cols[5]||""})});dedupe();save();render()};reader.readAsText(file)};
+function bindEvents(){
+  document.querySelectorAll(".tab").forEach(btn=>{
+    btn.onclick = ()=>{
+      document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+      document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+      btn.classList.add("active");
+      $(btn.dataset.panel).classList.add("active");
+      setTimeout(render, 50);
+    };
+  });
+  document.querySelectorAll(".chip").forEach(btn=>{
+    btn.onclick = ()=>{
+      document.querySelectorAll(".chip").forEach(c=>c.classList.remove("active"));
+      btn.classList.add("active");
+      $("search").value = btn.dataset.q || "";
+      render();
+    };
+  });
+  $("search").oninput = ()=>{
+    document.querySelectorAll(".chip").forEach(c=>c.classList.remove("active"));
+    render();
+  };
+  $("graphMode").onchange = render;
+  $("restoreBtn").onclick = ()=>restoreSeed(true);
 
-if(records.length===0){SEED_RECORDS.forEach(addRecord);dedupe();save()}
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js"))}
+  $("addBtn").onclick = ()=>{
+    const qty = Number($("qty").value || 1);
+    const unitPrice = Number($("unitPrice").value || 0);
+    const amount = Number($("amount").value || 0) || qty * unitPrice;
+    if(!$("name").value.trim()){ alert("商品名を入力してください"); return; }
+    addRecord({date:$("date").value||today(), name:$("name").value, qty, unitPrice, amount, supplier:$("supplier").value||"ソゴウ"});
+    dedupe(); save(); render(); alert("追加しました");
+  };
+  $("clearBtn").onclick = ()=>{
+    if(confirm("全データを削除しますか？")){
+      records = [];
+      save();
+      render();
+    }
+  };
 
-function initUiEvents(){
- document.querySelectorAll(".chip").forEach(chip=>{
-   chip.onclick=()=>{
-     document.querySelectorAll(".chip").forEach(c=>c.classList.remove("active"));
-     chip.classList.add("active");
-     el("search").value = chip.dataset.q || "";
-     render();
-   };
- });
- const gm=document.getElementById("graphMode");
- if(gm) gm.onchange=render;
+  $("cameraBtn").onclick = ()=>{
+    $("imageInput").setAttribute("capture","environment");
+    $("imageInput").click();
+  };
+  $("imageBtn").onclick = ()=>{
+    $("imageInput").removeAttribute("capture");
+    $("imageInput").click();
+  };
+  $("imageInput").onchange = e=>{
+    imageFile = e.target.files[0];
+    if(!imageFile) return;
+    $("preview").src = URL.createObjectURL(imageFile);
+    $("preview").style.display = "block";
+    $("ocrStatus").textContent = "画像を読み込みました。OCRを押してください。";
+  };
+  $("ocrBtn").onclick = async ()=>{
+    if(!imageFile){ alert("先に撮影または画像選択してください"); return; }
+    if(!window.Tesseract){ alert("OCRエンジンを読み込めません。ネット接続を確認してください。"); return; }
+    $("ocrStatus").textContent = "OCR解析中...";
+    try{
+      const result = await Tesseract.recognize(imageFile, "jpn+eng", {
+        logger: m => { if(m.status) $("ocrStatus").textContent = `OCR: ${m.status} ${m.progress ? Math.round(m.progress*100)+"%" : ""}`; }
+      });
+      $("ocrText").value = result.data.text;
+      parsedRows = parseOCR(result.data.text);
+      renderParsed();
+      $("ocrStatus").textContent = "OCR完了。内容を確認してください。";
+    }catch(e){
+      $("ocrStatus").textContent = "OCR失敗: " + e.message;
+    }
+  };
+  $("parseBtn").onclick = ()=>{
+    parsedRows = parseOCR($("ocrText").value);
+    renderParsed();
+  };
+  $("addParsedBtn").onclick = ()=>{
+    parsedRows.forEach(addRecord);
+    dedupe(); save(); render();
+    alert(`${parsedRows.length}件登録しました`);
+  };
+
+  $("exportBtn").onclick = ()=>{
+    const header = ["日付","商品名","数量","単価","金額","仕入先"];
+    const csv = [header, ...records.map(r=>[r.date,r.name,r.qty,r.unitPrice,r.amount,r.supplier])]
+      .map(row=>row.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\ufeff"+csv], {type:"text/csv;charset=utf-8"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "material_prices.csv";
+    a.click();
+  };
+  $("csvInput").onchange = e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const lines = reader.result.split(/\r?\n/).filter(Boolean);
+      lines.slice(1).forEach(line=>{
+        const cols = line.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g)?.map(v=>v.replace(/^"|"$/g,"").replaceAll('""','"')) || [];
+        if(cols.length >= 5) addRecord({date:cols[0], name:cols[1], qty:cols[2], unitPrice:cols[3], amount:cols[4], supplier:cols[5]||"ソゴウ"});
+      });
+      dedupe(); save(); render();
+    };
+    reader.readAsText(file);
+  };
 }
-initUiEvents();
 
-render();
+document.addEventListener("DOMContentLoaded", ()=>{
+  $("date").value = today();
+  load();
+  bindEvents();
+  renderParsed();
+  render();
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
+  }
+});
