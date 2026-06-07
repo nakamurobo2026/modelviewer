@@ -13,7 +13,6 @@ const els = {
   category: document.getElementById("categorySelect"),
   generate: document.getElementById("generateBtn"),
   clear: document.getElementById("clearBtn"),
-  settings: document.getElementById("settingsBtn"),
   showAll: document.getElementById("showAllBtn"),
   showOne: document.getElementById("showOneBtn"),
   tuneButtons: document.querySelectorAll("[data-tune]"),
@@ -30,24 +29,23 @@ const els = {
   history: document.getElementById("historyList"),
   clearHistory: document.getElementById("clearHistoryBtn"),
   error: document.getElementById("errorMessage"),
-  loading: document.getElementById("loadingOverlay"),
-  apiModal: document.getElementById("apiKeyModal"),
-  edgeUrl: document.getElementById("apiKeyInput"),
-  toggleEdgeUrl: document.getElementById("toggleApiKeyBtn"),
-  saveEdgeUrl: document.getElementById("saveApiKeyBtn"),
-  skipEdgeUrl: document.getElementById("skipApiKeyBtn"),
-  clearEdgeUrl: document.getElementById("clearApiKeyBtn")
+  loading: document.getElementById("loadingOverlay")
 };
 
 function normalizeStoredIdeas(ideas) {
-  return ideas.map((idea, index) => ({ ...idea, id: idea.id || `stored-${index}`, hookType: idea.hookType || idea.hook || "未分類", status: idea.status || "new" }));
+  return ideas.map((idea, index) => ({
+    ...idea,
+    id: idea.id || `stored-${index}`,
+    hookType: idea.hookType || idea.hook || "未分類",
+    status: idea.status || "new"
+  }));
 }
 
-function persist() {
+function persist(statusText = null) {
   window.IwakanStorage.setIdeas(state.ideas);
   window.IwakanStorage.setLastInput({ theme: els.theme.value, category: els.category.value });
   window.IwakanStorage.setView({ mode: state.viewMode });
-  els.saveStatus.textContent = `保存済み ${new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}`;
+  els.saveStatus.textContent = statusText || `保存済み ${new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}`;
 }
 
 function render() {
@@ -55,10 +53,12 @@ function render() {
   els.empty.hidden = state.ideas.length > 0;
   state.singleIndex = clamp(state.singleIndex, 0, Math.max(0, state.ideas.length - 1));
   const visibleIdeas = state.viewMode === "one" && state.ideas.length ? [state.ideas[state.singleIndex]] : state.ideas;
+
   visibleIdeas.forEach((idea, index) => {
     const globalIndex = state.viewMode === "one" ? state.singleIndex : index;
     els.list.appendChild(createIdeaCard(idea, globalIndex));
   });
+
   renderMode();
   updateStats();
   renderHistory();
@@ -103,6 +103,7 @@ function renderHistory() {
     els.history.textContent = "履歴はまだありません。";
     return;
   }
+
   els.history.innerHTML = history.map((item) => `
     <div class="history-item">
       <b>${escapeHtml(item.theme || "無題")}</b>
@@ -112,7 +113,12 @@ function renderHistory() {
 
 function pushHistory({ theme, category, source }) {
   const history = window.IwakanStorage.getHistory();
-  history.unshift({ theme, category, source, time: new Date().toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) });
+  history.unshift({
+    theme,
+    category,
+    source,
+    time: new Date().toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })
+  });
   window.IwakanStorage.setHistory(history);
 }
 
@@ -138,26 +144,17 @@ function setLoading(isLoading) {
 }
 
 function showError(message) {
-  if (!message) {
-    els.error.hidden = true;
-    els.error.textContent = "";
-    return;
-  }
-  els.error.hidden = false;
-  els.error.textContent = message;
+  els.error.hidden = !message;
+  els.error.textContent = message || "";
 }
 
-function openApiModal() {
-  window.IwakanStorage.clearLegacyOpenAISecrets?.();
-  els.edgeUrl.value = window.IwakanStorage.getEdgeFunctionUrl();
-  els.edgeUrl.type = "url";
-  els.toggleEdgeUrl.textContent = "隠す";
-  if (typeof els.apiModal.showModal === "function") els.apiModal.showModal();
-}
-
-function closeApiModal() {
-  window.IwakanStorage.markApiModalSeen();
-  els.apiModal.close();
+function normalizeAiIdeas(ideas, category) {
+  return ideas.slice(0, IDEA_COUNT).map((idea, index) => window.TemplateGenerator.normalizeIdea({
+    text: idea.text,
+    category: idea.category || category,
+    score: idea.score,
+    hook: idea.hook || idea.hookType
+  }, category, index));
 }
 
 async function generatePosts(tune = null) {
@@ -170,38 +167,37 @@ async function generatePosts(tune = null) {
 
   const category = tune || els.category.value;
   if (tune) els.category.value = category;
-  const workerUrl = window.IwakanStorage.getEdgeFunctionUrl();
-  let source = "local";
+  let source = "Cloudflare Worker";
 
   setLoading(true);
   showError("");
+
   try {
-    if (workerUrl) {
-      const aiResult = await window.AIClient.generate({ endpointUrl: workerUrl, theme, category, tune, count: IDEA_COUNT });
-      state.ideas = aiResult.ideas.slice(0, IDEA_COUNT).map((idea, index) => window.TemplateGenerator.normalizeIdea(idea, category, index));
-      source = `Cloudflare Worker ${aiResult.model || "gpt-5-mini"}`;
-      els.saveStatus.textContent = `AI生成完了: ${aiResult.model || "gpt-5-mini"}`;
-    } else {
-      state.ideas = window.TemplateGenerator.generate({ theme, category, tune, count: IDEA_COUNT });
-      els.saveStatus.textContent = "テンプレート生成で作成しました";
-    }
+    const aiResult = await window.AIClient.generate({ theme, category, mode: "list" });
+    state.ideas = normalizeAiIdeas(aiResult.ideas, category);
+    source = `Cloudflare Worker ${aiResult.model || "gpt-5-mini"}`;
+    persist(`AI生成完了: ${aiResult.model || "gpt-5-mini"}`);
   } catch (error) {
-    console.error("Cloudflare Worker generation failed. Falling back to template generation.", {
+    console.error("Cloudflare Worker generation failed. Falling back to local template generation.", {
       message: error.message,
       endpoint: error.endpoint,
       status: error.status,
       detail: error.detail,
       rawResponse: error.rawResponse,
+      response: error.response,
+      originalError: error.originalError,
       error
     });
     state.ideas = window.TemplateGenerator.generate({ theme, category, tune, count: IDEA_COUNT });
     source = "local fallback";
-    showError(`AI生成に失敗しました。ローカル生成に切り替えました。${error.message || ""}`);
-    els.saveStatus.textContent = "Cloudflare Worker失敗。テンプレート生成へ戻しました";
+    showError(`AI生成に失敗しました。ローカル生成に切り替えました。${error.message ? ` ${error.message}` : ""}`);
+    persist("Cloudflare Worker失敗。テンプレート生成へ戻しました");
   } finally {
     state.singleIndex = 0;
     pushHistory({ theme, category, source });
-    persist();
+    window.IwakanStorage.setIdeas(state.ideas);
+    window.IwakanStorage.setLastInput({ theme, category });
+    window.IwakanStorage.setView({ mode: state.viewMode });
     render();
     els.list.firstElementChild?.classList.add("toast");
     setLoading(false);
@@ -226,7 +222,7 @@ function clearIdeas() {
   if (!confirm("保存済みの投稿案を削除しますか？")) return;
   state.ideas = [];
   state.singleIndex = 0;
-  persist();
+  persist("投稿案を削除しました");
   render();
 }
 
@@ -239,7 +235,6 @@ function setViewMode(mode) {
 els.generate.addEventListener("click", () => generatePosts());
 els.clear.addEventListener("click", clearIdeas);
 els.clearHistory.addEventListener("click", () => { window.IwakanStorage.clearHistory(); renderHistory(); });
-els.settings.addEventListener("click", openApiModal);
 els.showAll.addEventListener("click", () => setViewMode("all"));
 els.showOne.addEventListener("click", () => setViewMode("one"));
 els.prevIdea.addEventListener("click", () => { state.singleIndex = clamp(state.singleIndex - 1, 0, Math.max(0, state.ideas.length - 1)); render(); });
@@ -253,32 +248,10 @@ els.list.addEventListener("click", (event) => {
   if (action === "adopt") updateStatus(id, "adopted");
   if (action === "reject") updateStatus(id, "rejected");
 });
-els.saveEdgeUrl.addEventListener("click", () => {
-  const endpointUrl = els.edgeUrl.value.trim();
-  if (endpointUrl) window.IwakanStorage.setEdgeFunctionUrl(endpointUrl);
-  else window.IwakanStorage.clearEdgeFunctionUrl();
-  window.IwakanStorage.clearLegacyOpenAISecrets?.();
-  closeApiModal();
-  els.saveStatus.textContent = endpointUrl ? "Cloudflare Worker URLを保存しました" : "AI未設定です。ローカル生成で動きます";
-});
-els.toggleEdgeUrl.addEventListener("click", () => {
-  const visible = els.edgeUrl.type === "url" || els.edgeUrl.type === "text";
-  els.edgeUrl.type = visible ? "password" : "url";
-  els.toggleEdgeUrl.textContent = visible ? "表示" : "隠す";
-});
-els.skipEdgeUrl.addEventListener("click", closeApiModal);
-els.clearEdgeUrl.addEventListener("click", () => {
-  window.IwakanStorage.clearEdgeFunctionUrl();
-  window.IwakanStorage.clearLegacyOpenAISecrets?.();
-  els.edgeUrl.value = "";
-  closeApiModal();
-  els.saveStatus.textContent = "Cloudflare Worker URLを削除しました";
-});
 
 if (state.lastInput.theme) els.theme.value = state.lastInput.theme;
 if (state.lastInput.category) els.category.value = state.lastInput.category;
 window.IwakanStorage.clearLegacyOpenAISecrets?.();
-if (!window.IwakanStorage.hasSeenApiModal() && !window.IwakanStorage.getEdgeFunctionUrl()) window.addEventListener("load", openApiModal);
 render();
 
 if ("serviceWorker" in navigator) {
