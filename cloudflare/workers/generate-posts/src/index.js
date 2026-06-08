@@ -2,6 +2,7 @@ const OPENAI_ENDPOINT = "https://api.openai.com/v1/responses";
 const DEFAULT_MODEL = "gpt-5-mini";
 const TIMEOUT_MS = 15000;
 const MAX_COUNT = 50;
+const AI_SEED_COUNT = 16;
 
 function corsHeaders(env) {
   return {
@@ -17,7 +18,7 @@ function json(body, status = 200, env = {}) {
 }
 
 function buildPrompt({ theme, category, mode }) {
-  const count = mode === "one" ? 1 : MAX_COUNT;
+  const count = mode === "one" ? 1 : AI_SEED_COUNT;
   return [
     "Threads向けの短い投稿案をJSON配列だけで生成してください。",
     `テーマ: ${theme}`,
@@ -56,7 +57,7 @@ function parseIdeas(text) {
       if (Array.isArray(parsed.ideas)) return parsed.ideas;
       if (Array.isArray(parsed.posts)) return parsed.posts;
     } catch {
-      // Try the next candidate.
+      // Try next candidate.
     }
   }
   return [];
@@ -67,8 +68,65 @@ function normalizeIdea(idea, fallbackCategory, index) {
   const category = String(idea?.category || fallbackCategory || "違和感");
   const hook = String(idea?.hook || idea?.hookType || "余白");
   const rawScore = Number(idea?.score);
-  const score = Number.isFinite(rawScore) ? Math.max(1, Math.min(100, Math.round(rawScore))) : 70 + (index % 19);
+  const score = Number.isFinite(rawScore) ? Math.max(1, Math.min(100, Math.round(rawScore))) : 72 + (index % 18);
   return { text, category, score, hook };
+}
+
+function compactTheme(theme) {
+  const clean = String(theme || "").trim().replace(/\s+/g, " ");
+  return clean.length > 26 ? `${clean.slice(0, 26)}…` : clean;
+}
+
+function makeLocalVariant(seed, theme, category, index) {
+  const baseText = String(seed?.text || "").replace(/[。\s]+$/, "");
+  const shortTheme = compactTheme(theme);
+  const tails = [
+    "これ、分かる人だけ分かればいい。",
+    "言い切れないけど、残る。",
+    "たぶん名前がないだけ。",
+    "夜だと少し意味が変わる。",
+    "なんか静かに刺さる。",
+    "説明すると薄くなるやつ。",
+    "見た瞬間だけ黙る。",
+    "少しだけ昔の匂いがする。",
+    "気にしないふりをしてる。",
+    "この余白、ちょっと怖い。"
+  ];
+  const leads = [
+    shortTheme,
+    `${shortTheme}の話`,
+    `${shortTheme}って`,
+    `${shortTheme}、`,
+    "これ"
+  ];
+
+  const text = index % 3 === 0
+    ? `${leads[index % leads.length]}、${tails[index % tails.length]}`
+    : `${baseText}。${tails[index % tails.length]}`;
+
+  return normalizeIdea({
+    text,
+    category: seed?.category || category,
+    score: Number(seed?.score || 74) + (index % 9),
+    hook: seed?.hook || seed?.hookType || "余白"
+  }, category, index);
+}
+
+function expandIdeas(seeds, theme, category, mode) {
+  const normalized = seeds.map((idea, index) => normalizeIdea(idea, category, index)).filter((idea) => idea.text);
+  if (mode === "one") return normalized.slice(0, 1);
+
+  const ideas = [...normalized];
+  let index = 0;
+  while (ideas.length < MAX_COUNT && normalized.length) {
+    const seed = normalized[index % normalized.length];
+    const variant = makeLocalVariant(seed, theme, category, ideas.length + index);
+    const isDuplicate = ideas.some((idea) => idea.text === variant.text);
+    if (!isDuplicate) ideas.push(variant);
+    index += 1;
+    if (index > 300) break;
+  }
+  return ideas.slice(0, MAX_COUNT);
 }
 
 export default {
@@ -110,7 +168,7 @@ export default {
         body: JSON.stringify({
           model,
           input: buildPrompt({ theme, category, mode }),
-          max_output_tokens: mode === "one" ? 500 : 2400
+          max_output_tokens: mode === "one" ? 450 : 1200
         })
       });
 
@@ -127,10 +185,8 @@ export default {
         return json({ success: false, error: "OpenAI response was not JSON.", detail: rawOpenAI.slice(0, 1200) }, 502, env);
       }
 
-      const ideas = parseIdeas(extractText(openaiData))
-        .slice(0, mode === "one" ? 1 : MAX_COUNT)
-        .map((idea, index) => normalizeIdea(idea, category, index))
-        .filter((idea) => idea.text);
+      const seedIdeas = parseIdeas(extractText(openaiData));
+      const ideas = expandIdeas(seedIdeas, theme, category, mode);
 
       if (!ideas.length) {
         return json({ success: false, error: "OpenAI response did not include usable post ideas.", detail: rawOpenAI.slice(0, 1200) }, 502, env);
