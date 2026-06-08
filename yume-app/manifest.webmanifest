@@ -1,0 +1,26 @@
+{
+  "name": "夢アプリ",
+  "short_name": "夢アプリ",
+  "description": "夢を、今日の一歩に変えるAIロードマップアプリ。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f6f1",
+  "theme_color": "#202321",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
