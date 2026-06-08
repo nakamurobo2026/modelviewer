@@ -1,5 +1,5 @@
-const RESPONSES_ENDPOINT = "https://api.openai.com/v1/responses";
 const CHAT_ENDPOINT = "https://api.openai.com/v1/chat/completions";
+const RESPONSES_ENDPOINT = "https://api.openai.com/v1/responses";
 const DEFAULT_MODEL = "gpt-5-mini";
 const TIMEOUT_MS = 15000;
 const MAX_COUNT = 50;
@@ -74,60 +74,24 @@ function buildPrompt({ theme, category, mode }) {
   ].join("\n");
 }
 
-function collectStrings(value, bucket = []) {
-  if (typeof value === "string") bucket.push(value);
-  else if (Array.isArray(value)) value.forEach((item) => collectStrings(item, bucket));
-  else if (value && typeof value === "object") Object.values(value).forEach((item) => collectStrings(item, bucket));
-  return bucket;
-}
-
 function isIdeaLike(value) {
   return value && typeof value === "object" && typeof value.text === "string";
 }
 
 function findIdeaArray(value) {
   if (!value || typeof value !== "object") return [];
-  if (Array.isArray(value)) {
-    if (value.some(isIdeaLike)) return value;
-    for (const item of value) {
-      const found = findIdeaArray(item);
-      if (found.length) return found;
-    }
-    return [];
-  }
+  if (Array.isArray(value)) return value.some(isIdeaLike) ? value : value.flatMap(findIdeaArray).slice(0, AI_SEED_COUNT);
   if (Array.isArray(value.ideas)) return value.ideas;
   if (Array.isArray(value.posts)) return value.posts;
   if (Array.isArray(value.data)) return value.data;
-  for (const item of Object.values(value)) {
-    const found = findIdeaArray(item);
-    if (found.length) return found;
-  }
-  return [];
+  return Object.values(value).flatMap(findIdeaArray).slice(0, AI_SEED_COUNT);
 }
 
-function extractText(data) {
-  if (typeof data.output_text === "string") return data.output_text;
-  const chunks = [];
-  for (const item of Array.isArray(data.output) ? data.output : []) {
-    for (const part of Array.isArray(item.content) ? item.content : []) {
-      if (typeof part.text === "string") chunks.push(part.text);
-      if (typeof part.output_text === "string") chunks.push(part.output_text);
-      if (typeof part.json === "object") chunks.push(JSON.stringify(part.json));
-    }
-  }
-  return chunks.join("\n");
-}
-
-function parseIdeas(textOrData) {
-  const direct = findIdeaArray(textOrData);
+function parseIdeas(value) {
+  const direct = findIdeaArray(value);
   if (direct.length) return direct;
-  const trimmed = String(textOrData || "").trim().replace(/^```json/i, "").replace(/^```/, "").replace(/```$/, "").trim();
-  const candidates = [trimmed, ...collectStrings(textOrData)];
-  const arrayMatch = trimmed.match(/\[[\s\S]*\]/);
-  if (arrayMatch) candidates.push(arrayMatch[0]);
-  const objectMatch = trimmed.match(/\{[\s\S]*\}/);
-  if (objectMatch) candidates.push(objectMatch[0]);
-  for (const candidate of candidates) {
+  const text = String(value || "").trim().replace(/^```json/i, "").replace(/^```/, "").replace(/```$/, "").trim();
+  for (const candidate of [text, text.match(/\{[\s\S]*\}/)?.[0], text.match(/\[[\s\S]*\]/)?.[0]].filter(Boolean)) {
     try {
       const found = findIdeaArray(JSON.parse(candidate));
       if (found.length) return found;
@@ -136,6 +100,18 @@ function parseIdeas(textOrData) {
     }
   }
   return [];
+}
+
+function extractResponseText(data) {
+  if (typeof data.output_text === "string") return data.output_text;
+  const strings = [];
+  const walk = (value) => {
+    if (typeof value === "string") strings.push(value);
+    else if (Array.isArray(value)) value.forEach(walk);
+    else if (value && typeof value === "object") Object.values(value).forEach(walk);
+  };
+  walk(data.output || data);
+  return strings.join("\n");
 }
 
 function compactTheme(theme) {
@@ -201,12 +177,7 @@ function makeLocalVariant(seed, theme, category, index) {
   const place = inferPlace(theme, index);
   const base = String(seed?.text || "").replace(/[。\s]+$/, "");
   const observation = observationDb[place][index % observationDb[place].length];
-  const forms = [
-    `${place}、${observation}`,
-    `${compactTheme(theme)}、${observation}`,
-    `${base}。${observation}`,
-    `${place}の${observation}`
-  ];
+  const forms = [`${place}、${observation}`, `${compactTheme(theme)}、${observation}`, `${base}。${observation}`, `${place}の${observation}`];
   const text = forms[index % forms.length].slice(0, 95);
   return normalizeIdea({ text, category: seed?.category || category, score: concreteScore(text), hook: seed?.hook || seed?.hookType || "観察" }, category, index);
 }
@@ -225,38 +196,12 @@ function expandIdeas(seeds, theme, category, mode) {
   return ideas.slice(0, MAX_COUNT);
 }
 
-async function callResponsesApi({ env, theme, category, mode, signal }) {
-  const model = env.OPENAI_MODEL || DEFAULT_MODEL;
-  const response = await fetch(RESPONSES_ENDPOINT, {
-    method: "POST",
-    signal,
-    headers: {
-      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model,
-      input: buildPrompt({ theme, category, mode }),
-      max_output_tokens: mode === "one" ? 350 : 900,
-      text: { format: { type: "json_schema", name: "threads_post_ideas", strict: true, schema: ideaSchema() } }
-    })
-  });
-  const raw = await response.text();
-  if (!response.ok) throw new Error(`Responses API failed: ${response.status} ${raw.slice(0, 500)}`);
-  const data = JSON.parse(raw);
-  const parsed = parseIdeas(data);
-  return parsed.length ? parsed : parseIdeas(extractText(data));
-}
-
 async function callChatCompletions({ env, theme, category, mode, signal }) {
   const model = env.OPENAI_MODEL || DEFAULT_MODEL;
   const response = await fetch(CHAT_ENDPOINT, {
     method: "POST",
     signal,
-    headers: {
-      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
-      "Content-Type": "application/json"
-    },
+    headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model,
       messages: [
@@ -270,25 +215,39 @@ async function callChatCompletions({ env, theme, category, mode, signal }) {
   const raw = await response.text();
   if (!response.ok) throw new Error(`Chat Completions failed: ${response.status} ${raw.slice(0, 500)}`);
   const data = JSON.parse(raw);
-  const content = data?.choices?.[0]?.message?.content || "";
-  return parseIdeas(content || data);
+  return parseIdeas(data?.choices?.[0]?.message?.content || data);
+}
+
+async function callResponsesApi({ env, theme, category, mode, signal }) {
+  const model = env.OPENAI_MODEL || DEFAULT_MODEL;
+  const response = await fetch(RESPONSES_ENDPOINT, {
+    method: "POST",
+    signal,
+    headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      input: buildPrompt({ theme, category, mode }),
+      max_output_tokens: mode === "one" ? 350 : 900,
+      text: { format: { type: "json_schema", name: "threads_post_ideas", strict: true, schema: ideaSchema() } }
+    })
+  });
+  const raw = await response.text();
+  if (!response.ok) throw new Error(`Responses API failed: ${response.status} ${raw.slice(0, 500)}`);
+  const data = JSON.parse(raw);
+  const parsed = parseIdeas(data);
+  return parsed.length ? parsed : parseIdeas(extractResponseText(data));
 }
 
 async function callOpenAI(args) {
   const errors = [];
-  try {
-    const ideas = await callResponsesApi(args);
-    if (ideas.length) return ideas;
-    errors.push("Responses API returned no usable ideas.");
-  } catch (error) {
-    errors.push(error && error.message ? error.message : String(error));
-  }
-  try {
-    const ideas = await callChatCompletions(args);
-    if (ideas.length) return ideas;
-    errors.push("Chat Completions returned no usable ideas.");
-  } catch (error) {
-    errors.push(error && error.message ? error.message : String(error));
+  for (const call of [callChatCompletions, callResponsesApi]) {
+    try {
+      const ideas = await call(args);
+      if (ideas.length) return ideas;
+      errors.push("No usable ideas returned.");
+    } catch (error) {
+      errors.push(error && error.message ? error.message : String(error));
+    }
   }
   throw new Error(errors.join(" | "));
 }
