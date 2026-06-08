@@ -31,12 +31,26 @@ Safariで数回リロード、またはホーム画面アイコンを削除し�
 
 `iwakan-lab` はGitHub Pagesから直接OpenAI APIを呼びません。AI生成は固定のCloudflare Worker経由で行い、ブラウザにはOpenAI APIキーやWorker URLを保存しません。OpenAIが失敗した場合もWorker内で50件を補完して返すため、アプリは止まりません。
 
+### 生成方針
+
+投稿は感情ワードから直接作らず、Observation Engineで「観察」を作ってから文章化します。
+
+```text
+観察
+  -> 情景
+  -> 微妙な違和感
+  -> 人格フィルタ
+  -> 投稿文
+```
+
+Human Observation DBには、スーパー、ホームセンター、コンビニ、地方駅、市役所、商店街、古い病院、学校、パチンコ屋、ドラッグストアの観察データを入れています。抽象語だけの投稿、AIポエム、露骨な共感誘導、意味不明な違和感は品質フィルタで減点または除外します。
+
 ### 構成
 
 ```text
 GitHub Pages
   -> Cloudflare Worker: https://iwakan-lab.nakamura0407.workers.dev/generate
-    -> OpenAI Responses API
+    -> OpenAI Responses API / Chat Completions fallback
 ```
 
 ### ブラウザ側
@@ -45,7 +59,7 @@ GitHub Pages
 - タイムアウトは15秒です。
 - `source: "openai"` の時はOpenAI生成です。
 - `source: "worker-fallback"` の時はWorker内の安全モード生成です。
-- Worker通信自体が失敗した場合のみ、ブラウザ内ローカルテンプレート生成へ戻ります。
+- Worker通信自体が失敗した場合のみ、ブラウザ内ローカルObservation Engine生成へ戻ります。
 - 旧localStorageキー `iwakan_lab_openai_api_key_v1`、`iwakan_lab_openai_model_v1`、`iwakan_lab_openai_api_mode_v1`、`iwakan_lab_edge_function_url_v1` は起動時に削除されます。
 
 ### Workerリクエスト
@@ -76,7 +90,7 @@ Content-Type: application/json
       "text": "...",
       "category": "違和感",
       "score": 87,
-      "hook": "共感"
+      "hook": "観察"
     }
   ]
 }
