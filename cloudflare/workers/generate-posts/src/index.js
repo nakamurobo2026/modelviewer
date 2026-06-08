@@ -1,4 +1,5 @@
-const OPENAI_ENDPOINT = "https://api.openai.com/v1/responses";
+const RESPONSES_ENDPOINT = "https://api.openai.com/v1/responses";
+const CHAT_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 const DEFAULT_MODEL = "gpt-5-mini";
 const TIMEOUT_MS = 15000;
 const MAX_COUNT = 50;
@@ -61,6 +62,30 @@ function collectStrings(value, bucket = []) {
   return bucket;
 }
 
+function isIdeaLike(value) {
+  return value && typeof value === "object" && typeof value.text === "string";
+}
+
+function findIdeaArray(value) {
+  if (!value || typeof value !== "object") return [];
+  if (Array.isArray(value)) {
+    if (value.some(isIdeaLike)) return value;
+    for (const item of value) {
+      const found = findIdeaArray(item);
+      if (found.length) return found;
+    }
+    return [];
+  }
+  if (Array.isArray(value.ideas)) return value.ideas;
+  if (Array.isArray(value.posts)) return value.posts;
+  if (Array.isArray(value.data)) return value.data;
+  for (const item of Object.values(value)) {
+    const found = findIdeaArray(item);
+    if (found.length) return found;
+  }
+  return [];
+}
+
 function extractText(data) {
   if (typeof data.output_text === "string") return data.output_text;
   const chunks = [];
@@ -74,31 +99,21 @@ function extractText(data) {
   return chunks.join("\n");
 }
 
-function parseIdeasFromObject(value) {
-  if (!value || typeof value !== "object") return [];
-  if (Array.isArray(value)) return value;
-  if (Array.isArray(value.ideas)) return value.ideas;
-  if (Array.isArray(value.posts)) return value.posts;
-  if (Array.isArray(value.data)) return value.data;
-  return [];
-}
-
 function parseIdeas(textOrData) {
-  const direct = parseIdeasFromObject(textOrData);
+  const direct = findIdeaArray(textOrData);
   if (direct.length) return direct;
 
   const trimmed = String(textOrData || "").trim().replace(/^```json/i, "").replace(/^```/, "").replace(/```$/, "").trim();
   const candidates = [trimmed, ...collectStrings(textOrData)];
-  const match = trimmed.match(/\[[\s\S]*\]/);
-  if (match) candidates.push(match[0]);
+  const arrayMatch = trimmed.match(/\[[\s\S]*\]/);
+  if (arrayMatch) candidates.push(arrayMatch[0]);
   const objectMatch = trimmed.match(/\{[\s\S]*\}/);
   if (objectMatch) candidates.push(objectMatch[0]);
 
   for (const candidate of candidates) {
     try {
-      const parsed = JSON.parse(candidate);
-      const ideas = parseIdeasFromObject(parsed);
-      if (ideas.length) return ideas;
+      const found = findIdeaArray(JSON.parse(candidate));
+      if (found.length) return found;
     } catch {
       // Try next candidate.
     }
@@ -184,9 +199,9 @@ function expandIdeas(seeds, theme, category, mode) {
   return ideas.slice(0, MAX_COUNT);
 }
 
-async function callOpenAI({ env, theme, category, mode, signal }) {
+async function callResponsesApi({ env, theme, category, mode, signal }) {
   const model = env.OPENAI_MODEL || DEFAULT_MODEL;
-  const response = await fetch(OPENAI_ENDPOINT, {
+  const response = await fetch(RESPONSES_ENDPOINT, {
     method: "POST",
     signal,
     headers: {
@@ -209,20 +224,64 @@ async function callOpenAI({ env, theme, category, mode, signal }) {
   });
 
   const raw = await response.text();
-  if (!response.ok) {
-    throw new Error(`OpenAI API request failed: ${response.status} ${raw.slice(0, 500)}`);
-  }
+  if (!response.ok) throw new Error(`Responses API failed: ${response.status} ${raw.slice(0, 500)}`);
+  const data = JSON.parse(raw);
+  return parseIdeas(data).length ? parseIdeas(data) : parseIdeas(extractText(data));
+}
 
-  let data;
+async function callChatCompletions({ env, theme, category, mode, signal }) {
+  const model = env.OPENAI_MODEL || DEFAULT_MODEL;
+  const response = await fetch(CHAT_ENDPOINT, {
+    method: "POST",
+    signal,
+    headers: {
+      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: "あなたはThreads向けの短文投稿案をJSONで返す編集者です。" },
+        { role: "user", content: buildPrompt({ theme, category, mode }) }
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "threads_post_ideas",
+          strict: true,
+          schema: ideaSchema()
+        }
+      },
+      max_completion_tokens: mode === "one" ? 350 : 900
+    })
+  });
+
+  const raw = await response.text();
+  if (!response.ok) throw new Error(`Chat Completions failed: ${response.status} ${raw.slice(0, 500)}`);
+  const data = JSON.parse(raw);
+  const content = data?.choices?.[0]?.message?.content || "";
+  return parseIdeas(content || data);
+}
+
+async function callOpenAI(args) {
+  const errors = [];
   try {
-    data = JSON.parse(raw);
-  } catch {
-    throw new Error(`OpenAI response was not JSON: ${raw.slice(0, 500)}`);
+    const ideas = await callResponsesApi(args);
+    if (ideas.length) return ideas;
+    errors.push("Responses API returned no usable ideas.");
+  } catch (error) {
+    errors.push(error && error.message ? error.message : String(error));
   }
 
-  const structuredIdeas = parseIdeas(data);
-  if (structuredIdeas.length) return structuredIdeas;
-  return parseIdeas(extractText(data));
+  try {
+    const ideas = await callChatCompletions(args);
+    if (ideas.length) return ideas;
+    errors.push("Chat Completions returned no usable ideas.");
+  } catch (error) {
+    errors.push(error && error.message ? error.message : String(error));
+  }
+
+  throw new Error(errors.join(" | "));
 }
 
 export default {
