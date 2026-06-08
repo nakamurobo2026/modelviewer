@@ -65,6 +65,9 @@
       ideas.ideas = ideas;
       ideas.mode = "cloudflare-worker";
       ideas.model = data.model || "gpt-5-mini";
+      ideas.source = data.source || "openai";
+      ideas.error = data.error || "";
+      ideas.elapsedMs = data.elapsedMs || Date.now() - startedAt;
       return ideas;
     } catch (error) {
       if (error.name === "AbortError") {
