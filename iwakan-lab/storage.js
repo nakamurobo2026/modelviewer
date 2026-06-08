@@ -3,7 +3,10 @@
     ideas: "iwakan_lab_ideas_v1",
     lastInput: "iwakan_lab_last_input_v1",
     view: "iwakan_lab_view_v1",
-    history: "iwakan_lab_history_v1"
+    history: "iwakan_lab_history_v1",
+    research: "iwakan_lab_research_v1",
+    agent: "iwakan_lab_agent_v1",
+    queue: "iwakan_lab_queue_v1"
   };
 
   function read(key, fallback) {
@@ -40,6 +43,12 @@
     getHistory: () => read(keys.history, []),
     setHistory: (history) => write(keys.history, history.slice(0, 8)),
     clearHistory: () => localStorage.removeItem(keys.history),
+    getResearch: () => read(keys.research, { text: "", notes: [] }),
+    setResearch: (research) => write(keys.research, research),
+    getAgent: () => read(keys.agent, { persona: "違和感ノート" }),
+    setAgent: (agent) => write(keys.agent, agent),
+    getQueue: () => read(keys.queue, []),
+    setQueue: (queue) => write(keys.queue, queue.slice(0, 80)),
     clearLegacyOpenAISecrets
   };
 })();
