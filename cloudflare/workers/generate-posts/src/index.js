@@ -133,7 +133,12 @@ function makeLocalVariant(seed, theme, category, index) {
     "見た瞬間だけ黙る。",
     "少しだけ昔の匂いがする。",
     "気にしないふりをしてる。",
-    "この余白、ちょっと怖い。"
+    "この余白、ちょっと怖い。",
+    "誰かの記憶にもありそう。",
+    "普通のふりがうまい。",
+    "少しだけ置いていかれる。",
+    "分かると言うには静かすぎる。",
+    "名前をつける前の感じ。"
   ];
   const leads = [shortTheme, `${shortTheme}の話`, `${shortTheme}って`, `${shortTheme}、`, "これ"];
   const text = index % 3 === 0
@@ -173,11 +178,8 @@ function expandIdeas(seeds, theme, category, mode) {
   let index = 0;
   while (ideas.length < MAX_COUNT && normalized.length) {
     const seed = normalized[index % normalized.length];
-    const variant = makeLocalVariant(seed, theme, category, ideas.length + index);
-    const isDuplicate = ideas.some((idea) => idea.text === variant.text);
-    if (!isDuplicate) ideas.push(variant);
+    ideas.push(makeLocalVariant(seed, theme, category, ideas.length + index));
     index += 1;
-    if (index > 300) break;
   }
   return ideas.slice(0, MAX_COUNT);
 }
