@@ -157,6 +157,18 @@ function normalizeAiIdeas(ideas, category) {
   }, category, index));
 }
 
+function generationStatus(result) {
+  if (result.source === "openai") return `AI生成完了: ${result.model || "gpt-5-mini"}`;
+  if (result.source === "worker-fallback") return "Worker内生成完了: OpenAI不調時の安全モード";
+  return `Worker生成完了: ${result.model || "gpt-5-mini"}`;
+}
+
+function historySource(result) {
+  if (result.source === "openai") return `OpenAI ${result.model || "gpt-5-mini"}`;
+  if (result.source === "worker-fallback") return "Worker fallback";
+  return "Cloudflare Worker";
+}
+
 async function generatePosts(tune = null) {
   const theme = els.theme.value.trim();
   if (!theme) {
@@ -175,8 +187,8 @@ async function generatePosts(tune = null) {
   try {
     const aiResult = await window.AIClient.generate({ theme, category, mode: "list" });
     state.ideas = normalizeAiIdeas(aiResult.ideas, category);
-    source = `Cloudflare Worker ${aiResult.model || "gpt-5-mini"}`;
-    persist(`AI生成完了: ${aiResult.model || "gpt-5-mini"}`);
+    source = historySource(aiResult);
+    persist(generationStatus(aiResult));
   } catch (error) {
     console.error("Cloudflare Worker generation failed. Falling back to local template generation.", {
       message: error.message,
