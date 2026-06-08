@@ -29,7 +29,7 @@ Safariで数回リロード、またはホーム画面アイコンを削除し�
 
 ## iwakan-lab: Cloudflare Workers経由のAI生成
 
-`iwakan-lab` はGitHub Pagesから直接OpenAI APIを呼びません。AI生成は固定のCloudflare Worker経由で行い、ブラウザにはOpenAI APIキーやWorker URLを保存しません。Worker通信に失敗した場合は、現在のローカルテンプレート生成へ自動で戻ります。
+`iwakan-lab` はGitHub Pagesから直接OpenAI APIを呼びません。AI生成は固定のCloudflare Worker経由で行い、ブラウザにはOpenAI APIキーやWorker URLを保存しません。OpenAIが失敗した場合もWorker内で50件を補完して返すため、アプリは止まりません。
 
 ### 構成
 
@@ -43,8 +43,9 @@ GitHub Pages
 
 - `iwakan-lab/ai-client.js` が `POST /generate` を呼びます。
 - タイムアウトは15秒です。
-- 成功時のみAI生成結果を採用します。
-- 失敗時、非JSONレスポンス時、空配列時はローカル生成へフォールバックします。
+- `source: "openai"` の時はOpenAI生成です。
+- `source: "worker-fallback"` の時はWorker内の安全モード生成です。
+- Worker通信自体が失敗した場合のみ、ブラウザ内ローカルテンプレート生成へ戻ります。
 - 旧localStorageキー `iwakan_lab_openai_api_key_v1`、`iwakan_lab_openai_model_v1`、`iwakan_lab_openai_api_mode_v1`、`iwakan_lab_edge_function_url_v1` は起動時に削除されます。
 
 ### Workerリクエスト
@@ -67,6 +68,9 @@ Content-Type: application/json
 ```json
 {
   "success": true,
+  "source": "openai",
+  "model": "gpt-5-mini",
+  "count": 50,
   "ideas": [
     {
       "text": "...",
@@ -98,7 +102,7 @@ cd cloudflare/workers/generate-posts
 npx wrangler secret put OPENAI_API_KEY
 ```
 
-4. 必要なら `wrangler.toml` の `ALLOWED_ORIGIN` と `OPENAI_MODEL` を調整します。
+4. `Variables and Secrets` または `wrangler.toml` に以下を設定します。
 
 ```toml
 [vars]
@@ -122,7 +126,7 @@ curl -X POST "https://iwakan-lab.nakamura0407.workers.dev/generate" \
   -d '{"theme":"眠れない夜の違和感","category":"違和感","mode":"list"}'
 ```
 
-`"Hello World!"` が返る場合は、Cloudflare上のWorkerがまだ初期コードのままです。このリポジトリ内の `cloudflare/workers/generate-posts/src/index.js` をWorkerへ反映して再デプロイしてください。
+`"Hello World!"` が返る場合は、Cloudflare上のWorkerがまだ初期コードのままです。`cloudflare/workers/generate-posts/src/index.js` をWorkerへ反映して再デプロイしてください。
 
 ### Worker仕様
 
@@ -130,5 +134,6 @@ curl -X POST "https://iwakan-lab.nakamura0407.workers.dev/generate" \
 - モデル初期値: `gpt-5-mini`
 - OpenAI APIキー: Cloudflare Worker secret `OPENAI_API_KEY`
 - タイムアウト: 15秒
-- 成功時: `{ "success": true, "model": "gpt-5-mini", "ideas": [...] }`
-- 失敗時: `{ "success": false, "error": "...", "detail": "..." }`
+- 通常成功時: `{ "success": true, "source": "openai", "ideas": [...] }`
+- OpenAI失敗時: `{ "success": true, "source": "worker-fallback", "error": "...", "ideas": [...] }`
+- Worker通信失敗時: ブラウザ側がローカル生成へフォールバック
