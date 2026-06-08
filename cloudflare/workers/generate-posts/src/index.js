@@ -17,19 +17,48 @@ function json(body, status = 200, env = {}) {
   return new Response(JSON.stringify(body), { status, headers: corsHeaders(env) });
 }
 
+function ideaSchema() {
+  return {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      ideas: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            text: { type: "string" },
+            category: { type: "string" },
+            score: { type: "integer", minimum: 1, maximum: 100 },
+            hook: { type: "string" }
+          },
+          required: ["text", "category", "score", "hook"]
+        }
+      }
+    },
+    required: ["ideas"]
+  };
+}
+
 function buildPrompt({ theme, category, mode }) {
   const count = mode === "one" ? 1 : AI_SEED_COUNT;
   return [
-    "Threads向けの短い投稿案をJSON配列だけで生成してください。",
     `テーマ: ${theme}`,
     `カテゴリ: ${category}`,
     `件数: ${count}`,
-    "条件: AIっぽくしない。20〜90文字中心。短文中心。コメントしたくなる余白を残す。",
-    "空気感: 静か、深夜、少し違和感、共感、懐かしさ、地方感、なんか分かる。",
-    "禁止: 説明文、Markdown、ハッシュタグの乱用、過剰なポエム、長い結論。",
-    "出力は必ずJSON配列のみ。",
-    "形式: [{\"text\":\"...\",\"category\":\"...\",\"score\":87,\"hook\":\"共感\"}]"
+    "Threads向けの短い投稿案を作ってください。",
+    "AIっぽくしない。20〜90文字中心。短文中心。コメントしたくなる余白を残す。",
+    "静か、深夜、少し違和感、共感、懐かしさ、地方感、なんか分かる空気にする。",
+    "説明しすぎない。ハッシュタグを乱用しない。過剰なポエムにしない。"
   ].join("\n");
+}
+
+function collectStrings(value, bucket = []) {
+  if (typeof value === "string") bucket.push(value);
+  else if (Array.isArray(value)) value.forEach((item) => collectStrings(item, bucket));
+  else if (value && typeof value === "object") Object.values(value).forEach((item) => collectStrings(item, bucket));
+  return bucket;
 }
 
 function extractText(data) {
@@ -39,23 +68,37 @@ function extractText(data) {
     for (const part of Array.isArray(item.content) ? item.content : []) {
       if (typeof part.text === "string") chunks.push(part.text);
       if (typeof part.output_text === "string") chunks.push(part.output_text);
+      if (typeof part.json === "object") chunks.push(JSON.stringify(part.json));
     }
   }
   return chunks.join("\n");
 }
 
-function parseIdeas(text) {
-  const trimmed = String(text || "").trim().replace(/^```json/i, "").replace(/^```/, "").replace(/```$/, "").trim();
-  const candidates = [trimmed];
+function parseIdeasFromObject(value) {
+  if (!value || typeof value !== "object") return [];
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value.ideas)) return value.ideas;
+  if (Array.isArray(value.posts)) return value.posts;
+  if (Array.isArray(value.data)) return value.data;
+  return [];
+}
+
+function parseIdeas(textOrData) {
+  const direct = parseIdeasFromObject(textOrData);
+  if (direct.length) return direct;
+
+  const trimmed = String(textOrData || "").trim().replace(/^```json/i, "").replace(/^```/, "").replace(/```$/, "").trim();
+  const candidates = [trimmed, ...collectStrings(textOrData)];
   const match = trimmed.match(/\[[\s\S]*\]/);
   if (match) candidates.push(match[0]);
+  const objectMatch = trimmed.match(/\{[\s\S]*\}/);
+  if (objectMatch) candidates.push(objectMatch[0]);
 
   for (const candidate of candidates) {
     try {
       const parsed = JSON.parse(candidate);
-      if (Array.isArray(parsed)) return parsed;
-      if (Array.isArray(parsed.ideas)) return parsed.ideas;
-      if (Array.isArray(parsed.posts)) return parsed.posts;
+      const ideas = parseIdeasFromObject(parsed);
+      if (ideas.length) return ideas;
     } catch {
       // Try next candidate.
     }
@@ -151,22 +194,32 @@ async function callOpenAI({ env, theme, category, mode, signal }) {
     body: JSON.stringify({
       model,
       input: buildPrompt({ theme, category, mode }),
-      max_output_tokens: mode === "one" ? 350 : 900
+      max_output_tokens: mode === "one" ? 350 : 900,
+      text: {
+        format: {
+          type: "json_schema",
+          name: "threads_post_ideas",
+          strict: true,
+          schema: ideaSchema()
+        }
+      }
     })
   });
 
   const raw = await response.text();
   if (!response.ok) {
-    throw new Error(`OpenAI API request failed: ${response.status} ${raw.slice(0, 300)}`);
+    throw new Error(`OpenAI API request failed: ${response.status} ${raw.slice(0, 500)}`);
   }
 
   let data;
   try {
     data = JSON.parse(raw);
   } catch {
-    throw new Error(`OpenAI response was not JSON: ${raw.slice(0, 300)}`);
+    throw new Error(`OpenAI response was not JSON: ${raw.slice(0, 500)}`);
   }
 
+  const structuredIdeas = parseIdeas(data);
+  if (structuredIdeas.length) return structuredIdeas;
   return parseIdeas(extractText(data));
 }
 
