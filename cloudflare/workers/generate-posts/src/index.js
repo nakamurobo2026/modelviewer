@@ -2,7 +2,7 @@ const OPENAI_ENDPOINT = "https://api.openai.com/v1/responses";
 const DEFAULT_MODEL = "gpt-5-mini";
 const TIMEOUT_MS = 15000;
 const MAX_COUNT = 50;
-const AI_SEED_COUNT = 16;
+const AI_SEED_COUNT = 12;
 
 function corsHeaders(env) {
   return {
@@ -92,14 +92,7 @@ function makeLocalVariant(seed, theme, category, index) {
     "気にしないふりをしてる。",
     "この余白、ちょっと怖い。"
   ];
-  const leads = [
-    shortTheme,
-    `${shortTheme}の話`,
-    `${shortTheme}って`,
-    `${shortTheme}、`,
-    "これ"
-  ];
-
+  const leads = [shortTheme, `${shortTheme}の話`, `${shortTheme}って`, `${shortTheme}、`, "これ"];
   const text = index % 3 === 0
     ? `${leads[index % leads.length]}、${tails[index % tails.length]}`
     : `${baseText}。${tails[index % tails.length]}`;
@@ -112,8 +105,25 @@ function makeLocalVariant(seed, theme, category, index) {
   }, category, index);
 }
 
+function fallbackSeeds(theme, category) {
+  const shortTheme = compactTheme(theme);
+  return [
+    { text: `${shortTheme}、なんか分かる人だけ分かればいい。`, category, score: 82, hook: "共感" },
+    { text: `${shortTheme}って、普通なのに少しだけ変。`, category, score: 85, hook: "違和感" },
+    { text: `${shortTheme}を見ると、昔の夜を少し思い出す。`, category, score: 79, hook: "懐かしさ" },
+    { text: `${shortTheme}、説明すると急に薄くなる。`, category, score: 84, hook: "余白" },
+    { text: `${shortTheme}の話、昼より深夜に刺さる。`, category, score: 81, hook: "深夜" },
+    { text: `${shortTheme}、地方の夕方みたいな静けさがある。`, category, score: 78, hook: "地方感" },
+    { text: `${shortTheme}、怖くない顔をした怖さがある。`, category, score: 83, hook: "ちょい怖" },
+    { text: `${shortTheme}、気にしないふりをしてる人多そう。`, category, score: 80, hook: "共感" },
+    { text: `${shortTheme}、まだ名前がない違和感かも。`, category, score: 86, hook: "違和感" },
+    { text: `${shortTheme}、見た瞬間だけ少し黙る。`, category, score: 77, hook: "余白" }
+  ];
+}
+
 function expandIdeas(seeds, theme, category, mode) {
-  const normalized = seeds.map((idea, index) => normalizeIdea(idea, category, index)).filter((idea) => idea.text);
+  const sourceSeeds = seeds.length ? seeds : fallbackSeeds(theme, category);
+  const normalized = sourceSeeds.map((idea, index) => normalizeIdea(idea, category, index)).filter((idea) => idea.text);
   if (mode === "one") return normalized.slice(0, 1);
 
   const ideas = [...normalized];
@@ -129,16 +139,43 @@ function expandIdeas(seeds, theme, category, mode) {
   return ideas.slice(0, MAX_COUNT);
 }
 
+async function callOpenAI({ env, theme, category, mode, signal }) {
+  const model = env.OPENAI_MODEL || DEFAULT_MODEL;
+  const response = await fetch(OPENAI_ENDPOINT, {
+    method: "POST",
+    signal,
+    headers: {
+      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model,
+      input: buildPrompt({ theme, category, mode }),
+      max_output_tokens: mode === "one" ? 350 : 900
+    })
+  });
+
+  const raw = await response.text();
+  if (!response.ok) {
+    throw new Error(`OpenAI API request failed: ${response.status} ${raw.slice(0, 300)}`);
+  }
+
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    throw new Error(`OpenAI response was not JSON: ${raw.slice(0, 300)}`);
+  }
+
+  return parseIdeas(extractText(data));
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(env) });
     if (url.pathname !== "/generate") return json({ success: false, error: "Not found. Use POST /generate." }, 404, env);
     if (request.method !== "POST") return json({ success: false, error: "Method not allowed." }, 405, env);
-
-    if (!env.OPENAI_API_KEY) {
-      return json({ success: false, error: "OPENAI_API_KEY is not configured." }, 500, env);
-    }
 
     let payload;
     try {
@@ -152,57 +189,34 @@ export default {
     const mode = payload.mode === "one" ? "one" : "list";
     if (!theme) return json({ success: false, error: "theme is required." }, 400, env);
 
-    const model = env.OPENAI_MODEL || DEFAULT_MODEL;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
     const startedAt = Date.now();
+    let seedIdeas = [];
+    let source = "openai";
+    let errorDetail = "";
 
     try {
-      const openaiResponse = await fetch(OPENAI_ENDPOINT, {
-        method: "POST",
-        signal: controller.signal,
-        headers: {
-          Authorization: `Bearer ${env.OPENAI_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model,
-          input: buildPrompt({ theme, category, mode }),
-          max_output_tokens: mode === "one" ? 450 : 1200
-        })
-      });
-
-      const rawOpenAI = await openaiResponse.text();
-      if (!openaiResponse.ok) {
-        console.error("OpenAI API error", { status: openaiResponse.status, rawOpenAI });
-        return json({ success: false, error: "OpenAI API request failed.", status: openaiResponse.status, detail: rawOpenAI.slice(0, 1200) }, 502, env);
-      }
-
-      let openaiData;
-      try {
-        openaiData = JSON.parse(rawOpenAI);
-      } catch {
-        return json({ success: false, error: "OpenAI response was not JSON.", detail: rawOpenAI.slice(0, 1200) }, 502, env);
-      }
-
-      const seedIdeas = parseIdeas(extractText(openaiData));
-      const ideas = expandIdeas(seedIdeas, theme, category, mode);
-
-      if (!ideas.length) {
-        return json({ success: false, error: "OpenAI response did not include usable post ideas.", detail: rawOpenAI.slice(0, 1200) }, 502, env);
-      }
-
-      return json({ success: true, model, count: ideas.length, elapsedMs: Date.now() - startedAt, ideas }, 200, env);
+      if (!env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not configured.");
+      seedIdeas = await callOpenAI({ env, theme, category, mode, signal: controller.signal });
+      if (!seedIdeas.length) throw new Error("OpenAI response did not include usable post ideas.");
     } catch (error) {
-      const isAbort = error instanceof DOMException && error.name === "AbortError";
-      console.error("iwakan-lab worker failed", error);
-      return json({
-        success: false,
-        error: isAbort ? "OpenAI request timed out after 15 seconds." : "Cloudflare Worker failed.",
-        detail: error instanceof Error ? error.message : String(error)
-      }, isAbort ? 504 : 500, env);
+      source = "worker-fallback";
+      errorDetail = error && error.message ? error.message : String(error);
+      console.error("OpenAI generation failed. Returning Worker fallback ideas.", error);
     } finally {
       clearTimeout(timeout);
     }
+
+    const ideas = expandIdeas(seedIdeas, theme, category, mode);
+    return json({
+      success: true,
+      model: env.OPENAI_MODEL || DEFAULT_MODEL,
+      source,
+      count: ideas.length,
+      elapsedMs: Date.now() - startedAt,
+      error: errorDetail || undefined,
+      ideas
+    }, 200, env);
   }
 };
