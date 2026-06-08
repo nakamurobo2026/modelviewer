@@ -20,12 +20,20 @@ https://nakamurobo2026.github.io/modelviewer/yume-app/
 - `icons/maskable.svg`
 - iOS向け `apple-mobile-web-app-*` metadata
 - theme color
+- 前回の分析結果と振り返りのローカル保存
 
 スマホで確認すること:
 
 - iPhone Safariでホーム画面に追加できるか
 - Android Chromeでインストール導線が出るか
 - 一度開いた後、オフラインでもトップ画面が表示されるか
+- 分析後に再読み込みして「前回の結果を見る」が表示されるか
+
+## 保存仕様
+
+`localStorage` に最新の分析結果と振り返りを保存します。
+サーバー送信はしていません。
+結果画面の「記録を消す」でブラウザ内の保存を削除できます。
 
 ## 将来のAPI接続
 
