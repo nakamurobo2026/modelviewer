@@ -1,20 +1,141 @@
 (function () {
   const IDEA_COUNT = 50;
-  const seeds = {
-    "共感": ["平気なふりしてる人ほど分かる気がする。","みんな本当はちょっと疲れてない？","言わないだけで、抱えてる人多そう。","ちゃんとしたいのに、そこで止まる日がある。","自分だけじゃないと思いたい。","一日が少し重くなる。","笑えるけど、少しだけ本気でつらい。","地味に消耗する。","気にしない人になりたかった。","小さいことなのに心に残る。","ちゃんと話すと長くなる人いる？","余裕がない日は、それすら刺さる。","生活の端っこにある本音かも。","黙っちゃう瞬間、あるよね。","強く言えないけど、けっこう分かる。","なんでもない顔で残り続ける。","ちょっと安心した人いる？","疲れてる時ほど響く。","これだけで今日の説明になる。","分かる人だけでいい。","笑える日は、たぶんまだ大丈夫。"],
-    "違和感": ["普通っぽいのに少しだけ変。","なんか引っかかったの自分だけ？","説明できないズレだけ残った。","正しそうで少し怖い。","みんな流してるけど、変じゃない？","言葉にしにくいノイズがある。","気づいた瞬間、戻れなくなる。","慣れたら終わりな気がしてる。","便利なのに妙にざらつく。","小さい違和感の入口。","笑って済ませていいのかな。","当たり前になる空気、少しこわい。","嫌いじゃないのに落ち着かない。","なぜか心が一歩引く。","きれいに見えるほど違和感が残る。","まだ名前のないズレがある。","見て黙った人、たぶん同じ。","正解っぽい顔をした未解決。","気にしない人には見えない線。","どこから普通じゃなくなった？","言語化すると少し空気が変わる。"],
-    "懐かしさ": ["昔どこかで見た気がする。","懐かしいのに少しだけ寂しい。","急に昔を思い出す人いる？","夕方の匂いがある。","戻れない場所みたいで残る。","懐かしい理由、うまく言えない。","古い記憶が少し起きる。","忘れてた温度だけ戻ってきた。","なぜか平成の端っこ感ある。","誰かの実家みたいな安心感がある。","懐かしさと不安の間にある。","胸が少し痛いの、何なんだろう。","もう戻れない日の光がある。","古いけど、終わってない感じがする。","見て静かになる人、いると思う。","記憶のすみに残ってた景色みたい。","懐かしいものほど少し怖い。","誰の記憶にも少しありそう。","見た瞬間、昔の音がした。","説明より先に懐かしい。","思い出す場所、ある？"],
-    "深夜テンション": ["深夜だから言うけど、妙に刺さる。","午前2時に考えるの危険。","朝見たら消したくなる本音。","眠れない夜ほど大きく見える。","深夜だけ正体を出さない？","今だけ言う。かなり分かる。","冷静じゃないけど、嘘でもない。","考えてたら眠れなくなった。","午前2時の脳にちょうどいい。","深夜の判断なので許してほしい。","夜だけ少し意味が変わる。","静かな時間に見ると少し危ない。","昼なら流せるのに、夜は残る。","急に人生を考え始める夜ある。","眠れないので違和感だけ置いておく。","深夜にだけ本音っぽくなる。","気になる夜、だいたい疲れてる。","変に優しくて怖い。","寝たら忘れるかもしれないけど。","今だけ分かる人いる？","午前2時だけ妙に正しい気がする。"],
-    "地方感": ["地方だと妙にリアル。","都会の言葉だと説明しにくい。","派手じゃないけど、ちゃんと濃い。","ローカルな生活感がある。","地元を思い出す人いる？","地方の静かな強さがある。","説明しない方が伝わる空気。","この距離感が地方っぽい。","店の裏口みたいなリアルがある。","きれいすぎないから残る。","なんか実家感あると思った。","地方の夕方みたいな温度。","小さい町の大きい感情。","地元の人ほど黙るかも。","地方でしか出ない間がある。","不便さごと愛着になる感じ。","都会なら見逃されそう。","静けさが地方のリアルに近い。","何も起きてないのに見てしまう。","安心するの、地方出身だから？","地味だけど嘘がない。"],
-    "ちょい怖": ["よく考えると少し怖い。","背中が少し静かになった。","怖いほどじゃないのに残る。","日常の端にある不穏。","気づかない方がよかったかも。","考えすぎならいいんだけど。","普通さが逆にちょっと怖い。","安心できないの、なぜ。","説明できない怖さだけある。","明るい場所で見るほど不穏。","どこかで見た怖さじゃない？","怖い話の前半みたい。","違和感があとから来る。","誰も気にしてないのが怖い。","静かすぎるものは少し怖い。","日常に混ざってるから怖い。","見たあと少し黙った。","怖くない顔をした怖さ。","余白に何かある気がする。","これ以上考えない方がいい？","何も起きてないのが怖い。"]
+  const categories = ["共感", "違和感", "懐かしさ", "深夜テンション", "地方感", "ちょい怖"];
+  const hookByCategory = { "共感": "共感", "違和感": "観察", "懐かしさ": "懐かしさ", "深夜テンション": "深夜", "地方感": "地方感", "ちょい怖": "ちょい怖" };
+  const tuneMap = { "共感": ["共感", "地方感"], "違和感": ["違和感", "ちょい怖"], "懐かしさ": ["懐かしさ", "地方感"] };
+  const abstractWords = ["静か", "違和感", "深い", "エモい", "孤独", "ノスタルジー", "余白", "世界観", "尊い", "沁みる"];
+  const bannedPhrases = ["心が静か", "時間が止まる", "孤独が優しい", "空気が沁みる", "分かる人いる", "刺さる人には刺さる", "深夜の空気"];
+
+  const observationDb = {
+    "スーパー": [
+      { place: "スーパー", time: "17時過ぎ", light: "惣菜売り場の照明だけ黄色い", sound: "レジのスキャン音だけ奥まで響く", smell: "揚げ物の匂いが少し残る", people: "駐車場の車がまばら", behavior: "値引きシールを待つ人が棚の前で止まる", local: "半分消えた看板", era: "昭和っぽい棚配置", tension: "閉店前だけ棚の色が暗く見える" },
+      { place: "スーパー", time: "雨の日の夕方", light: "入口の蛍光灯が床に反射してる", sound: "カートの車輪だけ大きく聞こえる", smell: "濡れた傘とパン売り場の匂いが混ざる", people: "レジ前だけ人が固まる", behavior: "袋詰め台で全員ちょっと無言になる", local: "広すぎる駐車場", era: "古いポスターがまだ貼ってある", tension: "外が暗いのに店内だけ昼みたい" },
+      { place: "スーパー", time: "閉店30分前", light: "冷凍ケースの白さが強い", sound: "BGMが小さくなった気がする", smell: "魚売り場の匂いだけ残る", people: "通路に店員の台車が増える", behavior: "奥の棚だけ補充が始まる", local: "入口のガチャガチャが古い", era: "床のタイルが昔のまま", tension: "急に買い物が作業っぽくなる" }
+    ],
+    "ホームセンター": [
+      { place: "ホームセンター", time: "閉店前", light: "木材売り場の蛍光灯だけ白い", sound: "遠くで台車の音が響く", smell: "木材と肥料の匂いが混ざる", people: "客より店員の方が多く見える", behavior: "ネジ売り場でひとりだけ長く止まってる", local: "駐車場の端が暗い", era: "工具棚のラベルが少し古い", tension: "木材売り場だけ時間が遅い" },
+      { place: "ホームセンター", time: "日曜の夕方", light: "園芸コーナーだけ外の色が残る", sound: "館内放送が天井でぼやける", smell: "土と灯油の匂いがする", people: "家族連れが一気に減る", behavior: "レジ前で軍手だけ買う人がいる", local: "軽トラが入口近くに止まってる", era: "展示品の椅子が少し日焼けしてる", tension: "広いのに急に人の気配が薄い" },
+      { place: "ホームセンター", time: "平日の昼", light: "資材館の奥だけ暗い", sound: "チェーンの揺れる音が残る", smell: "ゴムと段ボールの匂い", people: "通路が広すぎて誰も近くにいない", behavior: "同じ棚を何度も見直す人がいる", local: "外の自販機が古い", era: "値札のフォントが昔っぽい", tension: "必要な物を探してるだけなのに少し迷子になる" }
+    ],
+    "コンビニ": [
+      { place: "コンビニ", time: "深夜1時", light: "白い照明が強すぎる", sound: "冷蔵ケースの音がずっと鳴ってる", smell: "コーヒーマシンの匂いだけ残る", people: "客が自分ひとり", behavior: "店員がバックヤードからなかなか出てこない", local: "駐車場が妙に広い", era: "古いコピー機が端にある", tension: "外が真っ暗で店内だけ浮いてる" },
+      { place: "コンビニ", time: "朝5時", light: "窓際だけ青っぽい", sound: "揚げ物ケースの小さい音", smell: "床清掃の匂いがする", people: "作業着の人が無言で弁当を選ぶ", behavior: "雑誌棚の前だけ誰も止まらない", local: "入口の灰皿跡が残ってる", era: "看板の端が少し色あせてる", tension: "一日が始まる前の店っぽい" },
+      { place: "コンビニ", time: "雨の夜", light: "ガラスに店内が二重に映る", sound: "自動ドアの音だけ目立つ", smell: "濡れた服とおでんの匂い", people: "駐車場に車だけいる", behavior: "傘立ての前で一瞬迷う", local: "国道沿いの広い入口", era: "古いATMの音", tension: "明るいのに外へ出るのが少し嫌になる" }
+    ],
+    "地方駅": [
+      { place: "地方駅", time: "18時前", light: "ホームの端だけ夕日が残る", sound: "改札の音が数分に一回だけ鳴る", smell: "濡れた線路みたいな匂い", people: "ベンチにひとりだけ座ってる", behavior: "時刻表を見たあと全員黙る", local: "駅前の看板が半分消えてる", era: "古い待合室の椅子", tension: "次の電車までの時間が長く見える" },
+      { place: "地方駅", time: "昼過ぎ", light: "待合室の蛍光灯が少し暗い", sound: "自販機の低い音", smell: "古い畳と雨の匂い", people: "駅員より乗客が少ない", behavior: "切符を買う音だけ響く", local: "駅前ロータリーが広い", era: "手書きの案内が残る", tension: "誰も急いでないのが逆に目立つ" }
+    ],
+    "市役所": [
+      { place: "市役所", time: "15時半", light: "窓口の番号表示だけ明るい", sound: "プリンターの音が続く", smell: "紙と古い床の匂い", people: "待ってる人が同じ姿勢のまま", behavior: "番号を呼ばれても一拍遅れる", local: "掲示板のポスターが多い", era: "古い長椅子", tension: "用事は普通なのに少し緊張する" },
+      { place: "市役所", time: "閉庁前", light: "廊下の奥だけ暗い", sound: "職員の足音が遠い", smell: "コピー用紙の匂い", people: "窓口前が急に空く", behavior: "書類を持った人だけ早足になる", local: "地域イベントの旗が立ってる", era: "案内板の文字が古い", tension: "建物全体が片付けに入ってる" }
+    ],
+    "商店街": [
+      { place: "商店街", time: "夕方", light: "アーケードの照明が早めにつく", sound: "シャッターの音が一つだけ響く", smell: "惣菜屋の油の匂い", people: "歩いてる人より自転車が多い", behavior: "開いてる店と閉まってる店の差が大きい", local: "半分消えた看板", era: "昭和のタイル", tension: "明るい店ほど少し寂しく見える" },
+      { place: "商店街", time: "昼過ぎ", light: "店の奥が暗い", sound: "ラジオの音が外に漏れてる", smell: "古い紙袋の匂い", people: "店主だけが外を見てる", behavior: "商品より棚の古さを見てしまう", local: "旗が色あせてる", era: "手書き値札", tension: "営業中なのに時間が止まりかけてる" }
+    ],
+    "古い病院": [
+      { place: "古い病院", time: "午前の終わり", light: "待合室の窓だけ明るい", sound: "スリッパの音が廊下で響く", smell: "消毒液と古い椅子の匂い", people: "受付前だけ人が固まる", behavior: "呼ばれる直前に全員少し顔を上げる", local: "掲示物が多すぎる", era: "古い診察券入れ", tension: "静かに待ってる時間が長い" },
+      { place: "古い病院", time: "夕方前", light: "蛍光灯の白さが残る", sound: "遠くの咳だけ聞こえる", smell: "湿布の匂い", people: "待合室の席が一列空く", behavior: "テレビを誰も見てない", local: "駐車場の線が薄い", era: "古い受付カウンター", tension: "普通の待ち時間が少し長く感じる" }
+    ],
+    "学校": [
+      { place: "学校", time: "放課後", light: "廊下の端だけ夕日が入る", sound: "遠くの部活の声", smell: "ワックスと砂の匂い", people: "教室に机だけ残ってる", behavior: "黒板の日付だけそのまま", local: "校庭の隅が暗い", era: "古い掲示板", tension: "誰もいない教室ほど音が残る" },
+      { place: "学校", time: "休日の午前", light: "体育館の窓が白い", sound: "ボールの音が一回だけ響く", smell: "古い木の床の匂い", people: "職員室だけ人の気配がある", behavior: "廊下を歩く音が大きすぎる", local: "校門の塗装が剥げてる", era: "昭和っぽい下駄箱", tension: "建物が休んでる感じがする" }
+    ],
+    "パチンコ屋": [
+      { place: "パチンコ屋", time: "朝の開店前", light: "入口のLEDだけ派手", sound: "駐車場がまだ静か", smell: "タバコの匂いが少し残る", people: "数人だけ入口に並ぶ", behavior: "誰も話さずスマホを見てる", local: "大きい看板が国道沿いにある", era: "古いポスターの色", tension: "店内が始まる前の無音が目立つ" },
+      { place: "パチンコ屋", time: "夜", light: "外の看板だけ明るすぎる", sound: "自動ドアが開くと音が漏れる", smell: "芳香剤の匂い", people: "駐車場に車だけ多い", behavior: "出てくる人がみんな少し無言", local: "隣の空き地が暗い", era: "景品交換所の小窓", tension: "外に出た瞬間だけ現実に戻る" }
+    ],
+    "ドラッグストア": [
+      { place: "ドラッグストア", time: "21時過ぎ", light: "棚の白さが強い", sound: "BGMが止まる瞬間だけ店内が広くなる", smell: "洗剤と湿布の匂い", people: "客が数人だけ", behavior: "レジ前でポイントカードを探す音", local: "駐車場が広い", era: "薬売り場の古い棚札", tension: "明るいのに少し眠い店内" },
+      { place: "ドラッグストア", time: "夕方", light: "入口だけ西日が入る", sound: "冷蔵棚の音が続く", smell: "柔軟剤の匂いが強い", people: "通路ですれ違う人が少ない", behavior: "同じ棚を何度も見直す人がいる", local: "半分消えた看板", era: "古い蛍光灯", tension: "日用品を買うだけなのに少し遠くへ来た感じ" }
+    ]
   };
-  const hookByCategory = { "共感":"共感", "違和感":"違和感", "懐かしさ":"懐かしさ", "深夜テンション":"深夜", "地方感":"地方", "ちょい怖":"薄い不穏" };
-  const tuneMap = { "共感":["共感","深夜テンション"], "違和感":["違和感","ちょい怖"], "懐かしさ":["懐かしさ","地方感"] };
-  function normalizeTheme(theme) { return theme.trim().replace(/\s+/g, " ") || "まだ名前のない違和感"; }
-  function shuffle(items) { const copy = [...items]; for (let i = copy.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [copy[i], copy[j]] = [copy[j], copy[i]]; } return copy; }
-  function scoreIdea(text, category, hook, index) { const lengthScore = text.length >= 20 && text.length <= 90 ? 18 : 5; const categoryScore = category === "違和感" || category === "ちょい怖" ? 10 : 7; const hookScore = hook.includes("共感") || hook.includes("違和感") ? 8 : 5; const rhythm = index % 9 === 0 ? 5 : Math.floor(Math.random() * 9); return Math.max(48, Math.min(98, 54 + lengthScore + categoryScore + hookScore + rhythm)); }
-  function polishLength(text, theme) { const clean = text.replace(/\s+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim(); if (clean.length <= 90) return clean; const compactTheme = theme.length > 22 ? `${theme.slice(0, 22)}…` : theme; return clean.replaceAll(theme, compactTheme).slice(0, 88).replace(/[、。,.!?？!]*$/, "") + "。"; }
-  function normalizeIdea(idea, fallbackCategory = "違和感", index = 0) { const text = polishLength(String(idea.text || "").trim(), ""); const category = idea.category || fallbackCategory; const hook = idea.hook || idea.hookType || hookByCategory[category] || "余白"; return { id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`, text, category, score: Number(idea.score) || scoreIdea(text, category, hook, index), hookType: hook, status: "new", createdAt: new Date().toISOString() }; }
-  function generate({ theme, category, count = IDEA_COUNT, tune = null }) { const cleanTheme = normalizeTheme(theme); const cats = tuneMap[tune] || [category]; const buckets = cats.map((cat) => ({ cat, rows: shuffle(seeds[cat] || seeds["違和感"]), cursor: 0 })); let lastText = ""; let lastCat = ""; return Array.from({ length: count }, (_, index) => { const bucket = buckets[index % buckets.length]; let seed = bucket.rows[bucket.cursor % bucket.rows.length]; bucket.cursor += 1; if ((seed === lastText || bucket.cat === lastCat) && bucket.rows.length > 1) { seed = bucket.rows[bucket.cursor % bucket.rows.length]; bucket.cursor += 1; } lastText = seed; lastCat = bucket.cat; const text = polishLength(`${cleanTheme}、${seed}`, cleanTheme); const hook = hookByCategory[bucket.cat] || "余白"; return normalizeIdea({ text, category: bucket.cat, score: scoreIdea(text, bucket.cat, hook, index), hook }, bucket.cat, index); }); }
+
+  function normalizeTheme(theme) { return theme.trim().replace(/\s+/g, " ") || "古いスーパー"; }
+  function pick(items, index) { return items[index % items.length]; }
+  function inferPlace(theme, index) {
+    const clean = normalizeTheme(theme);
+    const found = Object.keys(observationDb).find((place) => clean.includes(place.replace("古い", "")) || clean.includes(place));
+    if (found) return found;
+    if (clean.includes("駅")) return "地方駅";
+    if (clean.includes("役所")) return "市役所";
+    if (clean.includes("病院")) return "古い病院";
+    if (clean.includes("学校")) return "学校";
+    if (clean.includes("商店")) return "商店街";
+    if (clean.includes("ホーム")) return "ホームセンター";
+    if (clean.includes("ドラッグ")) return "ドラッグストア";
+    if (clean.includes("コンビニ")) return "コンビニ";
+    return pick(Object.keys(observationDb), index);
+  }
+  function buildObservation(theme, category, index) {
+    const placeName = inferPlace(theme, index);
+    const base = pick(observationDb[placeName], index);
+    return { ...base, topic: normalizeTheme(theme), category };
+  }
+  function composeObservationText(obs, index) {
+    const forms = [
+      `${obs.time}の${obs.place}、${obs.behavior}`,
+      `${obs.place}の${obs.time}、${obs.sound}`,
+      `${obs.place}、${obs.light}と${obs.people}の組み合わせが妙に残る`,
+      `${obs.time}の${obs.place}、${obs.tension}`,
+      `${obs.place}で${obs.smell}時、急に昔の店みたいに見える`,
+      `${obs.place}、${obs.local}の近くで${obs.sound}`,
+      `${obs.time}、${obs.place}の${obs.era}だけ先に古くなる`,
+      `${obs.topic}、${obs.place}で見ると${obs.behavior}`,
+      `${obs.place}の${obs.people}感じ、${obs.light}せいで余計に目立つ`,
+      `${obs.time}の${obs.place}、${obs.sound}と${obs.smell}だけ覚えてる`
+    ];
+    return polishLength(pick(forms, index), obs.topic);
+  }
+  function concreteScore(text) {
+    const concreteTokens = ["時", "売り場", "駐車場", "レジ", "棚", "蛍光灯", "BGM", "看板", "台車", "匂い", "音", "入口", "通路", "待合室", "改札", "床", "窓", "夕方", "閉店", "雨", "カート", "自販機"];
+    const concrete = concreteTokens.filter((word) => text.includes(word)).length * 7;
+    const abstractPenalty = abstractWords.filter((word) => text.includes(word)).length * 6;
+    const bannedPenalty = bannedPhrases.some((phrase) => text.includes(phrase)) ? 40 : 0;
+    const lengthScore = text.length >= 20 && text.length <= 90 ? 18 : 4;
+    const talkScore = /だけ|急に|一瞬|なぜか|妙に|まだ|先に/.test(text) ? 10 : 4;
+    return Math.max(35, Math.min(98, 54 + concrete + lengthScore + talkScore - abstractPenalty - bannedPenalty));
+  }
+  function passesQuality(text) {
+    if (bannedPhrases.some((phrase) => text.includes(phrase))) return false;
+    if (text.length < 18 || text.length > 95) return false;
+    const abstractOnly = abstractWords.filter((word) => text.includes(word)).length >= 2 && !/[0-9時]|売り場|駐車場|レジ|棚|蛍光灯|BGM|看板|音|匂い|入口|通路/.test(text);
+    return !abstractOnly;
+  }
+  function polishLength(text, theme) {
+    const clean = text.replace(/\s+/g, " ").replace(/。。+/g, "。").trim();
+    if (clean.length <= 90) return clean;
+    const compactTheme = theme.length > 20 ? `${theme.slice(0, 20)}…` : theme;
+    return clean.replaceAll(theme, compactTheme).slice(0, 88).replace(/[、。,.!?？!]*$/, "") + "。";
+  }
+  function normalizeIdea(idea, fallbackCategory = "違和感", index = 0) {
+    const text = polishLength(String(idea.text || "").trim(), "");
+    const category = idea.category || fallbackCategory;
+    const hook = idea.hook || idea.hookType || hookByCategory[category] || "観察";
+    return { id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`, text, category, score: Number(idea.score) || concreteScore(text), hookType: hook, status: "new", createdAt: new Date().toISOString() };
+  }
+  function generate({ theme, category, count = IDEA_COUNT, tune = null }) {
+    const cats = tuneMap[tune] || [category];
+    const ideas = [];
+    let index = 0;
+    while (ideas.length < count && index < count * 8) {
+      const cat = cats[index % cats.length] || categories[index % categories.length];
+      const obs = buildObservation(theme, cat, index);
+      const text = composeObservationText(obs, index);
+      if (passesQuality(text) && !ideas.some((idea) => idea.text === text)) {
+        ideas.push(normalizeIdea({ text, category: cat, score: concreteScore(text), hook: hookByCategory[cat] || "観察" }, cat, ideas.length));
+      }
+      index += 1;
+    }
+    while (ideas.length < count) {
+      const cat = cats[ideas.length % cats.length] || category;
+      const obs = buildObservation(theme, cat, ideas.length + 11);
+      const text = polishLength(`${obs.time}の${obs.place}、${obs.sound}`, obs.topic);
+      ideas.push(normalizeIdea({ text, category: cat, score: concreteScore(text), hook: hookByCategory[cat] || "観察" }, cat, ideas.length));
+    }
+    return ideas.slice(0, count);
+  }
+
   window.TemplateGenerator = { IDEA_COUNT, generate, normalizeIdea, normalizeTheme };
 })();
