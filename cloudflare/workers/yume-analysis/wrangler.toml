@@ -1,7 +1,3 @@
 name = "yume-analysis"
 main = "src/index.js"
 compatibility_date = "2026-06-09"
-
-[vars]
-ALLOWED_ORIGIN = "https://nakamurobo2026.github.io"
-OPENAI_MODEL = "gpt-5-mini"
