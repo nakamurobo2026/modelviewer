@@ -54,8 +54,21 @@
         <div class="section-head"><p class="eyebrow">RESEARCH AGENT</p><h2 id="research-title">ネタ元を分解</h2></div>
         <label for="researchInput">トレンド、URL、気になったメモ</label>
         <textarea id="researchInput" rows="7" placeholder="複数行で入力できます。URLメモもそのまま保存できます。&#10;例：&#10;地方スーパーの閉店前、惣菜売り場だけ人が残る&#10;https://example.com/memo&#10;古い蛍光灯の店内写真が気になる"></textarea>
+        <label for="researchSourceType">入力タイプ</label>
+        <select id="researchSourceType">
+          <option value="mixed">URL / コピペ投稿 / メモ / キーワード</option>
+          <option value="url">URLメモ</option>
+          <option value="post">コピペ投稿</option>
+          <option value="memo">メモ</option>
+          <option value="keyword">キーワード</option>
+        </select>
+        <label class="toggle-line"><input id="researchReflectToggle" type="checkbox" checked> Research Summaryを投稿生成に反映</label>
         <div class="actions compact"><button id="saveResearchBtn" class="ghost" type="button">保存</button><button id="splitResearchBtn" class="primary" type="button">使えるネタに分解</button></div>
+        <div class="actions compact"><button id="extractBuzzBtn" class="primary soft" type="button">バズ要素抽出</button><button id="saveBuzzBtn" class="ghost" type="button">抽出結果を保存</button></div>
         <div id="researchNotes" class="research-notes">リサーチメモはまだありません。</div>
+        <div id="buzzResults" class="buzz-results" aria-live="polite">
+          <p class="muted">バズ要素はまだ抽出されていません。</p>
+        </div>
 
         <div class="flow-panel" aria-label="Agent Flow">
           <div class="flow-step" data-flow="research"><b>リサーチ</b><span>待機中</span></div>
