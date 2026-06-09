@@ -22,7 +22,12 @@ export default {
     }
 
     if (!env.OPENAI_API_KEY) {
-      return json({ source: 'worker-fallback', warning: 'OPENAI_API_KEY is not available in this Worker runtime.', ...fallbackAnalysis(plan) }, 200, cors);
+      return json({
+        source: 'worker-fallback',
+        warning: 'OPENAI_API_KEY is not available in this Worker runtime.',
+        ...(debug ? { debug: { envKeys: Object.keys(env).sort() } } : {}),
+        ...fallbackAnalysis(plan)
+      }, 200, cors);
     }
 
     try {
