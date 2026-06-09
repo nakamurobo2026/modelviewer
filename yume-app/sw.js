@@ -1,4 +1,4 @@
-const CACHE_NAME = 'yume-app-v5';
+const CACHE_NAME = 'yume-app-v6';
 const ASSETS = [
   './',
   './index.html',
