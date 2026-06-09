@@ -90,7 +90,13 @@ async function analyzeWithOpenAI(plan, env, openAiApiKey) {
           content: [
             {
               type: 'input_text',
-              text: 'あなたは現実的でやわらかい夢ロードマップ設計者です。成功を断言せず、JSONだけを返してください。NG語: KPI, 未達成, ノルマ, 失敗, 達成率が低い。'
+              text: [
+                'あなたは現実的でやわらかい夢ロードマップ設計者です。',
+                '成功を断言せず、自己啓発臭を強くしすぎず、深夜でも安心して読める温度で書きます。',
+                'JSONだけを返してください。Markdownや説明文は不要です。',
+                'NG語: KPI, 未達成, ノルマ, 失敗, 達成率が低い。',
+                '空文字、null、単なる文字列配列は使わず、必ず指定されたオブジェクト構造で返してください。'
+              ].join('\n')
             }
           ]
         },
@@ -99,7 +105,31 @@ async function analyzeWithOpenAI(plan, env, openAiApiKey) {
           content: [
             {
               type: 'input_text',
-              text: `次のDreamPlanをAnalysisResult JSONにしてください。必ず summary, possibilityLevel, message, existingAssets, missingPieces, risks, roadmap, todayActions を含めます。ロードマップは currentAge から targetAge まで各年齢分を作ります。\n\n${JSON.stringify(plan)}`
+              text: [
+                '次のDreamPlanをAnalysisResult JSONにしてください。',
+                '入力値を不明扱いせず、JSON内の各値を根拠にして具体化してください。',
+                '',
+                '必須スキーマ:',
+                '{',
+                '  "summary": "夢の整理を2〜4文で。",',
+                '  "possibilityLevel": "low | medium | high",',
+                '  "message": "確実とは言えないが今あるものから始められる、という温度の文。",',
+                '  "existingAssets": [{ "title": "", "description": "" }],',
+                '  "missingPieces": [{ "title": "", "description": "" }],',
+                '  "risks": [{ "title": "", "description": "", "avoidance": "" }],',
+                '  "roadmap": [{ "age": 44, "theme": "", "actions": ["短い行動"], "reason": "", "smallStart": "", "risks": ["短いリスク"], "fallbackPlan": "" }],',
+                '  "todayActions": [{ "title": "", "description": "", "estimatedMinutes": 10, "emotionalMessage": "" }]',
+                '}',
+                '',
+                '制約:',
+                '- roadmap は currentAge から targetAge まで各年齢分を必ず作る。',
+                '- actions と risks は必ず配列にする。文字列でまとめない。',
+                '- todayActions は3つ。10〜15分程度でできる小さな行動にする。',
+                '- 使う言葉: 今日の一歩, 小さな前進, 今あるもの, 止まる週があるのも普通, 一緒に整理しよう。',
+                '- 「必ず成功」などの断言はしない。',
+                '',
+                `DreamPlan: ${JSON.stringify(plan)}`
+              ].join('\n')
             }
           ]
         }
