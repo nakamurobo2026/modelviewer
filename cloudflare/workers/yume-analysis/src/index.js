@@ -72,14 +72,18 @@ function validatePlan(plan) {
 
 async function analyzeWithOpenAI(plan, env, openAiApiKey) {
   const model = getEnv(env, 'OPENAI_MODEL') || DEFAULT_MODEL;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort('OpenAI request timed out.'), 25000);
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
+    signal: controller.signal,
     headers: {
       Authorization: `Bearer ${openAiApiKey}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
       model,
+      max_output_tokens: 1800,
       input: [
         {
           role: 'system',
@@ -107,6 +111,7 @@ async function analyzeWithOpenAI(plan, env, openAiApiKey) {
       }
     })
   });
+  clearTimeout(timeoutId);
 
   if (!response.ok) {
     const body = await response.text();
