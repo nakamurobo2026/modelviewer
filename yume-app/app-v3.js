@@ -1,4 +1,4 @@
-const STORAGE_KEY = "yume_app_state_v4";
+const STORAGE_KEY = "yume_app_state_v5";
 
 const state = {
   screen: "top",
@@ -31,6 +31,20 @@ const reflections = [
   ["changed", "夢が変わった", "夢が変わるのは、逃げではなく情報が増えたサインかもしれません。今の形に合わせて整理し直せます。"],
   ["anxious", "やっぱり不安になった", "不安は邪魔者ではなく、確認したいことを教えてくれることがあります。ひとつずつ分けましょう。"]
 ];
+
+const APP_CONFIG = {
+  name: "ここから",
+  subtitle: "止まっていたものを、少しだけ動かすノート",
+  worldMessage: "頑張れない日も前提に、人生を少し整理します。",
+  heroMessage: "深夜でも開ける、再起動のための小さな場所。",
+  theme: {
+    ink: "#4b4f4a",
+    paper: "#fffdf7",
+    accent: "#8aa982",
+    calm: "#dceef1"
+  },
+  ...(window.YUME_APP_CONFIG || {})
+};
 
 const $ = (selector) => document.querySelector(selector);
 const escapeHtml = (value) => String(value ?? "")
@@ -79,8 +93,18 @@ function resetState() {
 }
 
 function render() {
+  applyTheme();
   $("#app").innerHTML = views[state.screen]();
   bind();
+}
+
+function applyTheme() {
+  const root = document.documentElement;
+  const theme = APP_CONFIG.theme || {};
+  if (theme.ink) root.style.setProperty("--ink", theme.ink);
+  if (theme.paper) root.style.setProperty("--paper", theme.paper);
+  if (theme.accent) root.style.setProperty("--leaf-strong", theme.accent);
+  if (theme.calm) root.style.setProperty("--sky", theme.calm);
 }
 
 const views = {
@@ -88,22 +112,22 @@ const views = {
     <section class="page home">
       <div class="shell">
         <header class="nav">
-          <div class="brand">夢アプリ</div>
+          <div class="brand">${escapeHtml(APP_CONFIG.name)}</div>
           <button class="ghost-button" data-go="${state.analysis ? "result" : "form"}">${state.analysis ? "前回の整理を見る" : "少し整理する"}</button>
         </header>
         <section class="hero-soft">
-          <p class="eyebrow">まだ間に合うか、一緒に調べてみよう</p>
-          <h1>今からでも、<br>遅くないかもしれない。</h1>
-          <p class="lead">いつかやりたいまま止まってることを、今日できる小さな一歩に変えるAIロードマップです。焦らせず、今あるものから一緒に整理します。</p>
+          <p class="eyebrow">${escapeHtml(APP_CONFIG.subtitle)}</p>
+          <h1>止まっていたものを、<br>少しだけ動かす。</h1>
+          <p class="lead">${escapeHtml(APP_CONFIG.heroMessage)} いつかやりたいままのことを、今日できる一歩だけに分けます。</p>
           <div class="actions">
-            <button class="primary-button" data-go="form">いつかのことを整理する</button>
+            <button class="primary-button" data-go="form">いまの状態を置いてみる</button>
             ${state.analysis ? '<button class="quiet-button" data-go="result">今日の一歩を見る</button>' : ""}
           </div>
         </section>
         <section class="soft-grid">
-          ${infoCard("今日の一歩", "ロードマップより先に、今日できる最小アクションを出します。")}
-          ${infoCard("今あるもの", "普通だと思っている経験の中から、使える材料を見つけます。")}
-          ${infoCard("止まっても大丈夫", "動けない週があっても、責めずに次の形へ整えます。")}
+          ${infoCard("今日1個だけ", "大きな計画より先に、10分でできることへ。")}
+          ${infoCard("今あるもの", "過去経験、続いたこと、人との関係を拾います。")}
+          ${infoCard("止まる日も前提", "できない週を責めず、再開しやすく整えます。")}
         </section>
       </div>
     </section>
@@ -170,7 +194,7 @@ const views = {
           <header class="result-header">
             <div>
               <p class="eyebrow">整理できました</p>
-              <h2>まずは、今日の一歩だけ。</h2>
+              <h2>今日、ひとつだけ。</h2>
             </div>
             <div class="actions compact">
               <button class="ghost-button" data-go="form">入力を直す</button>
@@ -180,10 +204,22 @@ const views = {
 
           <section class="today-panel">
             <p class="eyebrow">今日の一歩</p>
-            <h2>大きく変えなくて大丈夫です。</h2>
+            <h2>${escapeHtml(analysis.todayActions[0]?.title || "小さく始める")}</h2>
+            <p class="panel-note">${escapeHtml(analysis.todayActions[0]?.actionReason || "心理負荷が低く、今の生活を壊さず試せるため。")}</p>
             <div class="today-list">
               ${analysis.todayActions.map(todayAction).join("")}
             </div>
+          </section>
+
+          <section class="soft-card">
+            <div class="now-row">
+              <div>
+                <p class="eyebrow">今ここ</p>
+                <h3>${escapeHtml(currentPosition(plan))}</h3>
+              </div>
+              <span>${escapeHtml(plan.currentAge)}歳</span>
+            </div>
+            <div class="phase-line">${phaseTimeline(analysis).join("")}</div>
           </section>
 
           <section class="soft-card share-card">
@@ -195,23 +231,33 @@ const views = {
             <button class="quiet-button" data-copy-share>${state.copied ? "コピーしました" : "共有文をコピー"}</button>
           </section>
 
+          <section class="insight-panel">
+            <div>
+              <p class="eyebrow">この整理の手がかり</p>
+              <h3>${escapeHtml(analysis.reasoning)}</h3>
+            </div>
+            <div class="evidence-list">
+              ${analysis.evidence.map(evidenceItem).join("")}
+            </div>
+          </section>
+
           <section class="summary-grid">
             <div class="soft-card">
-              <p class="eyebrow">夢の整理</p>
+              <p class="eyebrow">少し整理すると</p>
               <h3>${escapeHtml(plan.dreamTitle)}</h3>
               <p class="body-text">${escapeHtml(analysis.summary)}</p>
               <p class="soft-note">${escapeHtml(analysis.message)}</p>
             </div>
             <div class="soft-card">
               <p class="eyebrow">今あるもの</p>
-              <h3>あなたが普通だと思っている経験の中に、使える武器があります。</h3>
-              <div class="item-list">${analysis.existingAssets.map(asset).join("")}</div>
+              <h3>普通だと思っていることの中に、再開の材料があります。</h3>
+              <div class="asset-cards">${analysis.existingAssets.map(assetCard).join("")}</div>
             </div>
           </section>
 
           <section class="soft-card">
-            <p class="eyebrow">無理のない道筋</p>
-            <h2>${plan.currentAge}歳から${plan.targetAge}歳まで</h2>
+            <p class="eyebrow">ここからの流れ</p>
+            <h2>小さく試して、反応を見る。</h2>
             <div class="roadmap">${analysis.roadmap.map(roadmapItem).join("")}</div>
           </section>
 
@@ -221,9 +267,15 @@ const views = {
               <div class="item-list">${analysis.missingPieces.map(asset).join("")}</div>
             </div>
             <div class="soft-card">
-              <p class="eyebrow">避けたいリスク</p>
+              <p class="eyebrow">そっと避けたいこと</p>
               <div class="item-list">${analysis.risks.map(risk).join("")}</div>
             </div>
+          </section>
+
+          <section class="soft-card">
+            <p class="eyebrow">止まりやすいところ</p>
+            <h3>動けない理由も、責める材料ではなく整理の材料です。</h3>
+            <div class="emotion-chips">${analysis.detectedBlocks.map(blockChip).join("")}</div>
           </section>
 
           <section class="reflection-cta">
@@ -387,6 +439,9 @@ function normalizeAnalysis(value, plan) {
     risks: normalizeRisks(value.risks, fallback.risks),
     roadmap: normalizeRoadmap(value.roadmap, fallback.roadmap),
     todayActions: normalizeTodayActions(value.todayActions, fallback.todayActions),
+    evidence: normalizeEvidence(value.evidence || value.userAssets, fallback.evidence),
+    detectedBlocks: normalizeTextItems(value.detectedBlocks || value.blocks || value.brakes, fallback.detectedBlocks, "止まりやすいところ"),
+    reasoning: stringOr(value.reasoning, fallback.reasoning),
     source: value.source || "mock"
   };
 }
@@ -398,6 +453,16 @@ function mockAnalysis(plan) {
     summary: `${plan.currentAge}歳の今から「${plan.dreamTitle}」へ向かうために、${plan.targetAge}歳までを小さな検証と積み上げに分けて考えます。`,
     possibilityLevel: level,
     message: "確実とは言えません。でも、今ある経験から始められる一歩はあります。",
+    reasoning: `「${trimText(plan.currentSituation, 44)}」という今の状況と、「${trimText(plan.availableTime, 28)}」「${trimText(plan.availableMoney, 28)}」という制約を見ると、最初から大きく変えるより、小さく試して反応を見る順番が合いやすそうです。`,
+    evidence: [
+      { label: "今の状況", quote: plan.currentSituation, interpretation: "現在地が言葉になっているので、無理のない始め方を選びやすくなります。" },
+      { label: "使える時間", quote: plan.availableTime, interpretation: "まとまった時間より、短い行動に分けるほうが続けやすい可能性があります。" },
+      { label: "経験・スキル", quote: plan.skills, interpretation: "普通だと思っている経験の中に、最初の試作や相談に使える材料があります。" }
+    ],
+    detectedBlocks: [
+      { title: "完璧に始めようとして止まりやすい", description: `「${trimText(plan.anxieties, 42)}」という不安があるため、最初から正解を出そうとすると重くなりやすいです。` },
+      { title: "今さら感で比較しやすい", description: `${plan.currentAge}歳から${plan.targetAge}歳までの時間を考えると、遠い成功例より近い実例を見るほうが動きやすそうです。` }
+    ],
     existingAssets: [
       { title: "今の状況を言葉にできていること", description: `「${trimText(plan.currentSituation, 64)}」という現在地は、次の判断材料になります。` },
       { title: "普通だと思っている経験", description: `${trimText(plan.skills, 76)}の中に、使える材料が残っています。` },
@@ -413,9 +478,9 @@ function mockAnalysis(plan) {
     ],
     roadmap: buildRoadmap(plan),
     todayActions: [
-      { title: "夢を1行にする", description: `「${plan.dreamTitle}」で誰に何を届けたいのか、粗いまま1行で書きます。`, estimatedMinutes: 8, emotionalMessage: "きれいな言葉でなくて大丈夫です。" },
-      { title: "近い人を3人保存する", description: "年齢、制約、出発点が少し近い実例を3人だけ保存します。", estimatedMinutes: 15, emotionalMessage: "遠すぎる成功例より、少し近い実例が今日の味方になります。" },
-      { title: "1人に小さく話す", description: "信頼できる人に「少し調べていること」として話します。", estimatedMinutes: 10, emotionalMessage: "宣言にしなくて大丈夫です。" }
+      { title: "夢を1行にする", description: `「${plan.dreamTitle}」で誰に何を届けたいのか、粗いまま1行で書きます。`, estimatedMinutes: 8, emotionalMessage: "きれいな言葉でなくて大丈夫です。", actionReason: "頭の中だけにある状態より、1行にすると次に調べることが軽くなるため。" },
+      { title: "近い人を3人保存する", description: "年齢、制約、出発点が少し近い実例を3人だけ保存します。", estimatedMinutes: 15, emotionalMessage: "遠すぎる成功例より、少し近い実例が今日の味方になります。", actionReason: "比較疲れを減らし、今の生活に近い始め方を見つけやすくするため。" },
+      { title: "1人に小さく話す", description: "信頼できる人に「少し調べていること」として話します。", estimatedMinutes: 10, emotionalMessage: "宣言にしなくて大丈夫です。", actionReason: "大きな決意ではなく、外に少し出す練習として心理負荷が低いため。" }
     ]
   };
 }
@@ -460,6 +525,7 @@ function todayAction(action, index) {
       <div>
         <h3>${escapeHtml(item.title)}</h3>
         <p>${escapeHtml(item.description)}</p>
+        <p class="reason-line"><strong>なぜ今これ？</strong>${escapeHtml(item.actionReason)}</p>
         <small>${escapeHtml(item.emotionalMessage)}</small>
       </div>
       <span>${Number(item.estimatedMinutes || 10)}分</span>
@@ -475,6 +541,35 @@ function asset(item, index) {
 function risk(item, index) {
   const normalized = normalizeRisk(item, index);
   return `<article class="text-item"><h4>${escapeHtml(normalized.title)}</h4><p>${escapeHtml(normalized.description)}</p><small>${escapeHtml(normalized.avoidance)}</small></article>`;
+}
+
+function assetCard(item, index) {
+  const normalized = normalizeTextItem(item, index, "今あるもの");
+  return `<article class="asset-card"><span>${index + 1}</span><h4>${escapeHtml(normalized.title)}</h4><p>${escapeHtml(normalized.description)}</p></article>`;
+}
+
+function evidenceItem(item, index) {
+  const normalized = normalizeEvidenceItem(item, index);
+  return `<article class="evidence-item"><span>${escapeHtml(normalized.label)}</span><q>${escapeHtml(normalized.quote)}</q><p>${escapeHtml(normalized.interpretation)}</p></article>`;
+}
+
+function blockItem(item, index) {
+  const normalized = normalizeTextItem(item, index, "止まりやすいところ");
+  return `<article class="text-item"><h4>${escapeHtml(normalized.title)}</h4><p>${escapeHtml(normalized.description)}</p></article>`;
+}
+
+function blockChip(item, index) {
+  const normalized = normalizeTextItem(item, index, "止まりやすいところ");
+  return `<article class="emotion-chip"><strong>${escapeHtml(normalized.title)}</strong><p>${escapeHtml(normalized.description)}</p></article>`;
+}
+
+function currentPosition(plan) {
+  return `「${trimText(plan.dreamTitle, 24)}」を、今の生活の中で少し動かせる形に分けています。`;
+}
+
+function phaseTimeline(analysis) {
+  const labels = ["今ここ", "小さく試す", "反応を見る", "続けやすくする", "自分らしい形"];
+  return labels.map((label, index) => `<div class="phase ${index === 0 ? "active" : ""}"><span></span><p>${escapeHtml(label)}</p></div>`);
 }
 
 function roadmapItem(item, index) {
@@ -572,7 +667,8 @@ function normalizeTodayAction(item, index = 0) {
       title: item.trim() || titles[index] || "小さく始める",
       description: "今日できる大きさまで小さくした一歩です。",
       estimatedMinutes: 10,
-      emotionalMessage: "大きく変えなくて大丈夫です。"
+      emotionalMessage: "大きく変えなくて大丈夫です。",
+      actionReason: "心理負荷が低く、今の生活を壊さず試せるため。"
     };
   }
   const minutes = Number(item?.estimatedMinutes || item?.minutes || item?.time || 10);
@@ -580,7 +676,25 @@ function normalizeTodayAction(item, index = 0) {
     title: textFrom(item, titles[index] || "小さく始める"),
     description: stringOr(item?.description || item?.detail || item?.body || item?.why, "今日できる大きさまで小さくした一歩です。"),
     estimatedMinutes: Number.isFinite(minutes) ? minutes : 10,
-    emotionalMessage: stringOr(item?.emotionalMessage || item?.message || item?.note, "大きく変えなくて大丈夫です。")
+    emotionalMessage: stringOr(item?.emotionalMessage || item?.message || item?.note, "大きく変えなくて大丈夫です。"),
+    actionReason: stringOr(item?.actionReason || item?.reason || item?.whyThis || item?.why, "心理負荷が低く、今の生活を壊さず試せるため。")
+  };
+}
+
+function normalizeEvidence(value, fallback) {
+  const source = arrayOr(value, fallback);
+  return source.map(normalizeEvidenceItem).filter((item) => item.quote || item.interpretation).slice(0, 5);
+}
+
+function normalizeEvidenceItem(item, index = 0) {
+  const labels = ["入力から拾ったこと", "今ある環境", "過去の経験", "不安の中身", "使える制約"];
+  if (typeof item === "string") {
+    return { label: labels[index] || "手がかり", quote: item, interpretation: "この言葉を起点に、今日できる大きさへ分けています。" };
+  }
+  return {
+    label: stringOr(item?.label || item?.title || item?.source, labels[index] || "手がかり"),
+    quote: stringOr(item?.quote || item?.input || item?.value || item?.text, "入力内容"),
+    interpretation: stringOr(item?.interpretation || item?.reason || item?.description, "この手がかりから、小さく試せる順番を考えています。")
   };
 }
 
