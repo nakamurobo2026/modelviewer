@@ -93,8 +93,10 @@ async function analyzeWithOpenAI(plan, env, openAiApiKey) {
               text: [
                 'あなたは現実的でやわらかい夢ロードマップ設計者です。',
                 '成功を断言せず、自己啓発臭を強くしすぎず、深夜でも安心して読める温度で書きます。',
+                'このアプリは夢達成アプリではなく、止まっていたものを少し再起動するための心の避難所です。',
+                '内部では、共感、資産発見、ブレーキ検知、小さな一歩、根拠説明の5役で整理してください。',
                 'JSONだけを返してください。Markdownや説明文は不要です。',
-                'NG語: KPI, 未達成, ノルマ, 失敗, 達成率が低い。',
+                'NG語: KPI, 未達成, ノルマ, 失敗, 達成率が低い, 実行フェーズ, 最適化, 資産化, 型化, ペルソナ, スケール。',
                 '空文字、null、単なる文字列配列は使わず、必ず指定されたオブジェクト構造で返してください。'
               ].join('\n')
             }
@@ -114,19 +116,27 @@ async function analyzeWithOpenAI(plan, env, openAiApiKey) {
                 '  "summary": "夢の整理を2〜4文で。",',
                 '  "possibilityLevel": "low | medium | high",',
                 '  "message": "確実とは言えないが今あるものから始められる、という温度の文。",',
+                '  "reasoning": "ユーザー入力のどこを見て、なぜその整理にしたか。診断ではなく整理として書く。",',
+                '  "evidence": [{ "label": "入力の種類", "quote": "ユーザー入力の短い引用", "interpretation": "そこから読み取ったこと" }],',
                 '  "existingAssets": [{ "title": "", "description": "" }],',
                 '  "missingPieces": [{ "title": "", "description": "" }],',
                 '  "risks": [{ "title": "", "description": "", "avoidance": "" }],',
+                '  "detectedBlocks": [{ "title": "止まりやすい理由", "description": "責めない文体で、入力と繋げて説明" }],',
                 '  "roadmap": [{ "age": 44, "theme": "", "actions": ["短い行動"], "reason": "", "smallStart": "", "risks": ["短いリスク"], "fallbackPlan": "" }],',
-                '  "todayActions": [{ "title": "", "description": "", "estimatedMinutes": 10, "emotionalMessage": "" }]',
+                '  "todayActions": [{ "title": "", "description": "", "estimatedMinutes": 10, "emotionalMessage": "", "actionReason": "なぜ今この一歩なのか" }]',
                 '}',
                 '',
                 '制約:',
                 '- roadmap は currentAge から targetAge まで各年齢分を必ず作る。',
                 '- actions と risks は必ず配列にする。文字列でまとめない。',
                 '- todayActions は3つ。10〜15分程度でできる小さな行動にする。',
+                '- evidence は3〜5個。必ず dreamTitle, currentSituation, availableTime, availableMoney, skills, anxieties のいずれかを短く引用する。',
+                '- detectedBlocks は2〜3個。「完璧に始めようとしている」「比較疲れ」「今さら感」「お金や時間の不安」などを、入力と接続して優しく整理する。',
+                '- 各 todayActions には actionReason を入れる。心理負荷・生活への影響・検証しやすさの観点で短く書く。',
                 '- 使う言葉: 今日の一歩, 小さな前進, 今あるもの, 止まる週があるのも普通, 一緒に整理しよう。',
                 '- 「必ず成功」などの断言はしない。',
+                '- 「向いています」と断定せず、「始めやすい可能性」「経験と繋がりやすい」「小さく試しやすい」と書く。',
+                '- 文章は短めに。読むより感覚で整理されるよう、1項目1メッセージにする。',
                 '',
                 `DreamPlan: ${JSON.stringify(plan)}`
               ].join('\n')
@@ -163,9 +173,12 @@ function normalizeAnalysis(value, plan) {
     summary: stringOr(value.summary, fallback.summary),
     possibilityLevel: ['low', 'medium', 'high'].includes(value.possibilityLevel) ? value.possibilityLevel : fallback.possibilityLevel,
     message: stringOr(value.message, fallback.message),
+    reasoning: stringOr(value.reasoning, fallback.reasoning),
+    evidence: normalizeEvidence(value.evidence || value.userAssets, fallback.evidence),
     existingAssets: normalizeTextItems(value.existingAssets, fallback.existingAssets, '今あるもの'),
     missingPieces: normalizeTextItems(value.missingPieces, fallback.missingPieces, '足りないもの'),
     risks: normalizeRisks(value.risks, fallback.risks),
+    detectedBlocks: normalizeTextItems(value.detectedBlocks || value.blocks || value.brakes, fallback.detectedBlocks, '止まりやすいところ'),
     roadmap: normalizeRoadmap(value.roadmap, fallback.roadmap),
     todayActions: normalizeTodayActions(value.todayActions, fallback.todayActions)
   };
@@ -185,6 +198,12 @@ function fallbackAnalysis(plan) {
       : possibilityLevel === 'medium'
         ? '楽ではありませんが、範囲を絞れば現実的に試せる道があります。'
         : 'かなり絞り込みが必要です。まず形を変えた小さな到達点から見るのがよさそうです。',
+    reasoning: `「${shorten(plan.currentSituation, 44)}」という今の状況と、「${shorten(plan.availableTime, 28)}」「${shorten(plan.availableMoney, 28)}」という制約を見ると、最初から大きく変えるより、小さく試して反応を見る順番が合いやすそうです。`,
+    evidence: [
+      { label: '今の状況', quote: shorten(plan.currentSituation, 58), interpretation: '現在地が言葉になっているので、無理のない始め方を選びやすくなります。' },
+      { label: '使える時間', quote: shorten(plan.availableTime, 42), interpretation: 'まとまった時間より、短い行動に分けるほうが続けやすい可能性があります。' },
+      { label: '経験・スキル', quote: shorten(plan.skills, 58), interpretation: '普通だと思っている経験の中に、最初の試作や相談に使える材料があります。' }
+    ],
     existingAssets: [
       { title: '今の状況を言葉にできていること', description: `「${shorten(plan.currentSituation, 58)}」という現在地は、次の判断材料になります。` },
       { title: '普通だと思っている経験', description: `${plan.skills ? shorten(plan.skills, 76) : 'これまでの仕事、生活、対人経験'}の中に使える材料があります。` },
@@ -198,11 +217,15 @@ function fallbackAnalysis(plan) {
       { title: '最初から大きく賭けすぎる', description: '大きな支出や退職を最初に置くと、検証前に後戻りしにくくなります。', avoidance: 'まずは無料から低額で、1週間以内に試せる行動へ落とします。' },
       { title: '調べ続けて動けなくなる', description: '情報収集だけだと始める日が遠くなります。', avoidance: '調査は30分で区切り、小さな外向き行動を1つ入れます。' }
     ],
+    detectedBlocks: [
+      { title: '完璧に始めようとして止まりやすい', description: `「${shorten(plan.anxieties, 42)}」という不安があるため、最初から正解を出そうとすると重くなりやすいです。` },
+      { title: '今さら感で比較しやすい', description: `${currentAge}歳から${targetAge}歳までの時間を考えると、遠い成功例より近い実例を見るほうが動きやすそうです。` }
+    ],
     roadmap: buildRoadmap(currentAge, targetAge),
     todayActions: [
-      { title: '夢を1行にする', description: `「${plan.dreamTitle}」で誰に何を届けたいのかを、粗いまま1行で書きます。`, estimatedMinutes: 8, emotionalMessage: 'きれいな言葉でなくて大丈夫です。' },
-      { title: '近い人を3人保存する', description: '年齢、制約、出発点が少し近い実例を3人だけ保存します。', estimatedMinutes: 15, emotionalMessage: '近い実例のほうが今日の味方になります。' },
-      { title: '1人に小さく話す', description: '信頼できる人に「少し調べていること」として話します。', estimatedMinutes: 10, emotionalMessage: '宣言にしなくて大丈夫です。' }
+      { title: '夢を1行にする', description: `「${plan.dreamTitle}」で誰に何を届けたいのかを、粗いまま1行で書きます。`, estimatedMinutes: 8, emotionalMessage: 'きれいな言葉でなくて大丈夫です。', actionReason: '頭の中だけにある状態より、1行にすると次に調べることが軽くなるため。' },
+      { title: '近い人を3人保存する', description: '年齢、制約、出発点が少し近い実例を3人だけ保存します。', estimatedMinutes: 15, emotionalMessage: '近い実例のほうが今日の味方になります。', actionReason: '比較疲れを減らし、今の生活に近い始め方を見つけやすくするため。' },
+      { title: '1人に小さく話す', description: '信頼できる人に「少し調べていること」として話します。', estimatedMinutes: 10, emotionalMessage: '宣言にしなくて大丈夫です。', actionReason: '大きな決意ではなく、外に少し出す練習として心理負荷が低いため。' }
     ]
   };
 }
@@ -259,16 +282,31 @@ function normalizeRisks(value, fallback) {
 function normalizeTodayActions(value, fallback) {
   return arrayOr(value, fallback).slice(0, 3).map((item, index) => {
     if (typeof item === 'string') {
-      return { title: item, description: '今日できる大きさまで小さくした一歩です。', estimatedMinutes: 10, emotionalMessage: '大きく変えなくて大丈夫です。' };
+      return { title: item, description: '今日できる大きさまで小さくした一歩です。', estimatedMinutes: 10, emotionalMessage: '大きく変えなくて大丈夫です。', actionReason: '心理負荷が低く、今の生活を壊さず試せるため。' };
     }
     const minutes = Number(item?.estimatedMinutes || item?.minutes || 10);
     return {
       title: stringOr(item?.title || item?.action || item?.step, ['夢を1行にする', '近い人を3人保存する', '1人に小さく話す'][index]),
       description: stringOr(item?.description || item?.detail, '今日できる大きさまで小さくした一歩です。'),
       estimatedMinutes: Number.isFinite(minutes) ? minutes : 10,
-      emotionalMessage: stringOr(item?.emotionalMessage || item?.message, '大きく変えなくて大丈夫です。')
+      emotionalMessage: stringOr(item?.emotionalMessage || item?.message, '大きく変えなくて大丈夫です。'),
+      actionReason: stringOr(item?.actionReason || item?.reason || item?.whyThis || item?.why, '心理負荷が低く、今の生活を壊さず試せるため。')
     };
   });
+}
+
+function normalizeEvidence(value, fallback) {
+  return arrayOr(value, fallback).map((item, index) => {
+    const labels = ['入力から拾ったこと', '今ある環境', '過去の経験', '不安の中身', '使える制約'];
+    if (typeof item === 'string') {
+      return { label: labels[index] || '手がかり', quote: item, interpretation: 'この言葉を起点に、今日できる大きさへ分けています。' };
+    }
+    return {
+      label: stringOr(item?.label || item?.title || item?.source, labels[index] || '手がかり'),
+      quote: stringOr(item?.quote || item?.input || item?.value || item?.text, '入力内容'),
+      interpretation: stringOr(item?.interpretation || item?.reason || item?.description, 'この手がかりから、小さく試せる順番を考えています。')
+    };
+  }).slice(0, 5);
 }
 
 function normalizeRoadmap(value, fallback) {
