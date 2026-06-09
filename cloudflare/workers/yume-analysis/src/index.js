@@ -83,7 +83,7 @@ async function analyzeWithOpenAI(plan, env, openAiApiKey) {
     },
     body: JSON.stringify({
       model,
-      max_output_tokens: 1800,
+      max_output_tokens: 5000,
       input: [
         {
           role: 'system',
