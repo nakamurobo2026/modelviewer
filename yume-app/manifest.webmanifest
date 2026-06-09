@@ -1,13 +1,13 @@
 {
   "name": "夢アプリ",
   "short_name": "夢アプリ",
-  "description": "夢を、今日の一歩に変えるAIロードマップアプリ。",
+  "description": "いつかやりたいことを、今日の一歩に変えるAIロードマップアプリ。",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f7f6f1",
-  "theme_color": "#202321",
+  "background_color": "#fbfaf4",
+  "theme_color": "#f8f3e8",
   "lang": "ja",
   "icons": [
     {
