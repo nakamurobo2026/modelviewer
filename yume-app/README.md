@@ -35,6 +35,26 @@ https://nakamurobo2026.github.io/modelviewer/yume-app/
 サーバー送信はしていません。
 結果画面の「記録を消す」でブラウザ内の保存を削除できます。
 
+## Phase 3 Cloudflare Worker準備
+
+夢アプリ用のWorker雛形を追加済みです。
+
+```txt
+cloudflare/workers/yume-analysis/
+```
+
+このWorkerは `DreamPlan` を受け取り、`AnalysisResult` 互換JSONを返します。
+OpenAI APIキーはCloudflare Worker secretに置きます。
+OpenAIが未設定、または失敗した場合も `worker-fallback` として安全なモック分析を返します。
+
+次の接続ステップでは、`yume-app/config.js` にWorker URLを置きます。
+
+```js
+window.YUME_AI_ENDPOINT = "https://YOUR-WORKER.workers.dev/analyze";
+```
+
+フロント側はWorker通信に失敗した場合、今まで通りブラウザ内モック分析へ戻します。
+
 ## 将来のAPI接続
 
 GitHub Pages上ではOpenAI APIキーを安全に扱えません。
