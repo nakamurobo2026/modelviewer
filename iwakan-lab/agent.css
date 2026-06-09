@@ -4,14 +4,26 @@ main{width:100%;max-width:100%;min-width:0;grid-template-columns:minmax(280px,36
 .control-panel,.agent-panel,.result-panel,.queue-panel,.history-panel,.history-panel.wide,.idea-card,.panel{min-width:0;max-width:100%}
 textarea,select,input,button{max-width:100%}
 textarea{width:100%;box-sizing:border-box}
-.idea-text,.queue-item p,.history-item b,.history-item span,.note-chip span,.debug-viewer pre{overflow-wrap:anywhere;word-break:break-word}
+.idea-text,.queue-item p,.history-item b,.history-item span,.note-chip span,.debug-viewer pre,.buzz-results,.buzz-list li{overflow-wrap:anywhere;word-break:break-word}
 .card-top,.card-actions,.judge-grid,.flow-panel,.actions{min-width:0}
 .agent-panel,.queue-panel,.history-panel.wide{grid-column:2;border:1px solid var(--line);border-radius:8px;background:rgba(17,20,26,.92);box-shadow:var(--shadow);padding:18px}
 .actions.compact{grid-template-columns:120px 1fr}
+.primary.soft{background:#202c18;color:var(--accent);border:1px solid rgba(215,255,99,.65)}
+.toggle-line{display:flex;align-items:center;gap:10px;margin-top:12px;color:var(--ink);font-size:13px}
+.toggle-line input{width:18px;height:18px;accent-color:var(--accent)}
 .research-notes{display:grid;gap:8px;margin-top:12px;color:var(--muted);font-size:13px}
 .note-chip{display:grid;grid-template-columns:86px 1fr;gap:10px;align-items:center;width:100%;min-height:44px;border:1px solid var(--line);border-radius:8px;background:#0a0c10;color:var(--ink);padding:9px 10px;text-align:left;cursor:pointer}
 .note-chip b{color:var(--accent);font-size:11px}
 .note-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.buzz-results{display:grid;gap:10px;margin-top:12px;border:1px solid var(--line);border-radius:8px;background:#080a0e;padding:12px;color:var(--muted);font-size:13px}
+.buzz-summary{display:grid;gap:10px}
+.buzz-summary h3{margin:0;color:var(--ink);font-size:15px}
+.buzz-section{display:grid;gap:6px}
+.buzz-section b{color:#f0d89d;font-size:12px}
+.buzz-list{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.buzz-list li{border:1px solid var(--line);border-radius:8px;background:#0d1117;color:var(--ink);padding:6px 8px;font-size:12px;line-height:1.5}
+.buzz-angle{margin:0;color:var(--ink);line-height:1.7}
+.muted{color:var(--muted);margin:0}
 .flow-panel{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:16px}
 .flow-step{border:1px solid var(--line);border-radius:8px;background:#0a0c10;padding:10px;min-height:70px}
 .flow-step b,.flow-step span{display:block}
