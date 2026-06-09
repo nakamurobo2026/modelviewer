@@ -73,7 +73,7 @@ function validatePlan(plan) {
 async function analyzeWithOpenAI(plan, env, openAiApiKey) {
   const model = getEnv(env, 'OPENAI_MODEL') || DEFAULT_MODEL;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort('OpenAI request timed out.'), 25000);
+  const timeoutId = setTimeout(() => controller.abort('OpenAI request timed out.'), 55000);
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     signal: controller.signal,
