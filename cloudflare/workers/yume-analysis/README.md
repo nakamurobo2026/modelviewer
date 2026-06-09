@@ -62,13 +62,36 @@ Cloudflare Workersではパスを厳密に見ていないため、`POST /` で�
 
 OpenAI未設定または失敗時は `source: "worker-fallback"` で、Worker内の安全なフォールバック分析を返します。
 
-## セットアップ
+## GitHub Actionsデプロイ
+
+Workflowを追加済みです。
+
+```txt
+.github/workflows/deploy-yume-analysis.yml
+```
+
+GitHub repository secrets に以下を追加します。
+
+```txt
+CLOUDFLARE_API_TOKEN
+```
+
+その後、GitHub Actionsの `Deploy yume-analysis Worker` を手動実行、または `cloudflare/workers/yume-analysis/**` へのpushで自動デプロイされます。
+
+OpenAI APIキーはGitHub Secretsではなく、Cloudflare Worker secretに保存します。
 
 ```bash
 cd cloudflare/workers/yume-analysis
-npx wrangler login
 npx wrangler secret put OPENAI_API_KEY
-npx wrangler deploy
+```
+
+## ローカルからデプロイ
+
+```bash
+cd cloudflare/workers/yume-analysis
+npm install
+npm run secret:openai
+npm run deploy
 ```
 
 `wrangler.toml` の初期値:
@@ -87,12 +110,13 @@ curl -X POST "https://YOUR-WORKER.workers.dev/analyze" \
   -d '{"dreamTitle":"小さなカフェを開きたい","currentAge":44,"targetAge":50,"currentSituation":"会社員。週末に少し時間がある。","availableTime":"週末2時間","availableMoney":"月1万円","skills":"接客、料理","anxieties":"遅いかもしれない"}'
 ```
 
-## フロント接続方針
+## フロント接続
 
-次の段階で `yume-app` に `config.js` を追加し、Worker URLをそこに置きます。
+`yume-app/config.js` にWorker URLを設定します。
 
 ```js
 window.YUME_AI_ENDPOINT = "https://YOUR-WORKER.workers.dev/analyze";
 ```
 
-フロント側はWorker通信に失敗した場合、今まで通りブラウザ内モック分析へフォールバックします。
+未設定の間はブラウザ内モック分析で動きます。
+Worker通信に失敗した場合も、ブラウザ内モック分析へフォールバックします。
