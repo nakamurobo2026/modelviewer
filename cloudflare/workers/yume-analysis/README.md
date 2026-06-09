@@ -1,122 +1,117 @@
-# yume-analysis Cloudflare Worker
+# yume-analysis Worker
 
-夢アプリ用のAI分析ゲートウェイです。
-GitHub PagesのブラウザからOpenAI APIを直接呼ばず、このWorkerを経由します。
+夢アプリの外部AI接続用Cloudflare Workerです。
+
+GitHub PagesではAPIキーを安全に扱えないため、ブラウザからOpenAI APIを直接呼ばず、このWorkerを中継します。
 
 ## 役割
 
-```txt
-GitHub Pages yume-app
-  -> Cloudflare Worker yume-analysis
-    -> OpenAI Responses API
+- `POST /analyze` を受け取る
+- 入力された夢、年齢、状況、時間、お金、経験、不安をもとに分析する
+- OpenAI APIキーが設定されている場合はOpenAI APIを呼ぶ
+- APIキー未設定、またはAI接続に失敗した場合はWorker内のフォールバック分析を返す
+- ブラウザ側の `config.js` が未設定の場合は、このWorkerを使わずモックAIで動く
+
+## Cloudflare DashboardでWorkerを作成する
+
+1. Cloudflare Dashboardを開きます。
+2. 左メニューから `Workers & Pages` を開きます。
+3. `Create application` を選びます。
+4. `Worker` を選びます。
+5. Worker名を `yume-analysis` にします。
+6. 作成後、Workerの編集画面を開きます。
+7. GitHub上の `cloudflare/workers/yume-analysis/src/index.js` の内容を確認します。
+8. 初回だけDashboardのWorker編集画面に同じコードを貼り付けて保存しておくと、画面上でも動作確認しやすくなります。
+
+以後の更新はGitHub Actionsからデプロイできます。
+
+## Variables and Secrets
+
+Cloudflare Dashboardで `yume-analysis` Workerを開き、`Settings` から `Variables and Secrets` を設定します。
+
+必要なSecret:
+
+```text
+OPENAI_API_KEY
 ```
 
-ブラウザにはOpenAI APIキーを置きません。
-OpenAI APIキーはCloudflare Worker secretとして保存します。
+任意のVariables:
 
-## エンドポイント
-
-```http
-POST /analyze
-Content-Type: application/json
+```text
+ALLOWED_ORIGIN=https://nakamurobo2026.github.io
+OPENAI_MODEL=gpt-5-mini
 ```
 
-Cloudflare Workersではパスを厳密に見ていないため、`POST /` でも動きます。
-運用上は `/analyze` を推奨します。
+`OPENAI_API_KEY` は必ずSecretとして保存してください。GitHub Pages側の `config.js`、HTML、JavaScriptには書きません。
 
-## 入力
+## GitHub Secrets
 
-`DreamPlan` と同じ形です。
+GitHub ActionsからWorkerをデプロイするため、GitHub側にCloudflareのAPI Tokenを登録します。
 
-```json
-{
-  "dreamTitle": "小さなカフェを開きたい",
-  "targetDescription": "週末だけ試し営業できる状態",
-  "currentAge": 44,
-  "targetAge": 50,
-  "currentSituation": "会社員。平日は忙しい。",
-  "availableTime": "平日30分、週末2時間",
-  "availableMoney": "月1万円まで",
-  "skills": "接客、料理、SNS",
-  "anxieties": "遅いかもしれない"
-}
+1. Cloudflare Dashboard右上のプロフィールメニューを開きます。
+2. `My Profile` を開きます。
+3. `API Tokens` を開きます。
+4. WorkersをデプロイできるAPI Tokenを作成します。
+5. 作成されたTokenをコピーします。
+6. GitHubで `nakamurobo2026/modelviewer` リポジトリを開きます。
+7. `Settings` を開きます。
+8. `Secrets and variables` から `Actions` を開きます。
+9. `New repository secret` を選びます。
+10. Nameに `CLOUDFLARE_API_TOKEN` を入れます。
+11. SecretにCloudflareのTokenを貼り付けて保存します。
+
+## GitHub Actionsからデプロイする
+
+1. GitHubで `nakamurobo2026/modelviewer` リポジトリを開きます。
+2. `Actions` タブを開きます。
+3. `Deploy yume-analysis Worker` を選びます。
+4. `Run workflow` を押します。
+5. ブランチが `main` であることを確認します。
+6. 実行します。
+7. 完了後、Cloudflare Dashboardで `yume-analysis` のURLを確認します。
+
+Worker URLは通常、次のような形式です。
+
+```text
+https://yume-analysis.YOUR_SUBDOMAIN.workers.dev
 ```
 
-## 出力
+夢アプリに設定するURLは次の形式です。
 
-`AnalysisResult` 互換です。
-
-```json
-{
-  "source": "openai",
-  "summary": "...",
-  "possibilityLevel": "medium",
-  "message": "...",
-  "existingAssets": [],
-  "missingPieces": [],
-  "risks": [],
-  "roadmap": [],
-  "todayActions": []
-}
+```text
+https://yume-analysis.YOUR_SUBDOMAIN.workers.dev/analyze
 ```
 
-OpenAI未設定または失敗時は `source: "worker-fallback"` で、Worker内の安全なフォールバック分析を返します。
+## yume-app/config.jsへの反映
 
-## GitHub Actionsデプロイ
+GitHub上で `yume-app/config.js` を編集します。
 
-Workflowを追加済みです。
-
-```txt
-.github/workflows/deploy-yume-analysis.yml
-```
-
-GitHub repository secrets に以下を追加します。
-
-```txt
-CLOUDFLARE_API_TOKEN
-```
-
-その後、GitHub Actionsの `Deploy yume-analysis Worker` を手動実行、または `cloudflare/workers/yume-analysis/**` へのpushで自動デプロイされます。
-
-OpenAI APIキーはGitHub Secretsではなく、Cloudflare Worker secretに保存します。
-
-```bash
-cd cloudflare/workers/yume-analysis
-npx wrangler secret put OPENAI_API_KEY
-```
-
-## ローカルからデプロイ
-
-```bash
-cd cloudflare/workers/yume-analysis
-npm install
-npm run secret:openai
-npm run deploy
-```
-
-`wrangler.toml` の初期値:
-
-```toml
-[vars]
-ALLOWED_ORIGIN = "https://nakamurobo2026.github.io"
-OPENAI_MODEL = "gpt-5-mini"
-```
-
-## 疎通確認
-
-```bash
-curl -X POST "https://YOUR-WORKER.workers.dev/analyze" \
-  -H "Content-Type: application/json" \
-  -d '{"dreamTitle":"小さなカフェを開きたい","currentAge":44,"targetAge":50,"currentSituation":"会社員。週末に少し時間がある。","availableTime":"週末2時間","availableMoney":"月1万円","skills":"接客、料理","anxieties":"遅いかもしれない"}'
-```
-
-## フロント接続
-
-`yume-app/config.js` にWorker URLを設定します。
+モックAIのまま使う場合:
 
 ```js
-window.YUME_AI_ENDPOINT = "https://YOUR-WORKER.workers.dev/analyze";
+window.YUME_AI_ENDPOINT = "";
 ```
 
-未設定の間はブラウザ内モック分析で動きます。
-Worker通信に失敗した場合も、ブラウザ内モック分析へフォールバックします。
+Workerに接続する場合:
+
+```js
+window.YUME_AI_ENDPOINT = "https://yume-analysis.YOUR_SUBDOMAIN.workers.dev/analyze";
+```
+
+空に戻すと、いつでもモックAIへ戻せます。
+
+## CORS
+
+初期設定では `https://nakamurobo2026.github.io` からのアクセスを許可します。
+
+必要に応じて、Cloudflare DashboardのVariablesで `ALLOWED_ORIGIN` を変更してください。
+
+## フォールバック
+
+次の場合でも、ユーザー体験が完全に止まらないようにしています。
+
+- `config.js` のWorker URLが空
+- `OPENAI_API_KEY` が未設定
+- OpenAI API接続に失敗
+
+この場合は、ブラウザ内モックAIまたはWorker内フォールバック分析でロードマップを返します。
