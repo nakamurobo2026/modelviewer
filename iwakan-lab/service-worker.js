@@ -9,6 +9,7 @@ const ASSETS = [
   "./ai-client.js",
   "./app.js",
   "./agent.js",
+  "./research-agent.js",
   "./manifest.webmanifest"
 ];
 
