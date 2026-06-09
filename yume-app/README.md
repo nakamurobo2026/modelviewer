@@ -47,13 +47,38 @@ cloudflare/workers/yume-analysis/
 OpenAI APIキーはCloudflare Worker secretに置きます。
 OpenAIが未設定、または失敗した場合も `worker-fallback` として安全なモック分析を返します。
 
-次の接続ステップでは、`yume-app/config.js` にWorker URLを置きます。
+フロント側には以下を追加済みです。
+
+```txt
+yume-app/config.js
+yume-app/cloudflare-ai.js
+```
+
+Cloudflare Workerをデプロイしたら、`yume-app/config.js` にWorker URLを入れます。
 
 ```js
 window.YUME_AI_ENDPOINT = "https://YOUR-WORKER.workers.dev/analyze";
 ```
 
-フロント側はWorker通信に失敗した場合、今まで通りブラウザ内モック分析へ戻します。
+`window.YUME_AI_ENDPOINT` が空の間は、今まで通りブラウザ内モック分析で動きます。
+Worker通信に失敗した場合も、ブラウザ内モック分析へ戻します。
+
+## Cloudflare Workerデプロイ
+
+```bash
+cd cloudflare/workers/yume-analysis
+npx wrangler login
+npx wrangler secret put OPENAI_API_KEY
+npx wrangler deploy
+```
+
+疎通確認:
+
+```bash
+curl -X POST "https://YOUR-WORKER.workers.dev/analyze" \
+  -H "Content-Type: application/json" \
+  -d '{"dreamTitle":"小さなカフェを開きたい","currentAge":44,"targetAge":50,"currentSituation":"会社員。週末に少し時間がある。"}'
+```
 
 ## 将来のAPI接続
 
