@@ -1,6 +1,6 @@
 name = "iwakan-lab"
-main = "src/index.js"
-compatibility_date = "2026-06-07"
+main = "worker.js"
+compatibility_date = "2026-06-09"
 
 [vars]
 OPENAI_MODEL = "gpt-5-mini"
