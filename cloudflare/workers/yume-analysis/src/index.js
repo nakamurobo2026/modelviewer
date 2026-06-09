@@ -21,7 +21,8 @@ export default {
       return json({ error: 'Invalid DreamPlan payload.' }, 400, cors);
     }
 
-    if (!env.OPENAI_API_KEY) {
+    const openAiApiKey = getEnv(env, 'OPENAI_API_KEY');
+    if (!openAiApiKey) {
       return json({
         source: 'worker-fallback',
         warning: 'OPENAI_API_KEY is not available in this Worker runtime.',
@@ -31,7 +32,7 @@ export default {
     }
 
     try {
-      const analysis = await analyzeWithOpenAI(plan, env);
+      const analysis = await analyzeWithOpenAI(plan, env, openAiApiKey);
       return json({ source: 'openai', ...analysis }, 200, cors);
     } catch (error) {
       return json({
@@ -69,12 +70,12 @@ function validatePlan(plan) {
   }
 }
 
-async function analyzeWithOpenAI(plan, env) {
-  const model = env.OPENAI_MODEL || DEFAULT_MODEL;
+async function analyzeWithOpenAI(plan, env, openAiApiKey) {
+  const model = getEnv(env, 'OPENAI_MODEL') || DEFAULT_MODEL;
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${openAiApiKey}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
@@ -198,6 +199,12 @@ function arrayOr(value, fallback) {
 function shorten(value, max) {
   const text = String(value || '').trim();
   return text.length > max ? `${text.slice(0, max)}...` : text;
+}
+
+function getEnv(env, name) {
+  if (env[name]) return env[name];
+  const matchingKey = Object.keys(env).find((key) => key.trim() === name);
+  return matchingKey ? env[matchingKey] : undefined;
 }
 
 function sanitizeError(error) {
