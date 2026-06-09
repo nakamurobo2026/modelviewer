@@ -3,6 +3,7 @@ const DEFAULT_MODEL = 'gpt-5-mini';
 export default {
   async fetch(request, env) {
     const cors = corsHeaders(env);
+    const debug = new URL(request.url).searchParams.get('debug') === '1';
 
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: cors });
@@ -21,14 +22,19 @@ export default {
     }
 
     if (!env.OPENAI_API_KEY) {
-      return json({ source: 'worker-fallback', ...fallbackAnalysis(plan) }, 200, cors);
+      return json({ source: 'worker-fallback', warning: 'OPENAI_API_KEY is not available in this Worker runtime.', ...fallbackAnalysis(plan) }, 200, cors);
     }
 
     try {
       const analysis = await analyzeWithOpenAI(plan, env);
       return json({ source: 'openai', ...analysis }, 200, cors);
     } catch (error) {
-      return json({ source: 'worker-fallback', warning: 'OpenAI analysis failed. Returned local fallback.', ...fallbackAnalysis(plan) }, 200, cors);
+      return json({
+        source: 'worker-fallback',
+        warning: 'OpenAI analysis failed. Returned local fallback.',
+        ...(debug ? { debug: sanitizeError(error) } : {}),
+        ...fallbackAnalysis(plan)
+      }, 200, cors);
     }
   }
 };
@@ -71,11 +77,21 @@ async function analyzeWithOpenAI(plan, env) {
       input: [
         {
           role: 'system',
-          content: 'あなたは現実的でやわらかい夢ロードマップ設計者です。成功を断言せず、JSONだけを返してください。NG語: KPI, 未達成, ノルマ, 失敗, 達成率が低い。'
+          content: [
+            {
+              type: 'input_text',
+              text: 'あなたは現実的でやわらかい夢ロードマップ設計者です。成功を断言せず、JSONだけを返してください。NG語: KPI, 未達成, ノルマ, 失敗, 達成率が低い。'
+            }
+          ]
         },
         {
           role: 'user',
-          content: `次のDreamPlanをAnalysisResult JSONにしてください。必ず summary, possibilityLevel, message, existingAssets, missingPieces, risks, roadmap, todayActions を含めます。ロードマップは currentAge から targetAge まで各年齢分を作ります。\n\n${JSON.stringify(plan)}`
+          content: [
+            {
+              type: 'input_text',
+              text: `次のDreamPlanをAnalysisResult JSONにしてください。必ず summary, possibilityLevel, message, existingAssets, missingPieces, risks, roadmap, todayActions を含めます。ロードマップは currentAge から targetAge まで各年齢分を作ります。\n\n${JSON.stringify(plan)}`
+            }
+          ]
         }
       ],
       text: {
@@ -87,11 +103,15 @@ async function analyzeWithOpenAI(plan, env) {
   });
 
   if (!response.ok) {
-    throw new Error(`OpenAI request failed: ${response.status}`);
+    const body = await response.text();
+    throw new Error(`OpenAI request failed: ${response.status} ${shorten(body, 600)}`);
   }
 
   const data = await response.json();
   const text = data.output_text || data.output?.flatMap((item) => item.content || []).map((item) => item.text || '').join('') || '';
+  if (!text) {
+    throw new Error('OpenAI response did not include output_text.');
+  }
   const parsed = JSON.parse(text);
   return normalizeAnalysis(parsed, plan);
 }
@@ -173,4 +193,10 @@ function arrayOr(value, fallback) {
 function shorten(value, max) {
   const text = String(value || '').trim();
   return text.length > max ? `${text.slice(0, max)}...` : text;
+}
+
+function sanitizeError(error) {
+  return String(error?.message || error || 'Unknown error')
+    .replace(/Bearer\s+[A-Za-z0-9._-]+/g, 'Bearer [redacted]')
+    .replace(/sk-[A-Za-z0-9_-]+/g, 'sk-[redacted]');
 }
