@@ -26,4 +26,4 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           wranglerVersion: "4.98.0"
           workingDirectory: cloudflare/workers/yume-analysis
-          command: deploy
+          command: deploy --keep-vars
