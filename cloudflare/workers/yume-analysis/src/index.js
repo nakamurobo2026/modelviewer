@@ -163,11 +163,11 @@ function normalizeAnalysis(value, plan) {
     summary: stringOr(value.summary, fallback.summary),
     possibilityLevel: ['low', 'medium', 'high'].includes(value.possibilityLevel) ? value.possibilityLevel : fallback.possibilityLevel,
     message: stringOr(value.message, fallback.message),
-    existingAssets: arrayOr(value.existingAssets, fallback.existingAssets),
-    missingPieces: arrayOr(value.missingPieces, fallback.missingPieces),
-    risks: arrayOr(value.risks, fallback.risks),
-    roadmap: arrayOr(value.roadmap, fallback.roadmap),
-    todayActions: arrayOr(value.todayActions, fallback.todayActions)
+    existingAssets: normalizeTextItems(value.existingAssets, fallback.existingAssets, '今あるもの'),
+    missingPieces: normalizeTextItems(value.missingPieces, fallback.missingPieces, '足りないもの'),
+    risks: normalizeRisks(value.risks, fallback.risks),
+    roadmap: normalizeRoadmap(value.roadmap, fallback.roadmap),
+    todayActions: normalizeTodayActions(value.todayActions, fallback.todayActions)
   };
 }
 
@@ -229,6 +229,73 @@ function stringOr(value, fallback) {
 
 function arrayOr(value, fallback) {
   return Array.isArray(value) && value.length ? value : fallback;
+}
+
+function normalizeTextItems(value, fallback, label) {
+  return arrayOr(value, fallback).map((item, index) => {
+    if (typeof item === 'string') {
+      return { title: item, description: `${label}として小さな前進に使える材料です。` };
+    }
+    return {
+      title: stringOr(item?.title || item?.name || item?.label, `${label}${index + 1}`),
+      description: stringOr(item?.description || item?.detail || item?.reason, '小さく分けて確認していきます。')
+    };
+  });
+}
+
+function normalizeRisks(value, fallback) {
+  return arrayOr(value, fallback).map((item, index) => {
+    if (typeof item === 'string') {
+      return { title: item, description: '焦る前に見ておきたい点です。', avoidance: '小さく試せる形へ戻します。' };
+    }
+    return {
+      title: stringOr(item?.title || item?.risk || item?.name, `避けたいリスク${index + 1}`),
+      description: stringOr(item?.description || item?.detail, '焦る前に見ておきたい点です。'),
+      avoidance: stringOr(item?.avoidance || item?.fallbackPlan || item?.fallback, '小さく試せる形へ戻します。')
+    };
+  });
+}
+
+function normalizeTodayActions(value, fallback) {
+  return arrayOr(value, fallback).slice(0, 3).map((item, index) => {
+    if (typeof item === 'string') {
+      return { title: item, description: '今日できる大きさまで小さくした一歩です。', estimatedMinutes: 10, emotionalMessage: '大きく変えなくて大丈夫です。' };
+    }
+    const minutes = Number(item?.estimatedMinutes || item?.minutes || 10);
+    return {
+      title: stringOr(item?.title || item?.action || item?.step, ['夢を1行にする', '近い人を3人保存する', '1人に小さく話す'][index]),
+      description: stringOr(item?.description || item?.detail, '今日できる大きさまで小さくした一歩です。'),
+      estimatedMinutes: Number.isFinite(minutes) ? minutes : 10,
+      emotionalMessage: stringOr(item?.emotionalMessage || item?.message, '大きく変えなくて大丈夫です。')
+    };
+  });
+}
+
+function normalizeRoadmap(value, fallback) {
+  return arrayOr(value, fallback).map((item, index) => {
+    const base = fallback[index] || {};
+    return {
+      age: Number(item?.age || base.age),
+      theme: stringOr(item?.theme || item?.title, base.theme || '小さく前へ進む'),
+      actions: toTextArray(item?.actions || base.actions),
+      reason: stringOr(item?.reason || item?.why, base.reason || '確認しながら進むためです。'),
+      smallStart: stringOr(item?.smallStart || item?.small_start || item?.firstStep, base.smallStart || '10分だけメモに書きます。'),
+      risks: toTextArray(item?.risks || base.risks),
+      fallbackPlan: stringOr(item?.fallbackPlan || item?.fallback || item?.alternative, base.fallbackPlan || 'さらに小さい一歩へ戻します。')
+    };
+  });
+}
+
+function toTextArray(value) {
+  if (Array.isArray(value) && value.length) return value.map((item) => typeof item === 'string' ? item : stringOr(item?.title || item?.description || item?.action, '小さく試す'));
+  if (typeof value === 'string' && value.trim()) {
+    return value
+      .split(/\n|。|・/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, 5);
+  }
+  return ['小さく試す'];
 }
 
 function shorten(value, max) {
