@@ -1,11 +1,9 @@
-const DEFAULT_MODEL = 'gpt-5-mini';
-
 export default {
   async fetch(request, env) {
-    const cors = corsHeaders(env);
+    const headers = corsHeaders(env);
     const debug = new URL(request.url).searchParams.get('debug') === '1';
-    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
-    if (request.method !== 'POST') return json({ error: 'Use POST.' }, 405, cors);
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
+    if (request.method !== 'POST') return json({ error: 'Use POST.' }, 405, headers);
 
     let plan;
     try {
@@ -15,19 +13,11 @@ export default {
         if (plan?.[key] === undefined || plan?.[key] === null || plan?.[key] === '') throw new Error(`Missing ${key}`);
       }
     } catch (_) {
-      return json({ error: 'Invalid DreamPlan payload.' }, 400, cors);
+      return json({ error: 'Invalid DreamPlan payload.' }, 400, headers);
     }
 
     const pipeline = await researchPipeline(plan, env);
-    const base = buildAnalysis(plan, pipeline);
-    if (!env.OPENAI_API_KEY) return json({ source: 'worker-voice-research', ...(debug ? { debug: debugPayload(env, pipeline) } : {}), ...base }, 200, cors);
-
-    try {
-      const edited = await editWithOpenAI(plan, pipeline, base, env);
-      return json({ source: 'openai-voice-research', ...(debug ? { debug: debugPayload(env, pipeline) } : {}), ...mergeAnalysis(edited, base) }, 200, cors);
-    } catch (error) {
-      return json({ source: 'worker-voice-research', warning: sanitizeError(error), ...(debug ? { debug: debugPayload(env, pipeline) } : {}), ...base }, 200, cors);
-    }
+    return json({ source: 'worker-voice-research-fast', ...(debug ? { debug: debugPayload(env, pipeline) } : {}), ...buildAnalysis(plan, pipeline) }, 200, headers);
   }
 };
 
@@ -42,25 +32,13 @@ function corsHeaders(env) {
 function json(body, status, headers) { return new Response(JSON.stringify(body), { status, headers }); }
 
 async function researchPipeline(plan, env) {
-  const queries = buildQueries(plan).slice(0, 10);
-  const search = await searchWeb(queries, env);
-  const extracted = extract(search.results);
-  const cases = analyzeCases(extracted);
+  const queries = buildQueries(plan).slice(0, 6);
+  const search = await searchTavily(queries, env);
+  const cases = analyzeCases(search.results.slice(0, 8));
   const scores = scorePlan(plan, cases);
   const ranked = rankCases(plan, cases, scores).slice(0, 5);
   const patterns = analyzePatterns(ranked);
-  return {
-    provider: search.provider,
-    status: search.status,
-    warning: search.warning || '',
-    generatedQueries: queries,
-    rawResultCount: search.results.length,
-    extractedCount: extracted.length,
-    cases: ranked,
-    patterns,
-    scores,
-    notes: buildNotes(ranked, patterns, scores)
-  };
+  return { provider: search.provider, status: search.status, warning: search.warning || '', generatedQueries: queries, rawResultCount: search.results.length, extractedCount: cases.length, cases: ranked, patterns, scores, notes: buildNotes(ranked, patterns, scores) };
 }
 
 function buildQueries(plan) {
@@ -84,55 +62,39 @@ function buildQueries(plan) {
   return [...new Set([...sources.map((source, index) => `${base[index % base.length]} ${source}`), ...base].map((q) => q.replace(/\s+/g, ' ').trim()))];
 }
 
-async function searchWeb(queries, env) {
+async function searchTavily(queries, env) {
   if (!env.TAVILY_API_KEY) return { provider: 'none', status: 'missing_search_key', warning: 'TAVILY_API_KEY is missing.', results: [] };
-  const batches = await Promise.all(queries.slice(0, 8).map(async (query) => {
-    const response = await fetch('https://api.tavily.com/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ api_key: env.TAVILY_API_KEY, query, search_depth: 'advanced', include_answer: false, include_raw_content: true, max_results: 5 })
-    });
-    if (!response.ok) return [];
-    const data = await response.json();
-    return (data.results || []).map((item) => {
-      const text = `${item.title || ''} ${item.content || ''} ${item.raw_content || ''}`;
-      const url = item.url || '';
-      return { query, title: item.title || '', url, snippet: item.content || '', rawContent: item.raw_content || '', score: item.score || 0, source: sourceName(url), sourceKind: sourceKind(url), sourceScore: sourceScore(url, text) };
-    });
-  }));
-  return { provider: 'tavily', status: 'ok', results: rankRaw(uniqueByUrl(batches.flat())).slice(0, 14) };
-}
-
-function extract(results) {
-  return results.slice(0, 10).map((item) => {
-    const text = clean(`${item.title}. ${item.snippet}. ${item.rawContent || ''}`).slice(0, 1800);
-    return { title: clean(item.title).slice(0, 90), url: item.url, source: item.source, sourceKind: item.sourceKind, sourceScore: item.sourceScore, query: item.query, text };
-  }).filter((item) => item.text.length > 20);
-}
-
-function analyzeCases(extracted) {
-  return extracted.map((item) => ({
-    title: item.title,
-    url: item.url,
-    source: item.source,
-    sourceKind: item.sourceKind,
-    sourceScore: item.sourceScore,
-    sourceType: classifySource(item),
-    ageRange: detectAge(item.text),
-    category: inferCategory(item.text),
-    emotion: detectEmotions(item.text),
-    firstStep: detectFirstStep(item.text),
-    mistakes: detectMistakes(item.text),
-    successPattern: detectPattern(item.text),
-    voice: summarizeVoice(item.text),
-    quote: summarizeEvidence(item.text),
-    signals: {
-      family: /家族|子供|子ども|育児|介護/.test(item.text),
-      local: /地方|地域|田舎|地元/.test(item.text),
-      sns: /SNS|投稿|発信|Instagram|YouTube|note|ブログ|X|Twitter|Threads/.test(item.text),
-      craft: /CNC|加工|製造|ものづくり|工房|工場|作品|ハンドメイド/.test(item.text),
-      money: /資金|初期投資|お金|費用|赤字|低資金|食べていけ/.test(item.text)
+  const batches = await Promise.all(queries.slice(0, 4).map(async (query) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 7000);
+    try {
+      const response = await fetch('https://api.tavily.com/search', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: env.TAVILY_API_KEY, query, search_depth: 'basic', include_answer: false, include_raw_content: false, max_results: 3 })
+      });
+      clearTimeout(timer);
+      if (!response.ok) return [];
+      const data = await response.json();
+      return (data.results || []).map((item) => {
+        const text = `${item.title || ''} ${item.content || ''}`;
+        const url = item.url || '';
+        return { query, title: item.title || '', url, snippet: item.content || '', score: item.score || 0, source: sourceName(url), sourceKind: sourceKind(url), sourceScore: sourceScore(url, text), text: clean(text).slice(0, 1200) };
+      });
+    } catch (_) {
+      clearTimeout(timer);
+      return [];
     }
+  }));
+  return { provider: 'tavily', status: 'ok', results: rankRaw(uniqueByUrl(batches.flat())).slice(0, 8) };
+}
+
+function analyzeCases(results) {
+  return results.filter((item) => item.text.length > 20).map((item) => ({
+    title: clean(item.title).slice(0, 90), url: item.url, source: item.source, sourceKind: item.sourceKind, sourceScore: item.sourceScore,
+    sourceType: classifySource(item), ageRange: detectAge(item.text), category: inferCategory(item.text), emotion: detectEmotions(item.text), firstStep: detectFirstStep(item.text), mistakes: detectMistakes(item.text), successPattern: detectPattern(item.text), voice: summarizeVoice(item.text), quote: summarizeEvidence(item.text),
+    signals: { family: /家族|子供|子ども|育児|介護/.test(item.text), local: /地方|地域|田舎|地元/.test(item.text), sns: /SNS|投稿|発信|Instagram|YouTube|note|ブログ|X|Twitter|Threads/.test(item.text), craft: /CNC|加工|製造|ものづくり|工房|工場|作品|ハンドメイド/.test(item.text), money: /資金|初期投資|お金|費用|赤字|低資金|食べていけ/.test(item.text) }
   }));
 }
 
@@ -215,19 +177,6 @@ function buildActions(plan, scores) {
   return actions.slice(0, 3);
 }
 
-async function editWithOpenAI(plan, pipeline, fallback, env) {
-  const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST', headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: env.OPENAI_MODEL || DEFAULT_MODEL, max_output_tokens: 3600, input: [{ role: 'system', content: [{ type: 'input_text', text: promptText() }] }, { role: 'user', content: [{ type: 'input_text', text: `DreamPlan:\n${JSON.stringify(plan)}\n\nResearchPipeline:\n${JSON.stringify(pipeline)}\n\nBaseAnalysis:\n${JSON.stringify(fallback)}` }] }], text: { format: { type: 'json_object' } } })
-  });
-  if (!response.ok) throw new Error(`OpenAI request failed: ${response.status} ${short(await response.text(), 500)}`);
-  const data = await response.json();
-  const text = data.output_text || data.output?.flatMap((item) => item.content || []).map((item) => item.text || '').join('') || '';
-  return JSON.parse(text);
-}
-function promptText() { return ['あなたは分析AIではなく、似た人の声を短く整理する編集係です。', 'ResearchPipeline の cases, notes, scores を必ず使う。AIだけの一般論は禁止。', 'sourceScore が高い一次情報、コメント、失敗談、感情のある声を優先する。', '企業LPやSEO記事は補助に留める。', '成功断言、自己啓発、コンサル語は禁止。', 'ユーザー表示で避ける語: 資産, 制約, 検証, KPI, 最適化, フェーズ, 実行, 解像度, 未達成, ノルマ, 失敗。', '使う語: 今あるもの, 止まってる理由, 小さく試す, 少し動く, 今の状況, 無理しない, 今日できそう, まずこれだけ。', 'JSONだけ返す。BaseAnalysisと同じキーを保つ。researchNotesのurl/sourceName/sourceKind/sourceScoreは消さない。'].join('\n'); }
-function mergeAnalysis(value, fallback) { const v = value && typeof value === 'object' ? value : {}; return { ...fallback, ...v, conclusion: { ...fallback.conclusion, ...(v.conclusion || {}) }, emotionalInsight: { ...fallback.emotionalInsight, ...(v.emotionalInsight || {}) }, researchNotes: keepNotes(v.researchNotes, fallback.researchNotes), todayActions: Array.isArray(v.todayActions) && v.todayActions.length ? v.todayActions.slice(0, 3) : fallback.todayActions, phaseTimeline: Array.isArray(v.phaseTimeline) && v.phaseTimeline.length ? v.phaseTimeline.slice(0, 4) : fallback.phaseTimeline, similarPatterns: Array.isArray(v.similarPatterns) && v.similarPatterns.length ? v.similarPatterns.slice(0, 2) : fallback.similarPatterns, commonMistakes: Array.isArray(v.commonMistakes) && v.commonMistakes.length ? v.commonMistakes.slice(0, 3) : fallback.commonMistakes, roadmap: [] }; }
-function keepNotes(value, fallback) { const notes = Array.isArray(value) && value.length ? value : fallback; return notes.slice(0, 3).map((note, i) => ({ ...fallback[i], ...note, url: note.url || fallback[i]?.url || '', sourceName: note.sourceName || fallback[i]?.sourceName || '', sourceKind: note.sourceKind || fallback[i]?.sourceKind || '', sourceScore: Number(note.sourceScore ?? fallback[i]?.sourceScore ?? 0) })); }
 function classifySource(item) { if (/失敗|注意|リスク|やめた|赤字|後悔|初期投資|食べていけ/.test(item.text)) return 'risk'; if (/comment|social|personal|qa/.test(item.sourceKind)) return 'case'; if (/事例|体験|始めた|インタビュー|note|reddit|youtube/.test(`${item.source} ${item.text}`.toLowerCase())) return 'case'; if (/市場|トレンド|増加|需要|人気/.test(item.text)) return 'trend'; return 'market'; }
 function detectAge(text) { if (/60代/.test(text)) return '60s'; if (/50代/.test(text)) return '50s'; if (/40代/.test(text)) return '40s'; if (/30代/.test(text)) return '30s'; return 'unknown'; }
 function detectEmotions(text) { return [['今さら感', /今さら|遅い|年齢/], ['比較疲れ', /比較|SNS疲れ|周り/], ['家族責任', /家族|子供|子ども|介護|生活/], ['不安', /不安|怖い|失敗|赤字|恥ずかしい/]].filter(([, r]) => r.test(text)).map(([label]) => label).slice(0, 4); }
@@ -249,5 +198,4 @@ function mostCommon(items) { const counts = new Map(); items.filter(Boolean).for
 function join(...values) { return values.map((v) => String(v || '')).join(' '); }
 function clamp(value) { return Math.max(0, Math.min(100, Math.round(value))); }
 function short(value, max) { const text = String(value || '').trim(); return text.length > max ? `${text.slice(0, max)}...` : text; }
-function sanitizeError(error) { return String(error?.message || error || 'Unknown error').replace(/Bearer\s+[A-Za-z0-9._-]+/g, 'Bearer [redacted]').replace(/sk-[A-Za-z0-9_-]+/g, 'sk-[redacted]'); }
 function debugPayload(env, pipeline) { return { envKeys: Object.keys(env).filter((key) => !/KEY|TOKEN|SECRET/i.test(key)).sort(), searchProvider: pipeline.provider, searchStatus: pipeline.status, queryCount: pipeline.generatedQueries.length, rawResultCount: pipeline.rawResultCount, extractedCount: pipeline.extractedCount, topSources: pipeline.cases.map((item) => ({ source: item.source, sourceKind: item.sourceKind, sourceScore: item.sourceScore, title: item.title })), warning: pipeline.warning }; }
