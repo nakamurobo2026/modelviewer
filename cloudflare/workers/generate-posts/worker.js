@@ -160,6 +160,37 @@ function localIdeas(theme, category, count = 50) {
   }));
 }
 
+function normalizeIdea(idea, theme, category, index) {
+  const fallback = localIdeas(theme, category, index + 1)[index];
+  return {
+    text: String(idea?.text || fallback.text).replace(/\s+/g, " ").slice(0, 90),
+    category: String(idea?.category || category),
+    score: clamp(Number(idea?.score || fallback.score), 55, 98),
+    hook: String(idea?.hook || idea?.hookType || fallback.hook)
+  };
+}
+
+function fillIdeas(ideas, theme, category) {
+  const seen = new Set();
+  const normalized = [];
+  for (const idea of Array.isArray(ideas) ? ideas : []) {
+    const item = normalizeIdea(idea, theme, category, normalized.length);
+    const key = item.text.replace(/[、。,.]/g, "");
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    normalized.push(item);
+    if (normalized.length >= 50) break;
+  }
+  for (const idea of localIdeas(theme, category, 50)) {
+    const key = idea.text.replace(/[、。,.]/g, "");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    normalized.push(idea);
+    if (normalized.length >= 50) break;
+  }
+  return normalized;
+}
+
 function extractJson(text) {
   const raw = String(text || "").trim();
   const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1];
@@ -192,15 +223,15 @@ async function handleGenerate(request, env) {
   const body = await request.json().catch(() => ({}));
   const theme = String(body.theme || "").slice(0, 3000);
   const category = String(body.category || "違和感");
-  const prompt = `Threads向け投稿案を50件作る。AIっぽい抽象語は禁止。20〜90文字中心。場所、時間、音、光、人の少なさ、店舗の挙動を使う。\nカテゴリ:${category}\n素材:${theme}`;
+  const prompt = `Threads向け投稿案の種を12件だけ作る。AIっぽい抽象語は禁止。20〜90文字中心。場所、時間、音、光、人の少なさ、店舗の挙動を使う。似た文を並べない。\nカテゴリ:${category}\n素材:${theme}`;
   try {
-    const result = await callOpenAI(env, prompt, '[{"text":"...","category":"...","score":87,"hook":"共感"}]');
+    const result = await callOpenAI(env, prompt, '[{"text":"...","category":"...","score":87,"hook":"共感"}]', 7000, 900);
     const ideas = Array.isArray(result.parsed) ? result.parsed : result.parsed.ideas;
     if (!Array.isArray(ideas) || !ideas.length) throw new Error("OpenAI JSON did not include ideas.");
-    return json({ success: true, source: "openai", model: result.model, elapsedMs: Date.now() - startedAt, ideas: ideas.slice(0, 50) }, env, request);
+    return json({ success: true, source: "openai-hybrid", model: result.model, elapsedMs: Date.now() - startedAt, ideas: fillIdeas(ideas, theme, category) }, env, request);
   } catch (error) {
     console.error("generate fallback", error);
-    return json({ success: true, source: "worker-fallback", error: error.message, elapsedMs: Date.now() - startedAt, ideas: localIdeas(theme, category) }, env, request);
+    return json({ success: true, source: "worker-fallback", error: error.message, elapsedMs: Date.now() - startedAt, ideas: fillIdeas([], theme, category) }, env, request);
   }
 }
 
