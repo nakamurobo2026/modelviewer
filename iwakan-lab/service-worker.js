@@ -1,4 +1,4 @@
-const CACHE_NAME = "iwakan-lab-v15";
+const CACHE_NAME = "iwakan-lab-v16";
 const ASSETS = [
   "./",
   "./index.html",
@@ -10,6 +10,7 @@ const ASSETS = [
   "./app.js",
   "./agent.js",
   "./research-agent.js",
+  "./research-status.js",
   "./manifest.webmanifest"
 ];
 
