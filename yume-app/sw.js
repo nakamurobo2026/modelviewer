@@ -1,14 +1,10 @@
-const CACHE_NAME = 'yume-app-v12';
+const CACHE_NAME = 'yume-app-v13';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
   './config.js',
-  './app-v3.js',
-  './data/categories.json',
-  './data/emotions.json',
-  './data/mistakes.json',
-  './data/patterns.json',
+  './app-v5.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/maskable.svg'
