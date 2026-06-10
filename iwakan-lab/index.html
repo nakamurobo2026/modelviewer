@@ -63,6 +63,13 @@
           <option value="keyword">キーワード</option>
         </select>
         <label class="toggle-line"><input id="researchReflectToggle" type="checkbox" checked> Research Summaryを投稿生成に反映</label>
+        <label for="sourcePriorityFilter">取得元フィルター</label>
+        <select id="sourcePriorityFilter">
+          <option value="all">すべて</option>
+          <option value="s">Sのみ</option>
+          <option value="sa">S + A</option>
+          <option value="manual">手動メモのみ</option>
+        </select>
         <div class="actions compact"><button id="saveResearchBtn" class="ghost" type="button">保存</button><button id="splitResearchBtn" class="primary" type="button">使えるネタに分解</button></div>
         <div class="actions compact"><button id="extractBuzzBtn" class="primary soft" type="button">バズ要素抽出</button><button id="saveBuzzBtn" class="ghost" type="button">抽出結果を保存</button></div>
         <div id="researchNotes" class="research-notes">リサーチメモはまだありません。</div>
