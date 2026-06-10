@@ -148,12 +148,15 @@ function localResearch(records, persona) {
 }
 
 function localIdeas(theme, category, count = 50) {
-  const base = String(theme || "地方スーパー").replace(/\s+/g, " ").slice(0, 70);
-  const times = ["17時過ぎ", "閉店前", "雨の日", "夕方", "夜", "平日の昼過ぎ"];
-  const sounds = ["レジ音", "BGM", "台車の音", "自動ドア", "冷蔵ケースの音", "店内放送"];
-  const objects = ["棚", "駐車場", "惣菜売り場", "看板", "入口", "袋詰め台"];
+  const rawBase = String(theme || "地方スーパー").replace(/\s+/g, " ").slice(0, 70);
+  const hasTime = /(17時|閉店|夕方|夜|深夜|朝|昼|雨の日)/.test(rawBase);
+  const base = rawBase.replace(/^(.{0,12}?の){1,2}/, "").trim() || "地方スーパー";
+  const times = ["17時過ぎ", "閉店前", "雨の日", "夕方", "夜", "平日の昼過ぎ", "開店直後", "日曜の午後", "閉店30分前", "西日が入る時間"];
+  const sounds = ["レジ音", "BGM", "台車の音", "自動ドア", "冷蔵ケースの音", "店内放送", "蛍光灯の音", "遠くのアナウンス", "カゴを戻す音", "雨の音"];
+  const objects = ["棚", "駐車場", "惣菜売り場", "看板", "入口", "袋詰め台", "木材売り場", "レジ横", "通路", "サービスカウンター", "古いポスター"];
+  const motions = ["少し広く見える", "急に静かになる", "時間だけ遅くなる", "人の少なさが目立つ", "色が暗く見える", "妙に遠く感じる", "普通なのに止まって見える", "片付けの気配だけ残る", "昔の店みたいに見える", "誰も急いでない", "明るいのに閉店前っぽい", "音だけ先に帰っていく", "急に生活感が出る"];
   return Array.from({ length: count }, (_, index) => ({
-    text: `${times[index % times.length]}の${base}、${sounds[index % sounds.length]}だけ残って${objects[index % objects.length]}が少し広く見える`.slice(0, 90),
+    text: `${hasTime ? base : `${times[index % times.length]}の${base}`}、${sounds[(index * 3) % sounds.length]}だけ残って${objects[(index * 7) % objects.length]}が${motions[(index * 9) % motions.length]}`.slice(0, 90),
     category,
     score: clamp(68 + (index * 7) % 25, 60, 94),
     hook: ["共感", "違和感", "懐かしさ", "余白", "不穏"][index % 5]
