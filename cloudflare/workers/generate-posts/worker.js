@@ -1,5 +1,5 @@
 const DEFAULT_ORIGIN = "https://nakamurobo2026.github.io";
-const IDEA_COUNT = 50;
+const MODEL = "gpt-5-mini";
 
 function corsHeaders(env, origin) {
   const allowed = env.ALLOWED_ORIGIN || DEFAULT_ORIGIN;
@@ -14,44 +14,15 @@ function corsHeaders(env, origin) {
 }
 
 function json(data, env, request, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: corsHeaders(env, request.headers.get("Origin"))
-  });
+  return new Response(JSON.stringify(data), { status, headers: corsHeaders(env, request.headers.get("Origin")) });
 }
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
-function pick(list, index) {
-  return list[index % list.length];
-}
-
-function sourceLabel(type) {
-  const labels = {
-    threads: "Threads実投稿",
-    x: "X投稿傾向",
-    tiktok: "TikTok構文",
-    instagram: "Instagram Reels",
-    google_trends: "Google Trends",
-    yahoo_realtime: "Yahoo!リアルタイム",
-    reddit: "Reddit",
-    hatebu: "はてなブックマーク",
-    note: "note",
-    togetter: "Togetter",
-    news: "ニュース",
-    blog: "ブログ",
-    official: "公式サイト",
-    wikipedia: "Wikipedia",
-    manual: "手動メモ",
-    local: "保存DB/ローカル"
-  };
-  return labels[type] || "Web";
-}
-
-function inferSourceType(source) {
-  const text = String(source || "").toLowerCase();
+function sourceTypeFrom(value) {
+  const text = String(value || "").toLowerCase();
   let host = "";
   try {
     host = new URL(text.match(/https?:\/\/\S+/)?.[0] || text).hostname.replace(/^www\./, "");
@@ -64,64 +35,59 @@ function inferSourceType(source) {
   if (host.includes("instagram.com")) return "instagram";
   if (host.includes("trends.google.")) return "google_trends";
   if (host.includes("search.yahoo.co.jp") || text.includes("リアルタイム")) return "yahoo_realtime";
-  if (host.includes("yahoo.co.jp")) return "news";
   if (host.includes("reddit.com")) return "reddit";
   if (host.includes("b.hatena.ne.jp")) return "hatebu";
   if (host.includes("note.com")) return "note";
   if (host.includes("togetter.com")) return "togetter";
   if (host.includes("wikipedia.org")) return "wikipedia";
+  if (host.includes("yahoo.co.jp") || /ニュース|新聞/.test(text)) return "news";
   if (/公式|official/.test(text)) return "official";
-  if (/ニュース|新聞|press|media/.test(text)) return "news";
   return host ? "blog" : "manual";
 }
 
 function priorityFor(type) {
-  if (["threads", "x", "tiktok", "instagram"].includes(type)) return { priority: "S", weight: 1, reason: "実投稿や短尺SNS構文に近く、バズへの距離が最短" };
-  if (["google_trends", "yahoo_realtime", "reddit", "hatebu", "note", "togetter"].includes(type)) return { priority: "A", weight: 0.8, reason: "話題化の兆候や集合知が見える" };
-  if (["news", "blog", "official", "wikipedia"].includes(type)) return { priority: "B", weight: 0.5, reason: "背景情報として有効だが投稿反応からは少し遠い" };
-  return { priority: "C", weight: 0.3, reason: "手動メモや保存DB由来で補助素材として扱う" };
+  if (["threads", "x", "tiktok", "instagram"].includes(type)) return { priority: "S", weight: 1, reason: "実投稿や短尺SNS構文に近い" };
+  if (["google_trends", "yahoo_realtime", "reddit", "hatebu", "note", "togetter"].includes(type)) return { priority: "A", weight: 0.8, reason: "話題化の兆候が見える" };
+  if (["news", "blog", "official", "wikipedia"].includes(type)) return { priority: "B", weight: 0.5, reason: "背景情報として使える" };
+  return { priority: "C", weight: 0.3, reason: "手動メモや保存DB由来" };
 }
 
-function reliabilityFor(source, priority) {
-  const text = String(source || "");
-  const specificity = ["時", "レジ", "棚", "駐車場", "音", "光", "匂い", "人", "店"].filter((word) => text.includes(word)).length;
-  const freshness = /今日|昨日|最新|2026|trend|トレンド/i.test(text) ? 18 : 8;
-  const closeness = { S: 35, A: 27, B: 17, C: 10 }[priority] || 10;
-  const postable = /だけ|急に|なぜ|違和感|あるある|残る|止まる/.test(text) ? 18 : 9;
-  return Math.min(100, closeness + freshness + specificity * 5 + postable);
+function reliabilityFor(text, priority) {
+  const body = String(text || "");
+  const specific = ["時", "レジ", "棚", "駐車場", "音", "光", "匂い", "人", "店"].filter((word) => body.includes(word)).length;
+  const close = { S: 38, A: 30, B: 20, C: 12 }[priority] || 12;
+  const postable = /だけ|急に|なぜ|違和感|あるある|残る|止まる/.test(body) ? 18 : 8;
+  return clamp(close + specific * 5 + postable, 20, 100);
 }
 
-function makeSourceRecord(source, index) {
-  const url = source.match(/https?:\/\/\S+/)?.[0] || "";
-  const content = source.replace(/https?:\/\/\S+/g, "").trim() || url || source;
-  const sourceType = inferSourceType(source);
+function sourceRecord(raw, index, prefix = "source") {
+  const url = String(raw.url || raw.match?.(/https?:\/\/\S+/)?.[0] || "");
+  const title = String(raw.title || raw.content || raw).replace(/\s+/g, " ").slice(0, 80);
+  const content = String(raw.content || raw.snippet || raw).replace(/\s+/g, " ").slice(0, 500);
+  const sourceType = sourceTypeFrom(url || `${title} ${content}`);
   const priority = priorityFor(sourceType);
-  const reliability = reliabilityFor(source, priority.priority);
+  const reliability = reliabilityFor(`${title} ${content} ${url}`, priority.priority);
   return {
-    id: `source-${index}`,
+    id: `${prefix}-${index}`,
     sourceType,
     priority: priority.priority,
     weight: priority.weight,
     url,
-    title: content.slice(0, 42) || sourceLabel(sourceType),
+    title: title || sourceType,
     content,
     reason: priority.reason,
     reliability,
     impact: Math.round(reliability * priority.weight),
     buzzElements: [
-      /レジ|BGM|音/.test(content) ? "音の違和感" : "具体描写",
-      /古い|昭和|懐|蛍光灯/.test(content) ? "懐かしさ" : "共感の余白"
+      /投稿|コメント|SNS|Threads|TikTok|X/.test(`${title} ${content}`) ? "SNS反応に近い話題" : "具体描写",
+      /レジ|BGM|音/.test(content) ? "音の違和感" : "共感の余白"
     ]
   };
 }
 
 function sortSources(records) {
   const rank = { S: 4, A: 3, B: 2, C: 1 };
-  return [...records].sort((a, b) => (rank[b.priority] - rank[a.priority]) || (b.impact - a.impact));
-}
-
-function cacheKeyFor(query) {
-  return new Request(`https://iwakan-lab.local/tavily-cache?q=${encodeURIComponent(String(query || "").slice(0, 400))}`);
+  return records.sort((a, b) => (rank[b.priority] - rank[a.priority]) || (b.impact - a.impact));
 }
 
 async function searchTavily(env, query) {
@@ -130,112 +96,49 @@ async function searchTavily(env, query) {
   if (!apiKey || !cleanQuery) return { source: apiKey ? "tavily-empty-query" : "tavily-key-missing", results: [] };
 
   const cache = caches.default;
-  const cacheKey = cacheKeyFor(cleanQuery);
+  const cacheKey = new Request(`https://iwakan-lab.local/tavily?q=${encodeURIComponent(cleanQuery.slice(0, 400))}`);
   const cached = await cache.match(cacheKey);
-  if (cached) {
-    const data = await cached.json();
-    return { ...data, source: "tavily-cache" };
-  }
+  if (cached) return { ...(await cached.json()), source: "tavily-cache" };
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 12000);
+  const timeout = setTimeout(() => controller.abort(), 8000);
   try {
     const response = await fetch("https://api.tavily.com/search", {
       method: "POST",
       signal: controller.signal,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        api_key: apiKey,
-        query: cleanQuery,
-        search_depth: "basic",
-        max_results: 8,
-        include_answer: false,
-        include_raw_content: false
-      })
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({ api_key: apiKey, query: cleanQuery, search_depth: "basic", max_results: 8, include_answer: false, include_raw_content: false })
     });
     const raw = await response.text();
-    if (!response.ok) throw new Error(`Tavily HTTP ${response.status}: ${raw.slice(0, 400)}`);
-    const data = JSON.parse(raw);
-    const payload = { source: "tavily", query: cleanQuery, results: Array.isArray(data.results) ? data.results : [] };
-    await cache.put(cacheKey, new Response(JSON.stringify(payload), {
-      headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=86400" }
-    }));
+    if (!response.ok) throw new Error(`Tavily HTTP ${response.status}: ${raw.slice(0, 300)}`);
+    const payload = { source: "tavily", query: cleanQuery, results: JSON.parse(raw).results || [] };
+    await cache.put(cacheKey, new Response(JSON.stringify(payload), { headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=86400" } }));
     return payload;
   } finally {
     clearTimeout(timeout);
   }
 }
 
-function tavilyRecord(result, index) {
-  const url = String(result.url || "");
-  const title = String(result.title || sourceLabel(inferSourceType(url))).slice(0, 80);
-  const content = String(result.content || result.snippet || "").slice(0, 500);
-  const sourceType = inferSourceType(url || `${title} ${content}`);
-  const priority = priorityFor(sourceType);
-  const reliability = reliabilityFor(`${title} ${content} ${url}`, priority.priority);
-  const scoreBoost = Math.round(Number(result.score || 0) * 10);
-  return {
-    id: `tavily-${index}`,
-    sourceType,
-    priority: priority.priority,
-    weight: priority.weight,
-    url,
-    title,
-    content,
-    reason: `${priority.reason} / Tavily検索結果`,
-    reliability: Math.min(100, reliability + scoreBoost),
-    impact: Math.round(Math.min(100, reliability + scoreBoost) * priority.weight),
-    buzzElements: [
-      /投稿|コメント|SNS|Threads|TikTok|X/.test(`${title} ${content}`) ? "SNS反応に近い話題" : "検索上位の話題",
-      /急|なぜ|違和感|話題|伸び/.test(`${title} ${content}`) ? "反応のきっかけ" : "背景情報"
-    ]
-  };
-}
-
-function localIdeas(theme, category, count = IDEA_COUNT) {
-  const base = String(theme || "地方スーパー").replace(/\s+/g, " ").slice(0, 80);
-  const places = ["スーパー", "ホームセンター", "ドラッグストア", "地方駅", "商店街", "コンビニ", "市役所"];
-  const times = ["17時過ぎ", "閉店前", "雨の日", "夕方", "夜", "平日の昼過ぎ"];
-  const sounds = ["レジ音", "BGM", "台車の音", "自動ドア", "冷蔵ケースの音", "店内放送"];
-  const objects = ["棚", "駐車場", "惣菜売り場", "看板", "入口", "袋詰め台"];
-  return Array.from({ length: count }, (_, index) => {
-    const text = `${pick(times, index)}の${base.includes(" ") ? pick(places, index) : base}、${pick(sounds, index)}だけ残って${pick(objects, index)}が少し広く見える`;
-    return {
-      text: text.slice(0, 90),
-      category,
-      score: clamp(68 + (index * 7) % 25, 60, 94),
-      hook: pick(["共感", "違和感", "懐かしさ", "余白", "不穏"], index)
-    };
-  });
-}
-
-function localResearch(sources, persona = "違和感ノート") {
-  const sourceRecords = sortSources((sources.length ? sources : ["地方スーパーの閉店前、レジ音だけ残る"]).map(makeSourceRecord));
-  const text = sourceRecords.map((source) => source.content).join("\n");
-  const first = sourceRecords[0]?.content || "地方スーパーの閉店前、レジ音だけ残る";
+function localResearch(records, persona) {
+  const first = records[0]?.content || "地方スーパーの閉店前、レジ音だけ残る";
   const hooks = [
     first.match(/(閉店前|17時過ぎ|夕方|深夜|雨の日)/)?.[0] || "17時過ぎ",
     first.match(/(スーパー|ホームセンター|コンビニ|地方駅|商店街|ドラッグストア|市役所)/)?.[0] || "身近な場所"
   ];
-  const phrases = sources.map((source) => source.replace(/https?:\/\/\S+/g, "").replace(/[「」『』"']/g, "").trim().slice(0, 34)).filter(Boolean).slice(0, 8);
-  const buzzElements = [
-    text.includes("レジ") ? "レジ音だけ残る" : "音が少なくなる瞬間",
-    text.includes("駐車場") ? "駐車場が急に広く見える" : "人が少ない場所",
-    text.includes("蛍光灯") ? "古い蛍光灯の白さ" : "棚の色が暗く見える",
-    "普通なのに少しだけずれる"
-  ];
+  const text = records.map((item) => item.content).join("\n");
   return {
     success: true,
-    source: "worker-fallback",
+    source: "worker-tavily-local",
     summary: `${hooks.join("の")}を起点に、具体描写と少しの違和感で投稿化する。`,
-    buzzElements,
+    buzzElements: [
+      text.includes("レジ") ? "レジ音だけ残る" : "音が少なくなる瞬間",
+      text.includes("駐車場") ? "駐車場が急に広く見える" : "人が少ない場所",
+      text.includes("蛍光灯") ? "古い蛍光灯の白さ" : "棚の色が暗く見える",
+      "普通なのに少しだけずれる"
+    ],
     hooks,
-    phrases,
+    phrases: records.map((item) => item.title).filter(Boolean).slice(0, 8),
     patterns: ["共感型", "違和感型", "余白型"],
-    sourceRecords,
     recommendedPostAngles: [
       `${persona}として、音や光から入る`,
       "元投稿の言い回しは避け、場所と時間を変えて観察にする",
@@ -244,39 +147,41 @@ function localResearch(sources, persona = "違和感ノート") {
   };
 }
 
-function extractJson(text) {
-  const source = String(text || "").trim();
-  const fenced = source.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1];
-  const candidate = fenced || source.match(/\[[\s\S]*\]|\{[\s\S]*\}/)?.[0] || source;
-  return JSON.parse(candidate);
+function localIdeas(theme, category, count = 50) {
+  const base = String(theme || "地方スーパー").replace(/\s+/g, " ").slice(0, 70);
+  const times = ["17時過ぎ", "閉店前", "雨の日", "夕方", "夜", "平日の昼過ぎ"];
+  const sounds = ["レジ音", "BGM", "台車の音", "自動ドア", "冷蔵ケースの音", "店内放送"];
+  const objects = ["棚", "駐車場", "惣菜売り場", "看板", "入口", "袋詰め台"];
+  return Array.from({ length: count }, (_, index) => ({
+    text: `${times[index % times.length]}の${base}、${sounds[index % sounds.length]}だけ残って${objects[index % objects.length]}が少し広く見える`.slice(0, 90),
+    category,
+    score: clamp(68 + (index * 7) % 25, 60, 94),
+    hook: ["共感", "違和感", "懐かしさ", "余白", "不穏"][index % 5]
+  }));
 }
 
-async function callOpenAI(env, prompt, schemaHint) {
-  const apiKey = env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY is not configured.");
-  const model = env.OPENAI_MODEL || "gpt-5-mini";
+function extractJson(text) {
+  const raw = String(text || "").trim();
+  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1];
+  return JSON.parse(fenced || raw.match(/\[[\s\S]*\]|\{[\s\S]*\}/)?.[0] || raw);
+}
+
+async function callOpenAI(env, prompt, schemaHint, timeoutMs = 15000, maxOutputTokens = 1800) {
+  if (!env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not configured.");
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
-  const body = {
-    model,
-    input: `${prompt}\n\nJSONだけを返してください。${schemaHint}`,
-    max_output_tokens: 2400
-  };
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       signal: controller.signal,
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
+      headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: env.OPENAI_MODEL || MODEL, input: `${prompt}\n\nJSONだけを返してください。${schemaHint}`, max_output_tokens: maxOutputTokens })
     });
     const raw = await response.text();
-    if (!response.ok) throw new Error(`OpenAI HTTP ${response.status}: ${raw.slice(0, 500)}`);
+    if (!response.ok) throw new Error(`OpenAI HTTP ${response.status}: ${raw.slice(0, 400)}`);
     const data = JSON.parse(raw);
     const text = data.output_text || data.output?.flatMap((item) => item.content || []).map((part) => part.text || "").join("\n") || "";
-    return { parsed: extractJson(text), model, raw };
+    return { model: env.OPENAI_MODEL || MODEL, parsed: extractJson(text) };
   } finally {
     clearTimeout(timeout);
   }
@@ -287,28 +192,15 @@ async function handleGenerate(request, env) {
   const body = await request.json().catch(() => ({}));
   const theme = String(body.theme || "").slice(0, 3000);
   const category = String(body.category || "違和感");
-  const prompt = [
-    "Threads向け投稿案を50件作る。",
-    "AIっぽい抽象語は禁止。20〜90文字中心。コメントしたくなる余白を残す。",
-    "場所、時間、音、光、人の少なさ、店舗の挙動を使う。",
-    `カテゴリ:${category}`,
-    `素材:${theme}`
-  ].join("\n");
+  const prompt = `Threads向け投稿案を50件作る。AIっぽい抽象語は禁止。20〜90文字中心。場所、時間、音、光、人の少なさ、店舗の挙動を使う。\nカテゴリ:${category}\n素材:${theme}`;
   try {
-    const { parsed, model } = await callOpenAI(env, prompt, '[{"text":"...","category":"...","score":87,"hook":"共感"}]');
-    const ideas = Array.isArray(parsed) ? parsed : parsed.ideas;
+    const result = await callOpenAI(env, prompt, '[{"text":"...","category":"...","score":87,"hook":"共感"}]');
+    const ideas = Array.isArray(result.parsed) ? result.parsed : result.parsed.ideas;
     if (!Array.isArray(ideas) || !ideas.length) throw new Error("OpenAI JSON did not include ideas.");
-    return json({ success: true, source: "openai", model, elapsedMs: Date.now() - startedAt, ideas: ideas.slice(0, IDEA_COUNT) }, env, request);
+    return json({ success: true, source: "openai", model: result.model, elapsedMs: Date.now() - startedAt, ideas: ideas.slice(0, 50) }, env, request);
   } catch (error) {
     console.error("generate fallback", error);
-    return json({
-      success: true,
-      source: "worker-fallback",
-      model: env.OPENAI_MODEL || "gpt-5-mini",
-      error: error.message,
-      elapsedMs: Date.now() - startedAt,
-      ideas: localIdeas(theme, category)
-    }, env, request);
+    return json({ success: true, source: "worker-fallback", error: error.message, elapsedMs: Date.now() - startedAt, ideas: localIdeas(theme, category) }, env, request);
   }
 }
 
@@ -319,43 +211,37 @@ async function handleResearch(request, env) {
   const persona = String(body.persona || "違和感ノート");
   let tavily = { source: "not-run", results: [] };
   try {
-    const query = String(body.query || sources.join(" ")).slice(0, 500);
-    tavily = await searchTavily(env, query);
+    tavily = await searchTavily(env, String(body.query || sources.join(" ")).slice(0, 500));
   } catch (error) {
     console.error("tavily fallback", error);
     tavily = { source: "tavily-error", error: error.message, results: [] };
   }
-  const tavilyRecords = sortSources((tavily.results || []).map(tavilyRecord));
-  const enrichedSources = [...tavilyRecords.map((item) => `${item.title}\n${item.url}\n${item.content}`), ...sources];
-  const prompt = [
-    "入力されたURLメモ、コピペ投稿、メモ、キーワードからThreads運用向けのバズ要素を抽出する。",
-    "元投稿の丸写しは禁止。言い回しは変換して使う。",
-    "返すキー: summary, buzzElements, hooks, phrases, patterns, recommendedPostAngles",
-    "sourceRecordsも返す。sourceType, priority, weight, url, title, content, reason, reliability, impactを含める。",
-    "Priority S/Aを優先し、B/Cは背景か補助として扱う。",
-    `人格:${persona}`,
-    `sources:${JSON.stringify(sources)}`
-  ].join("\n");
-  try {
-    const { parsed, model } = await callOpenAI(env, prompt, '{"summary":"...","buzzElements":[],"hooks":[],"phrases":[],"patterns":[],"recommendedPostAngles":[],"sourceRecords":[]}');
-    const base = localResearch(enrichedSources, persona);
-    return json({ success: true, source: "openai", model, tavilySource: tavily.source, tavilyCount: tavilyRecords.length, elapsedMs: Date.now() - startedAt, ...base, ...parsed, sourceRecords: sortSources([...(parsed.sourceRecords || []), ...tavilyRecords, ...base.sourceRecords]) }, env, request);
-  } catch (error) {
-    console.error("research fallback", error);
-    const base = localResearch(enrichedSources, persona);
-    return json({ ...base, tavilySource: tavily.source, tavilyCount: tavilyRecords.length, error: error.message, elapsedMs: Date.now() - startedAt, sourceRecords: sortSources([...tavilyRecords, ...base.sourceRecords]) }, env, request);
+
+  const sourceRecords = sortSources([
+    ...(tavily.results || []).map((item, index) => sourceRecord(item, index, "tavily")),
+    ...sources.map((item, index) => sourceRecord(item, index, "manual"))
+  ]);
+  const base = localResearch(sourceRecords.length ? sourceRecords : sources.map((item, index) => sourceRecord(item, index, "manual")), persona);
+
+  if (new URL(request.url).searchParams.has("ai")) {
+    try {
+      const prompt = `以下のリサーチ素材からThreads向けのバズ要素を抽出。丸写し禁止。\n${JSON.stringify(sourceRecords.slice(0, 10))}`;
+      const result = await callOpenAI(env, prompt, '{"summary":"...","buzzElements":[],"hooks":[],"phrases":[],"patterns":[],"recommendedPostAngles":[]}', 5000, 800);
+      return json({ ...base, ...result.parsed, source: "openai-research", model: result.model, tavilySource: tavily.source, tavilyCount: tavily.results.length, elapsedMs: Date.now() - startedAt, sourceRecords }, env, request);
+    } catch (error) {
+      console.error("research ai fallback", error);
+      return json({ ...base, tavilySource: tavily.source, tavilyCount: tavily.results.length, error: error.message, elapsedMs: Date.now() - startedAt, sourceRecords }, env, request);
+    }
   }
+
+  return json({ ...base, tavilySource: tavily.source, tavilyCount: tavily.results.length, elapsedMs: Date.now() - startedAt, sourceRecords }, env, request);
 }
 
 export default {
   async fetch(request, env) {
-    if (request.method === "OPTIONS") {
-      return new Response(null, { headers: corsHeaders(env, request.headers.get("Origin")) });
-    }
+    if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders(env, request.headers.get("Origin")) });
+    if (request.method !== "POST") return json({ success: false, error: "POST only" }, env, request, 405);
     const url = new URL(request.url);
-    if (request.method !== "POST") {
-      return json({ success: false, error: "POST only" }, env, request, 405);
-    }
     if (url.pathname === "/generate") return handleGenerate(request, env);
     if (url.pathname === "/research") return handleResearch(request, env);
     return json({ success: false, error: "Not found" }, env, request, 404);
