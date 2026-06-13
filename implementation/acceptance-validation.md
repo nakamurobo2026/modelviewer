@@ -1,6 +1,6 @@
 # Viral OS MVP Acceptance Validation
 
-Validation target used: `acceptance/acceptance-criteria.md`.
+Validation targets used: all files in `/acceptance`.
 
 ## Global Rules
 - Human approval guard exists in Worker publish paths.
@@ -27,3 +27,13 @@ Validation target used: `acceptance/acceptance-criteria.md`.
 
 ## Audit
 - Research creation, draft generation, approval/rejection/schedule, and publish success/failure create audit events.
+
+## Dashboard / Analytics / Learning
+- `GET /api/dashboard` returns drafts, research briefs, publish jobs, audit events, and aggregate metrics for the authenticated operator.
+- Dashboard shows approval, schedule, failure, published, average score, source-backed draft, recent research, and learning pipeline/audit state.
+- Learning data is limited to MVP-safe stored signals: source traces, scores, publish outcomes, failures, and audit events.
+
+## External Readiness
+- Tavily, OpenAI, and Threads calls are implemented through Cloudflare Worker only.
+- Tavily, OpenAI, and Threads network calls use a 15 second timeout.
+- Live end-to-end validation requires deployed secrets and platform credentials.

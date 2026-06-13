@@ -27,6 +27,32 @@ export type ResearchResponse = {
   viralElements: ViralElement[];
 };
 
+export type AuditEvent = {
+  id: string;
+  entityType: string;
+  entityId?: string;
+  action: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type PublishJob = {
+  id: string;
+  draftId: string;
+  status: string;
+  scheduledAt: string;
+  attemptCount: number;
+  lastError?: string;
+};
+
+export type ResearchBrief = {
+  id: string;
+  topic: string;
+  summary?: string;
+  sourceCount: number;
+  createdAt: string;
+};
+
 export type DraftStatus =
   | "draft"
   | "scored"
@@ -55,7 +81,29 @@ export type Draft = {
   };
   sourceTrace: string[];
   scheduledAt?: string;
+  publishedAt?: string;
   failureReason?: string;
+};
+
+export type DashboardResponse = {
+  success: true;
+  profile: {
+    id: string;
+    displayName?: string;
+    threadsConnected: boolean;
+  };
+  drafts: Draft[];
+  researchBriefs: ResearchBrief[];
+  publishJobs: PublishJob[];
+  auditEvents: AuditEvent[];
+  metrics: {
+    awaitingApproval: number;
+    scheduled: number;
+    failed: number;
+    published: number;
+    averageScore: number;
+    sourceBackedDrafts: number;
+  };
 };
 
 export type ApiError = {

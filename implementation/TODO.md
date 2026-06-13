@@ -1,5 +1,8 @@
 # Viral OS MVP TODO
 
-- `acceptance/mvp-acceptance.md` was requested as the validation target but does not exist. Validation uses `acceptance/acceptance-criteria.md` until that file is provided.
-- The exact production Cloudflare Pages adapter settings may need confirmation in the Cloudflare project because the specification names Cloudflare Pages but does not define a build adapter.
-- Threads API app review, token refresh, and permission scope setup are external platform tasks and must be completed before live publishing.
+No implementation TODO items remain for the MVP scope defined in `/spec`.
+
+Deployment blockers that require external platform configuration:
+- Configure Cloudflare Pages with the `viral-os` project and the environment variables listed in `.env.example`.
+- Configure Cloudflare Worker secrets listed in `cloudflare/workers/viral-os/.env.example`.
+- Complete Threads API app review and provide a valid single-account `THREADS_ACCESS_TOKEN` before live publishing.

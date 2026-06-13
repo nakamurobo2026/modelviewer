@@ -25,6 +25,7 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { headers: headers(env) });
     try {
       const url = new URL(request.url);
+      if (request.method === "GET" && url.pathname === "/api/dashboard") return dashboard(request, env);
       if (request.method === "POST" && url.pathname === "/api/research") return research(request, env);
       if (request.method === "POST" && url.pathname === "/api/generate-drafts") return generateDrafts(request, env);
       if (request.method === "PATCH" && url.pathname.startsWith("/api/drafts/")) return patchDraft(request, env, url);
@@ -85,7 +86,36 @@ async function research(request: Request, env: Env) {
     evidence_source_ids: savedSources.map((source) => source.id),
   })));
   await audit(env, user.id, "research_brief", brief.id, "research_created", { topic: body.topic });
-  return ok(env, { success: true, briefId: brief.id, summary: brief.summary, sources, viralElements });
+  return ok(env, { success: true, briefId: brief.id, summary: brief.summary, sources: savedSources.map(toClientSource), viralElements });
+}
+
+async function dashboard(request: Request, env: Env) {
+  const user = await requireUser(request, env);
+  await upsertProfile(env, user);
+  const profile = await selectOne(env, `profiles?id=eq.${user.id}`);
+  const drafts = await select(env, `post_drafts?user_id=eq.${user.id}&order=created_at.desc&limit=100`);
+  const briefs = await select(env, `research_briefs?user_id=eq.${user.id}&order=created_at.desc&limit=10`);
+  const jobs = await select(env, `publish_jobs?user_id=eq.${user.id}&order=scheduled_at.desc&limit=30`);
+  const audits = await select(env, `audit_events?user_id=eq.${user.id}&order=created_at.desc&limit=20`);
+  const clientDrafts = drafts.map(toClientDraft);
+  const scored = clientDrafts.filter((draft) => Number(draft.scoreTotal) > 0);
+  const averageScore = scored.length ? Math.round(scored.reduce((sum, draft) => sum + Number(draft.scoreTotal), 0) / scored.length) : 0;
+  return ok(env, {
+    success: true,
+    profile: { id: user.id, displayName: profile.display_name, threadsConnected: Boolean(profile.threads_connected || env.THREADS_ACCESS_TOKEN) },
+    drafts: clientDrafts,
+    researchBriefs: briefs.map(toClientBrief),
+    publishJobs: jobs.map(toClientJob),
+    auditEvents: audits.map(toClientAudit),
+    metrics: {
+      awaitingApproval: clientDrafts.filter((draft) => draft.status === "scored").length,
+      scheduled: clientDrafts.filter((draft) => draft.status === "scheduled").length,
+      failed: clientDrafts.filter((draft) => draft.status === "failed").length,
+      published: clientDrafts.filter((draft) => draft.status === "published").length,
+      averageScore,
+      sourceBackedDrafts: clientDrafts.filter((draft) => draft.sourceTrace.length > 0).length,
+    },
+  });
 }
 
 async function generateDrafts(request: Request, env: Env) {
@@ -166,7 +196,7 @@ async function publishDue(env: Env) {
     try {
       await patchOne(env, "publish_jobs", job.id, { status: "running", locked_at: new Date().toISOString(), attempt_count: (job.attempt_count || 0) + 1 });
       const draft = await selectOne(env, `post_drafts?id=eq.${job.draft_id}&user_id=eq.${job.user_id}`);
-      const result = await publishOne(env, draft, job.user_id);
+      const result = await publishOne(env, draft, String(job.user_id));
       if (!result.ok) throw new Error(await result.text());
       await patchOne(env, "publish_jobs", job.id, { status: "succeeded", updated_at: new Date().toISOString() });
       published += 1;
@@ -210,22 +240,22 @@ async function requireUser(request: Request, env: Env): Promise<User> {
 }
 
 async function tavily(env: Env, topic: string) {
-  const response = await fetch("https://api.tavily.com/search", {
+  const response = await fetchWithTimeout("https://api.tavily.com/search", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", authorization: `Bearer ${env.TAVILY_API_KEY}` },
     body: JSON.stringify({ api_key: env.TAVILY_API_KEY, query: `${topic} Threads 話題 共感`, search_depth: "basic", max_results: 8 }),
-  });
+  }, 15000);
   if (!response.ok) throw new Error(await response.text());
   const data = (await response.json()) as { results?: Array<{ url: string; title: string; content: string; score?: number }> };
   return (data.results || []).map((item) => ({ url: item.url, title: item.title, summary: item.content, sourceType: inferSourceType(item.url), weight: item.score || 0.3 }));
 }
 
 async function openAiJson(env: Env, payload: unknown): Promise<Row> {
-  const response = await fetch("https://api.openai.com/v1/responses", {
+  const response = await fetchWithTimeout("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${env.OPENAI_API_KEY}` },
     body: JSON.stringify({ model: env.OPENAI_MODEL || "gpt-5-mini", input: [{ role: "user", content: [{ type: "input_text", text: JSON.stringify(payload) }] }], text: { format: { type: "json_object" } } }),
-  });
+  }, 15000);
   const raw = await response.text();
   if (!response.ok) throw new Error(raw);
   const parsed = JSON.parse(raw);
@@ -241,18 +271,18 @@ async function threadsPublish(env: Env, text: string) {
 }
 
 async function graph(env: Env, path: string, body: Row) {
-  const response = await fetch(`https://graph.threads.net/v1.0/${path}`, {
+  const response = await fetchWithTimeout(`https://graph.threads.net/v1.0/${path}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ ...body, access_token: env.THREADS_ACCESS_TOKEN }),
-  });
+  }, 15000);
   const text = await response.text();
   if (!response.ok) throw new Error(text);
   return JSON.parse(text);
 }
 
 function localResearch(topic: string, sources: Row[]) {
-  return { summary: `${topic}を起点に、兛体描写とコメント余白のあるThreads投稿へ変換する。`, viralElements: [{ elementType: "hook", value: topic, score: 70 }, { elementType: "angle", value: sources[0]?.title || "日常観察", score: 65 }] };
+  return { summary: `${topic}を起点に、具体描写とコメント余白のあるThreads投稿へ変換する。`, viralElements: [{ elementType: "hook", value: topic, score: 70 }, { elementType: "angle", value: sources[0]?.title || "日常観察", score: 65 }] };
 }
 
 function localDrafts(brief: Row, sources: Row[], count: number) {
@@ -269,8 +299,12 @@ function normalizeElements(value: unknown) {
 
 function normalizeDrafts(value: unknown, sources: Row[]) {
   const ids = sources.slice(0, 2).map((source) => String(source.id));
+  const validIds = new Set(sources.map((source) => String(source.id)));
   const items = Array.isArray(value) ? value : [];
-  return items.map((item: Row) => ({ text: String(item.text || ""), category: item.category || "observation", hookType: item.hookType || "観察", scoreTotal: Number(item.scoreTotal || 70), scoreDetail: item.scoreDetail || { specificity: 70, commentPotential: 70, humanity: 70, novelty: 70, risk: 5 }, sourceTrace: Array.isArray(item.sourceTrace) ? item.sourceTrace.map(String) : ids })).filter((item) => item.text);
+  return items.map((item: Row) => {
+    const trace = Array.isArray(item.sourceTrace) ? item.sourceTrace.map(String).filter((id) => validIds.has(id)) : [];
+    return { text: String(item.text || ""), category: item.category || "observation", hookType: item.hookType || "観察", scoreTotal: Number(item.scoreTotal || 70), scoreDetail: item.scoreDetail || { specificity: 70, commentPotential: 70, humanity: 70, novelty: 70, risk: 5 }, sourceTrace: trace.length ? trace : ids };
+  }).filter((item) => item.text);
 }
 
 function scoreSources(sources: Row[]) {
@@ -297,7 +331,66 @@ function inferSourceType(url = "") {
 }
 
 function toClientDraft(row: Row) {
-  return { id: row.id, text: row.text, status: row.status, category: row.category, hookType: row.hook_type, scoreTotal: row.score_total, scoreDetail: row.score_detail, sourceTrace: row.source_trace || [], scheduledAt: row.scheduled_at, failureReason: row.failure_reason };
+  return {
+    id: String(row.id),
+    text: String(row.text),
+    status: row.status,
+    category: String(row.category),
+    hookType: row.hook_type,
+    scoreTotal: Number(row.score_total || 0),
+    scoreDetail: row.score_detail || {},
+    sourceTrace: Array.isArray(row.source_trace) ? row.source_trace : [],
+    scheduledAt: row.scheduled_at,
+    publishedAt: row.published_at,
+    failureReason: row.failure_reason,
+  };
+}
+
+function toClientSource(row: Row) {
+  return {
+    id: String(row.id),
+    sourceType: String(row.source_type),
+    priority: row.priority,
+    weight: Number(row.weight || 0),
+    url: row.url,
+    title: row.title,
+    summary: row.summary,
+    reliability: Number(row.reliability || 0),
+    impact: Number(row.impact || 0),
+    extractedElements: row.extracted_elements || [],
+  };
+}
+
+function toClientBrief(row: Row) {
+  return {
+    id: String(row.id),
+    topic: String(row.topic),
+    summary: row.summary,
+    sourceCount: Number(row.source_count || 0),
+    createdAt: String(row.created_at),
+  };
+}
+
+function toClientJob(row: Row) {
+  return {
+    id: String(row.id),
+    draftId: String(row.draft_id),
+    status: String(row.status),
+    scheduledAt: String(row.scheduled_at),
+    attemptCount: Number(row.attempt_count || 0),
+    lastError: row.last_error,
+  };
+}
+
+function toClientAudit(row: Row) {
+  return {
+    id: String(row.id),
+    entityType: String(row.entity_type),
+    entityId: row.entity_id,
+    action: String(row.action),
+    metadata: row.metadata || {},
+    createdAt: String(row.created_at),
+  };
 }
 
 async function upsertProfile(env: Env, user: User) {
@@ -312,7 +405,7 @@ async function audit(env: Env, userId: string, entityType: string, entityId: str
 async function select(env: Env, query: string) {
   const response = await fetch(`${env.SUPABASE_URL}/rest/v1/${query}`, { headers: dbHeaders(env) });
   if (!response.ok) throw new Error(await response.text());
-  return response.json<Row[]>();
+  return (await response.json()) as Row[];
 }
 
 async function selectOne(env: Env, query: string) {
@@ -329,13 +422,13 @@ async function insertMany(env: Env, table: string, rows: Row[]) {
   if (!rows.length) return [];
   const response = await fetch(`${env.SUPABASE_URL}/rest/v1/${table}`, { method: "POST", headers: dbHeaders(env, { Prefer: "return=representation" }), body: JSON.stringify(rows) });
   if (!response.ok) throw new Error(await response.text());
-  return response.json<Row[]>();
+  return (await response.json()) as Row[];
 }
 
 async function patchOne(env: Env, table: string, id: string, patch: Row) {
   const response = await fetch(`${env.SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, { method: "PATCH", headers: dbHeaders(env, { Prefer: "return=representation" }), body: JSON.stringify(patch) });
   if (!response.ok) throw new Error(await response.text());
-  return (await response.json<Row[]>())[0];
+  return ((await response.json()) as Row[])[0];
 }
 
 function dbHeaders(env: Env, extra: Record<string, string> = {}) {
@@ -348,6 +441,16 @@ function ok(env: Env, body: unknown) {
 
 function fail(env: Env, code: string, message: string, status = 400) {
   return new Response(JSON.stringify({ success: false, error: { code, message, details: {} } }), { status, headers: headers(env) });
+}
+
+async function fetchWithTimeout(input: RequestInfo, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort("timeout"), timeoutMs);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function headers(env: Env) {
