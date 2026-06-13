@@ -1,0 +1,6 @@
+name = "viral-os-pages"
+compatibility_date = "2026-06-13"
+pages_build_output_dir = ".open-next/assets"
+
+[vars]
+NEXT_PUBLIC_WORKER_BASE_URL = "https://viral-os-api.example.workers.dev"
