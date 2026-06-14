@@ -5,3 +5,4 @@ compatibility_date = "2026-06-09"
 [vars]
 OPENAI_MODEL = "gpt-5-mini"
 ALLOWED_ORIGIN = "https://nakamurobo2026.github.io"
+ALLOWED_ORIGINS = "https://nakamurobo2026.github.io,https://viral-os-phi.vercel.app"
