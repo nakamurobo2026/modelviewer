@@ -2,6 +2,8 @@ const DEFAULT_ORIGINS = ["https://nakamurobo2026.github.io", "https://viral-os-p
 const MODEL = "gpt-5-mini";
 const RESEARCH_FOCUS_WORDS = ["地域", "地方", "閉店", "スーパー", "商店街", "地元", "口コミ", "体験談", "懐かしい", "思い出", "生活", "ニュース", "話題", "議論"];
 const GENERIC_SITE_WORDS = ["マーケティング", "SEO", "アクセスアップ", "フォロワー", "アルゴリズム", "運用代行", "広告", "ランキング", "まとめサイト", "通販"];
+const GENERIC_DOMAINS = ["fast.com", "speedtest.net", "example.com", "test.com", "google.com/search", "www.google.com", "bing.com"];
+const TREND_DISCOVERY_QUERY = "地域ニュース 地元 スーパー 閉店 商店街 小規模店 廃業 懐かしい 思い出 体験談 コミュニティ喪失 変な地元ニュース SNS 話題";
 
 function corsHeaders(env, origin) {
   const configured = [env.ALLOWED_ORIGIN, env.ALLOWED_ORIGINS]
@@ -82,6 +84,13 @@ function researchQueryFor(topic) {
     .join(" ");
 }
 
+function isGenericResult(item) {
+  const text = `${item.title || ""} ${item.content || ""} ${item.url || ""}`.toLowerCase();
+  if (GENERIC_DOMAINS.some((domain) => text.includes(domain))) return true;
+  if (/internet speed|speed test|fast\.com|テストページ|example domain|login|sign in/.test(text)) return true;
+  return GENERIC_SITE_WORDS.filter((word) => text.includes(word.toLowerCase())).length >= 2;
+}
+
 function relevanceForResult(item, query) {
   const text = `${item.title || ""} ${item.content || ""} ${item.url || ""}`.toLowerCase();
   const queryTerms = String(query || "")
@@ -91,7 +100,7 @@ function relevanceForResult(item, query) {
     .slice(0, 12);
   const topicHits = queryTerms.filter((term) => text.includes(term.toLowerCase())).length;
   const focusHits = RESEARCH_FOCUS_WORDS.filter((word) => text.includes(word.toLowerCase())).length;
-  const genericHits = GENERIC_SITE_WORDS.filter((word) => text.includes(word.toLowerCase())).length;
+  const genericHits = GENERIC_SITE_WORDS.filter((word) => text.includes(word.toLowerCase())).length + (isGenericResult(item) ? 3 : 0);
   const domainBoost = /note\.com|togetter\.com|reddit\.com|yahoo\.co\.jp|nhk\.or\.jp|local|times|news|city|town/.test(text) ? 18 : 0;
   const socialBoost = /x\.com|twitter\.com|threads\.net|search\.yahoo\.co\.jp/.test(text) ? 12 : 0;
   return clamp(20 + topicHits * 8 + focusHits * 6 + domainBoost + socialBoost - genericHits * 18, 0, 100);
@@ -152,11 +161,13 @@ async function searchTavily(env, query) {
     if (!response.ok) throw new Error(`Tavily HTTP ${response.status}: ${raw.slice(0, 300)}`);
     const parsed = JSON.parse(raw);
     const scored = (parsed.results || [])
+      .filter((item) => !isGenericResult(item))
       .map((item) => ({ ...item, query: cleanQuery, relevance: relevanceForResult(item, cleanQuery) }))
       .filter((item) => item.relevance >= 34 || /note\.com|togetter\.com|reddit\.com|yahoo\.co\.jp|threads\.net|x\.com|twitter\.com/.test(String(item.url || "")))
       .sort((a, b) => b.relevance - a.relevance)
       .slice(0, 8);
-    const payload = { source: "tavily", query: cleanQuery, results: scored.length ? scored : (parsed.results || []).slice(0, 5) };
+    const fallback = (parsed.results || []).filter((item) => !isGenericResult(item)).slice(0, 5);
+    const payload = { source: "tavily", query: cleanQuery, results: scored.length ? scored : fallback };
     await cache.put(cacheKey, new Response(JSON.stringify(payload), { headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=86400" } }));
     return payload;
   } finally {
@@ -218,6 +229,88 @@ function clientViralElements(research) {
   return items
     .map(([elementType, value], index) => ({ elementType, value: String(value || "").slice(0, 120), score: clamp(82 - index * 3, 55, 90) }))
     .filter((item) => item.value);
+}
+
+function emotionalAngleFor(text) {
+  const body = String(text || "");
+  if (/閉店|廃業|なくなる|終了/.test(body)) return "なくなる前の生活感";
+  if (/懐かしい|思い出|昭和|昔/.test(body)) return "懐かしさと現在の差";
+  if (/商店街|地元|地域|町/.test(body)) return "地元の静かな変化";
+  if (/変|謎|不思議|違和感/.test(body)) return "少し変な地元感";
+  return "身近な場所の小さな違和感";
+}
+
+function keywordForRecord(record, index) {
+  const text = `${record.title || ""} ${record.content || ""}`;
+  const place = text.match(/(地方スーパー|スーパー|商店街|駅前|道の駅|個人店|喫茶店|銭湯|古い店|市場|ドラッグストア|ホームセンター)/)?.[0] || ["地方スーパー", "駅前商店街", "閉店前の個人店", "古いホームセンター"][index % 4];
+  const event = text.match(/(閉店|廃業|移転|再開発|人手不足|値上げ|空き店舗|取り壊し|最後の日|閉店前)/)?.[0] || ["閉店前", "空き店舗", "最後の日", "再開発前"][index % 4];
+  return `${place}の${event}`;
+}
+
+function fallbackTrendTopics() {
+  const seeds = [
+    ["地方スーパーの閉店前", "生活の音が減る瞬間に共感が集まりやすい", "なくなる前の生活感", "地域ニュースと閉店話題"],
+    ["駅前商店街の空き店舗", "見慣れた場所の変化はコメントが生まれやすい", "地元の静かな変化", "地域コミュニティの話題"],
+    ["古い個人店の最後の日", "個人の思い出と地域の記憶が重なる", "懐かしさと喪失感", "閉店ニュースと体験談"],
+    ["ホームセンターの夕方の静けさ", "誰でも知っている場所なのに観察の余白がある", "身近な場所の小さな違和感", "生活圏の観察"],
+    ["地方駅前の再開発前", "変わる前の風景に反応が起きやすい", "なくなる風景", "地域ニュース"],
+    ["昔ながらの喫茶店の閉店", "懐かしさと個人の記憶を引き出しやすい", "昭和感と喪失", "ローカルニュース"],
+    ["ドラッグストアだけ明るい夜", "地方の夜の違和感として投稿化しやすい", "少し変な地元感", "生活者の観察"],
+    ["道の駅の夕方", "観光ではなく生活の端っこが見える", "地方の余白", "地域コミュニティ"],
+    ["古い看板が残る店", "写真なしでも情景が浮かぶ", "懐かしさと違和感", "街の記憶"],
+    ["閉店後の駐車場", "音と人の少なさで共感を作りやすい", "静かな喪失感", "SNSのあるある"]
+  ];
+  return seeds.map(([keyword, why, emotionalAngle, sourceHint], index) => ({ keyword, whyItMayResonate: why, emotionalAngle, sourceBackedHint: sourceHint, score: 86 - index * 3 }));
+}
+
+function trendTopicsFromSources(sourceRecords) {
+  const seen = new Set();
+  const topics = [];
+  for (const record of sourceRecords) {
+    const keyword = keywordForRecord(record, topics.length);
+    const key = keyword.replace(/\s+/g, "");
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    const text = `${record.title || ""} ${record.content || ""}`;
+    topics.push({
+      keyword,
+      whyItMayResonate: record.reason || "地域の変化や生活感に近く、コメントの余白がある",
+      emotionalAngle: emotionalAngleFor(text),
+      sourceBackedHint: record.title || record.content || "Tavily search signal",
+      score: clamp(Math.round((record.relevance || 50) * 0.55 + (record.reliability || 50) * 0.45), 45, 96)
+    });
+    if (topics.length >= 10) break;
+  }
+  for (const topic of fallbackTrendTopics()) {
+    if (topics.length >= 10) break;
+    if (seen.has(topic.keyword.replace(/\s+/g, ""))) continue;
+    seen.add(topic.keyword.replace(/\s+/g, ""));
+    topics.push(topic);
+  }
+  return topics.sort((a, b) => b.score - a.score).slice(0, 10);
+}
+
+async function discoverTrends(env) {
+  const startedAt = Date.now();
+  let tavily = { source: "not-run", results: [] };
+  try {
+    tavily = await searchTavily(env, TREND_DISCOVERY_QUERY);
+  } catch (error) {
+    console.error("trend discovery fallback", error);
+    tavily = { source: "tavily-error", error: error.message, results: [] };
+  }
+  const sourceRecords = sortSources((tavily.results || []).map((item, index) => sourceRecord(item, index, "trend")));
+  const topics = trendTopicsFromSources(sourceRecords);
+  return {
+    success: true,
+    ok: true,
+    source: tavily.source,
+    query: tavily.query || TREND_DISCOVERY_QUERY,
+    topics,
+    pickedTopic: topics[0]?.keyword || "",
+    sourceRecords,
+    elapsedMs: Date.now() - startedAt
+  };
 }
 
 function researchPayload(research, sourceRecords, startedAt, extra = {}) {
@@ -328,7 +421,12 @@ async function handleResearch(request, env) {
   const startedAt = Date.now();
   const body = await request.json().catch(() => ({}));
   const sources = Array.isArray(body.sources) ? body.sources.map(String).slice(0, 24) : [];
-  const topic = String(body.topic || body.query || sources.join(" ")).replace(/\s+/g, " ").trim().slice(0, 500);
+  let topic = String(body.topic || body.query || sources.join(" ")).replace(/\s+/g, " ").trim().slice(0, 500);
+  let trendDiscovery = null;
+  if (!topic) {
+    trendDiscovery = await discoverTrends(env);
+    topic = trendDiscovery.pickedTopic || "";
+  }
   const inputSources = sources.length ? sources : (topic ? [topic] : []);
   const persona = String(body.persona || "違和感ノート");
   let tavily = { source: "not-run", results: [] };
@@ -349,14 +447,18 @@ async function handleResearch(request, env) {
     try {
       const prompt = `以下のリサーチ素材からThreads向けのバズ要素を抽出。丸写し禁止。\n${JSON.stringify(sourceRecords.slice(0, 10))}`;
       const result = await callOpenAI(env, prompt, '{"summary":"...","buzzElements":[],"hooks":[],"phrases":[],"patterns":[],"recommendedPostAngles":[]}', 5000, 800);
-      return json(researchPayload({ ...base, ...result.parsed, source: "openai-research", model: result.model }, sourceRecords, startedAt, { tavilySource: tavily.source, tavilyCount: tavily.results.length }), env, request);
+      return json(researchPayload({ ...base, ...result.parsed, source: "openai-research", model: result.model }, sourceRecords, startedAt, { topic, autoDiscovered: Boolean(trendDiscovery), trendDiscovery, tavilySource: tavily.source, tavilyCount: tavily.results.length }), env, request);
     } catch (error) {
       console.error("research ai fallback", error);
-      return json(researchPayload(base, sourceRecords, startedAt, { tavilySource: tavily.source, tavilyCount: tavily.results.length, error: error.message }), env, request);
+      return json(researchPayload(base, sourceRecords, startedAt, { topic, autoDiscovered: Boolean(trendDiscovery), trendDiscovery, tavilySource: tavily.source, tavilyCount: tavily.results.length, error: error.message }), env, request);
     }
   }
 
-  return json(researchPayload(base, sourceRecords, startedAt, { tavilySource: tavily.source, tavilyCount: tavily.results.length }), env, request);
+  return json(researchPayload(base, sourceRecords, startedAt, { topic, autoDiscovered: Boolean(trendDiscovery), trendDiscovery, tavilySource: tavily.source, tavilyCount: tavily.results.length }), env, request);
+}
+
+async function handleTrends(env, request) {
+  return json(await discoverTrends(env), env, request);
 }
 
 function handleDashboard(env, request) {
@@ -391,6 +493,7 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(env, request.headers.get("Origin")) });
     const url = new URL(request.url);
     if (request.method === "GET" && url.pathname === "/api/dashboard") return handleDashboard(env, request);
+    if (request.method === "GET" && url.pathname === "/api/trends") return handleTrends(env, request);
     if (request.method !== "POST") return json({ success: false, error: "POST only" }, env, request, 405);
     if (url.pathname === "/generate") return handleGenerate(request, env);
     if (url.pathname === "/research" || url.pathname === "/api/research") return handleResearch(request, env);
