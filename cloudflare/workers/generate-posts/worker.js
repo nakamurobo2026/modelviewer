@@ -75,10 +75,11 @@ function researchQueryFor(topic) {
   const base = String(topic || "").replace(/\s+/g, " ").trim();
   return [
     base,
-    "地方スーパー 閉店前",
-    "地域ニュース 地元 スーパー 閉店 生活",
-    "地方 スーパー 懐かしい 思い出 体験談",
-    "閉店前 スーパー 口コミ SNS 話題"
+    `${base} 地域ニュース 地元 生活 体験談`,
+    `${base} SNS 話題 口コミ コメント 議論`,
+    `${base} 懐かしい 思い出 閉店 喪失感`,
+    `${base} 小規模店 商店街 コミュニティ 変化`,
+    `${base} note Togetter Reddit Yahoo リアルタイム`
   ]
     .filter(Boolean)
     .join(" ");
@@ -247,6 +248,19 @@ function keywordForRecord(record, index) {
   return `${place}の${event}`;
 }
 
+function trendTopicPayload({ keyword, whyItMayResonate, emotionalAngle, sourceBackedHint, score }) {
+  return {
+    keyword,
+    emotional_angle: emotionalAngle,
+    why_it_may_resonate: whyItMayResonate,
+    source_hint: sourceBackedHint,
+    score,
+    emotionalAngle,
+    whyItMayResonate,
+    sourceBackedHint
+  };
+}
+
 function fallbackTrendTopics() {
   const seeds = [
     ["地方スーパーの閉店前", "生活の音が減る瞬間に共感が集まりやすい", "なくなる前の生活感", "地域ニュースと閉店話題"],
@@ -260,7 +274,13 @@ function fallbackTrendTopics() {
     ["古い看板が残る店", "写真なしでも情景が浮かぶ", "懐かしさと違和感", "街の記憶"],
     ["閉店後の駐車場", "音と人の少なさで共感を作りやすい", "静かな喪失感", "SNSのあるある"]
   ];
-  return seeds.map(([keyword, why, emotionalAngle, sourceHint], index) => ({ keyword, whyItMayResonate: why, emotionalAngle, sourceBackedHint: sourceHint, score: 86 - index * 3 }));
+  return seeds.map(([keyword, why, emotionalAngle, sourceHint], index) => trendTopicPayload({
+    keyword,
+    whyItMayResonate: why,
+    emotionalAngle,
+    sourceBackedHint: sourceHint,
+    score: 86 - index * 3
+  }));
 }
 
 function trendTopicsFromSources(sourceRecords) {
@@ -272,13 +292,13 @@ function trendTopicsFromSources(sourceRecords) {
     if (!key || seen.has(key)) continue;
     seen.add(key);
     const text = `${record.title || ""} ${record.content || ""}`;
-    topics.push({
+    topics.push(trendTopicPayload({
       keyword,
       whyItMayResonate: record.reason || "地域の変化や生活感に近く、コメントの余白がある",
       emotionalAngle: emotionalAngleFor(text),
       sourceBackedHint: record.title || record.content || "Tavily search signal",
       score: clamp(Math.round((record.relevance || 50) * 0.55 + (record.reliability || 50) * 0.45), 45, 96)
-    });
+    }));
     if (topics.length >= 10) break;
   }
   for (const topic of fallbackTrendTopics()) {
@@ -422,10 +442,15 @@ async function handleResearch(request, env) {
   const body = await request.json().catch(() => ({}));
   const sources = Array.isArray(body.sources) ? body.sources.map(String).slice(0, 24) : [];
   let topic = String(body.topic || body.query || sources.join(" ")).replace(/\s+/g, " ").trim().slice(0, 500);
+  const requestedTopic = topic;
   let trendDiscovery = null;
-  if (!topic) {
+  try {
     trendDiscovery = await discoverTrends(env);
-    topic = trendDiscovery.pickedTopic || "";
+  } catch (error) {
+    console.error("research trend context fallback", error);
+  }
+  if (!topic) {
+    topic = trendDiscovery?.pickedTopic || "";
   }
   const inputSources = sources.length ? sources : (topic ? [topic] : []);
   const persona = String(body.persona || "違和感ノート");
@@ -447,14 +472,14 @@ async function handleResearch(request, env) {
     try {
       const prompt = `以下のリサーチ素材からThreads向けのバズ要素を抽出。丸写し禁止。\n${JSON.stringify(sourceRecords.slice(0, 10))}`;
       const result = await callOpenAI(env, prompt, '{"summary":"...","buzzElements":[],"hooks":[],"phrases":[],"patterns":[],"recommendedPostAngles":[]}', 5000, 800);
-      return json(researchPayload({ ...base, ...result.parsed, source: "openai-research", model: result.model }, sourceRecords, startedAt, { topic, autoDiscovered: Boolean(trendDiscovery), trendDiscovery, tavilySource: tavily.source, tavilyCount: tavily.results.length }), env, request);
+      return json(researchPayload({ ...base, ...result.parsed, source: "openai-research", model: result.model }, sourceRecords, startedAt, { topic, autoDiscovered: !requestedTopic, trendDiscovery, tavilySource: tavily.source, tavilyCount: tavily.results.length }), env, request);
     } catch (error) {
       console.error("research ai fallback", error);
-      return json(researchPayload(base, sourceRecords, startedAt, { topic, autoDiscovered: Boolean(trendDiscovery), trendDiscovery, tavilySource: tavily.source, tavilyCount: tavily.results.length, error: error.message }), env, request);
+      return json(researchPayload(base, sourceRecords, startedAt, { topic, autoDiscovered: !requestedTopic, trendDiscovery, tavilySource: tavily.source, tavilyCount: tavily.results.length, error: error.message }), env, request);
     }
   }
 
-  return json(researchPayload(base, sourceRecords, startedAt, { topic, autoDiscovered: Boolean(trendDiscovery), trendDiscovery, tavilySource: tavily.source, tavilyCount: tavily.results.length }), env, request);
+  return json(researchPayload(base, sourceRecords, startedAt, { topic, autoDiscovered: !requestedTopic, trendDiscovery, tavilySource: tavily.source, tavilyCount: tavily.results.length }), env, request);
 }
 
 async function handleTrends(env, request) {
