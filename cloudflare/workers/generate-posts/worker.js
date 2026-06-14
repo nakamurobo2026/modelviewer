@@ -1,5 +1,7 @@
 const DEFAULT_ORIGINS = ["https://nakamurobo2026.github.io", "https://viral-os-phi.vercel.app"];
 const MODEL = "gpt-5-mini";
+const RESEARCH_FOCUS_WORDS = ["地域", "地方", "閉店", "スーパー", "商店街", "地元", "口コミ", "体験談", "懐かしい", "思い出", "生活", "ニュース", "話題", "議論"];
+const GENERIC_SITE_WORDS = ["マーケティング", "SEO", "アクセスアップ", "フォロワー", "アルゴリズム", "運用代行", "広告", "ランキング", "まとめサイト", "通販"];
 
 function corsHeaders(env, origin) {
   const configured = [env.ALLOWED_ORIGIN, env.ALLOWED_ORIGINS]
@@ -59,10 +61,40 @@ function priorityFor(type) {
 
 function reliabilityFor(text, priority) {
   const body = String(text || "");
-  const specific = ["時", "レジ", "棚", "駐車場", "音", "光", "匂い", "人", "店"].filter((word) => body.includes(word)).length;
+  const specific = ["時", "レジ", "棚", "駐車場", "音", "光", "匂い", "人", "店", "閉店", "地元", "商店街"].filter((word) => body.includes(word)).length;
   const close = { S: 38, A: 30, B: 20, C: 12 }[priority] || 12;
-  const postable = /だけ|急に|なぜ|違和感|あるある|残る|止まる/.test(body) ? 18 : 8;
-  return clamp(close + specific * 5 + postable, 20, 100);
+  const postable = /だけ|急に|なぜ|違和感|あるある|残る|止まる|懐かしい|思い出|閉店前/.test(body) ? 18 : 8;
+  const focused = RESEARCH_FOCUS_WORDS.filter((word) => body.includes(word)).length * 4;
+  const genericPenalty = GENERIC_SITE_WORDS.some((word) => body.includes(word)) ? 22 : 0;
+  return clamp(close + specific * 5 + postable + focused - genericPenalty, 10, 100);
+}
+
+function researchQueryFor(topic) {
+  const base = String(topic || "").replace(/\s+/g, " ").trim();
+  return [
+    base,
+    "地方スーパー 閉店前",
+    "地域ニュース 地元 スーパー 閉店 生活",
+    "地方 スーパー 懐かしい 思い出 体験談",
+    "閉店前 スーパー 口コミ SNS 話題"
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function relevanceForResult(item, query) {
+  const text = `${item.title || ""} ${item.content || ""} ${item.url || ""}`.toLowerCase();
+  const queryTerms = String(query || "")
+    .replace(/[、。,.]/g, " ")
+    .split(/\s+/)
+    .filter((term) => term.length >= 2)
+    .slice(0, 12);
+  const topicHits = queryTerms.filter((term) => text.includes(term.toLowerCase())).length;
+  const focusHits = RESEARCH_FOCUS_WORDS.filter((word) => text.includes(word.toLowerCase())).length;
+  const genericHits = GENERIC_SITE_WORDS.filter((word) => text.includes(word.toLowerCase())).length;
+  const domainBoost = /note\.com|togetter\.com|reddit\.com|yahoo\.co\.jp|nhk\.or\.jp|local|times|news|city|town/.test(text) ? 18 : 0;
+  const socialBoost = /x\.com|twitter\.com|threads\.net|search\.yahoo\.co\.jp/.test(text) ? 12 : 0;
+  return clamp(20 + topicHits * 8 + focusHits * 6 + domainBoost + socialBoost - genericHits * 18, 0, 100);
 }
 
 function sourceRecord(raw, index, prefix = "source") {
@@ -71,7 +103,8 @@ function sourceRecord(raw, index, prefix = "source") {
   const content = String(raw.content || raw.snippet || raw).replace(/\s+/g, " ").slice(0, 500);
   const sourceType = sourceTypeFrom(url || `${title} ${content}`);
   const priority = priorityFor(sourceType);
-  const reliability = reliabilityFor(`${title} ${content} ${url}`, priority.priority);
+  const relevance = Number(raw.relevance || relevanceForResult({ title, content, url }, raw.query || ""));
+  const reliability = clamp(Math.round((reliabilityFor(`${title} ${content} ${url}`, priority.priority) + relevance) / 2), 10, 100);
   return {
     id: `${prefix}-${index}`,
     sourceType,
@@ -82,6 +115,7 @@ function sourceRecord(raw, index, prefix = "source") {
     content,
     reason: priority.reason,
     reliability,
+    relevance,
     impact: Math.round(reliability * priority.weight),
     buzzElements: [
       /投稿|コメント|SNS|Threads|TikTok|X/.test(`${title} ${content}`) ? "SNS反応に近い話題" : "具体描写",
@@ -92,12 +126,12 @@ function sourceRecord(raw, index, prefix = "source") {
 
 function sortSources(records) {
   const rank = { S: 4, A: 3, B: 2, C: 1 };
-  return records.sort((a, b) => (rank[b.priority] - rank[a.priority]) || (b.impact - a.impact));
+  return records.sort((a, b) => (rank[b.priority] - rank[a.priority]) || ((b.relevance || 0) - (a.relevance || 0)) || (b.impact - a.impact));
 }
 
 async function searchTavily(env, query) {
   const apiKey = env.TAVILY_API_KEY;
-  const cleanQuery = String(query || "").replace(/\s+/g, " ").trim();
+  const cleanQuery = researchQueryFor(query).replace(/\s+/g, " ").trim();
   if (!apiKey || !cleanQuery) return { source: apiKey ? "tavily-empty-query" : "tavily-key-missing", results: [] };
 
   const cache = caches.default;
@@ -112,11 +146,17 @@ async function searchTavily(env, query) {
       method: "POST",
       signal: controller.signal,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({ api_key: apiKey, query: cleanQuery, search_depth: "basic", max_results: 8, include_answer: false, include_raw_content: false })
+      body: JSON.stringify({ api_key: apiKey, query: cleanQuery, search_depth: "advanced", max_results: 10, include_answer: false, include_raw_content: false })
     });
     const raw = await response.text();
     if (!response.ok) throw new Error(`Tavily HTTP ${response.status}: ${raw.slice(0, 300)}`);
-    const payload = { source: "tavily", query: cleanQuery, results: JSON.parse(raw).results || [] };
+    const parsed = JSON.parse(raw);
+    const scored = (parsed.results || [])
+      .map((item) => ({ ...item, query: cleanQuery, relevance: relevanceForResult(item, cleanQuery) }))
+      .filter((item) => item.relevance >= 34 || /note\.com|togetter\.com|reddit\.com|yahoo\.co\.jp|threads\.net|x\.com|twitter\.com/.test(String(item.url || "")))
+      .sort((a, b) => b.relevance - a.relevance)
+      .slice(0, 8);
+    const payload = { source: "tavily", query: cleanQuery, results: scored.length ? scored : (parsed.results || []).slice(0, 5) };
     await cache.put(cacheKey, new Response(JSON.stringify(payload), { headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=86400" } }));
     return payload;
   } finally {
@@ -163,6 +203,7 @@ function clientSources(records) {
     summary: record.content,
     reliability: record.reliability,
     impact: record.impact,
+    relevance: record.relevance,
     extractedElements: record.buzzElements || []
   }));
 }
