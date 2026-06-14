@@ -152,6 +152,46 @@ function localResearch(records, persona) {
   };
 }
 
+function clientSources(records) {
+  return records.map((record) => ({
+    id: record.id,
+    sourceType: record.sourceType,
+    priority: record.priority,
+    weight: record.weight,
+    url: record.url,
+    title: record.title,
+    summary: record.content,
+    reliability: record.reliability,
+    impact: record.impact,
+    extractedElements: record.buzzElements || []
+  }));
+}
+
+function clientViralElements(research) {
+  const items = [
+    ...(Array.isArray(research.buzzElements) ? research.buzzElements.map((value) => ["empathy", value]) : []),
+    ...(Array.isArray(research.hooks) ? research.hooks.map((value) => ["hook", value]) : []),
+    ...(Array.isArray(research.phrases) ? research.phrases.slice(0, 4).map((value) => ["phrase", value]) : []),
+    ...(Array.isArray(research.recommendedPostAngles) ? research.recommendedPostAngles.map((value) => ["angle", value]) : [])
+  ];
+  return items
+    .map(([elementType, value], index) => ({ elementType, value: String(value || "").slice(0, 120), score: clamp(82 - index * 3, 55, 90) }))
+    .filter((item) => item.value);
+}
+
+function researchPayload(research, sourceRecords, startedAt, extra = {}) {
+  return {
+    ...research,
+    ...extra,
+    success: true,
+    briefId: research.briefId || extra.briefId || `iwakan-${startedAt}`,
+    sources: clientSources(sourceRecords),
+    viralElements: clientViralElements(research),
+    sourceRecords,
+    elapsedMs: Date.now() - startedAt
+  };
+}
+
 function localIdeas(theme, category, count = 50) {
   const rawBase = String(theme || "地方スーパー").replace(/\s+/g, " ").slice(0, 70);
   const hasTime = /(17時|閉店|夕方|夜|深夜|朝|昼|雨の日)/.test(rawBase);
@@ -247,10 +287,12 @@ async function handleResearch(request, env) {
   const startedAt = Date.now();
   const body = await request.json().catch(() => ({}));
   const sources = Array.isArray(body.sources) ? body.sources.map(String).slice(0, 24) : [];
+  const topic = String(body.topic || body.query || sources.join(" ")).replace(/\s+/g, " ").trim().slice(0, 500);
+  const inputSources = sources.length ? sources : (topic ? [topic] : []);
   const persona = String(body.persona || "違和感ノート");
   let tavily = { source: "not-run", results: [] };
   try {
-    tavily = await searchTavily(env, String(body.query || sources.join(" ")).slice(0, 500));
+    tavily = await searchTavily(env, topic);
   } catch (error) {
     console.error("tavily fallback", error);
     tavily = { source: "tavily-error", error: error.message, results: [] };
@@ -258,22 +300,22 @@ async function handleResearch(request, env) {
 
   const sourceRecords = sortSources([
     ...(tavily.results || []).map((item, index) => sourceRecord(item, index, "tavily")),
-    ...sources.map((item, index) => sourceRecord(item, index, "manual"))
+    ...inputSources.map((item, index) => sourceRecord(item, index, "manual"))
   ]);
-  const base = localResearch(sourceRecords.length ? sourceRecords : sources.map((item, index) => sourceRecord(item, index, "manual")), persona);
+  const base = localResearch(sourceRecords.length ? sourceRecords : inputSources.map((item, index) => sourceRecord(item, index, "manual")), persona);
 
   if (new URL(request.url).searchParams.has("ai")) {
     try {
       const prompt = `以下のリサーチ素材からThreads向けのバズ要素を抽出。丸写し禁止。\n${JSON.stringify(sourceRecords.slice(0, 10))}`;
       const result = await callOpenAI(env, prompt, '{"summary":"...","buzzElements":[],"hooks":[],"phrases":[],"patterns":[],"recommendedPostAngles":[]}', 5000, 800);
-      return json({ ...base, ...result.parsed, source: "openai-research", model: result.model, tavilySource: tavily.source, tavilyCount: tavily.results.length, elapsedMs: Date.now() - startedAt, sourceRecords }, env, request);
+      return json(researchPayload({ ...base, ...result.parsed, source: "openai-research", model: result.model }, sourceRecords, startedAt, { tavilySource: tavily.source, tavilyCount: tavily.results.length }), env, request);
     } catch (error) {
       console.error("research ai fallback", error);
-      return json({ ...base, tavilySource: tavily.source, tavilyCount: tavily.results.length, error: error.message, elapsedMs: Date.now() - startedAt, sourceRecords }, env, request);
+      return json(researchPayload(base, sourceRecords, startedAt, { tavilySource: tavily.source, tavilyCount: tavily.results.length, error: error.message }), env, request);
     }
   }
 
-  return json({ ...base, tavilySource: tavily.source, tavilyCount: tavily.results.length, elapsedMs: Date.now() - startedAt, sourceRecords }, env, request);
+  return json(researchPayload(base, sourceRecords, startedAt, { tavilySource: tavily.source, tavilyCount: tavily.results.length }), env, request);
 }
 
 export default {
@@ -282,7 +324,7 @@ export default {
     if (request.method !== "POST") return json({ success: false, error: "POST only" }, env, request, 405);
     const url = new URL(request.url);
     if (url.pathname === "/generate") return handleGenerate(request, env);
-    if (url.pathname === "/research") return handleResearch(request, env);
+    if (url.pathname === "/research" || url.pathname === "/api/research") return handleResearch(request, env);
     return json({ success: false, error: "Not found" }, env, request, 404);
   }
 };
