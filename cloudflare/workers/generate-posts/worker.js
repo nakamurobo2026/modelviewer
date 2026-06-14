@@ -318,11 +318,39 @@ async function handleResearch(request, env) {
   return json(researchPayload(base, sourceRecords, startedAt, { tavilySource: tavily.source, tavilyCount: tavily.results.length }), env, request);
 }
 
+function handleDashboard(env, request) {
+  return json({
+    ok: true,
+    researchCount: 0,
+    draftCount: 0,
+    queueCount: 0,
+    success: true,
+    profile: {
+      id: "iwakan-lab",
+      displayName: "Iwakan Lab",
+      threadsConnected: Boolean(env.THREADS_ACCESS_TOKEN)
+    },
+    drafts: [],
+    researchBriefs: [],
+    publishJobs: [],
+    auditEvents: [],
+    metrics: {
+      awaitingApproval: 0,
+      scheduled: 0,
+      failed: 0,
+      published: 0,
+      averageScore: 0,
+      sourceBackedDrafts: 0
+    }
+  }, env, request);
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(env, request.headers.get("Origin")) });
-    if (request.method !== "POST") return json({ success: false, error: "POST only" }, env, request, 405);
     const url = new URL(request.url);
+    if (request.method === "GET" && url.pathname === "/api/dashboard") return handleDashboard(env, request);
+    if (request.method !== "POST") return json({ success: false, error: "POST only" }, env, request, 405);
     if (url.pathname === "/generate") return handleGenerate(request, env);
     if (url.pathname === "/research" || url.pathname === "/api/research") return handleResearch(request, env);
     return json({ success: false, error: "Not found" }, env, request, 404);
