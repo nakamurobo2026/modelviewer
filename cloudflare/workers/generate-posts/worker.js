@@ -1,14 +1,19 @@
-const DEFAULT_ORIGIN = "https://nakamurobo2026.github.io";
+const DEFAULT_ORIGINS = ["https://nakamurobo2026.github.io", "https://viral-os-phi.vercel.app"];
 const MODEL = "gpt-5-mini";
 
 function corsHeaders(env, origin) {
-  const allowed = env.ALLOWED_ORIGIN || DEFAULT_ORIGIN;
-  const requestOrigin = origin && origin.startsWith(allowed) ? origin : allowed;
+  const configured = [env.ALLOWED_ORIGIN, env.ALLOWED_ORIGINS]
+    .flatMap((value) => String(value || "").split(","))
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const allowedOrigins = new Set([...DEFAULT_ORIGINS, ...configured]);
+  const requestOrigin = origin && allowedOrigins.has(origin) ? origin : (env.ALLOWED_ORIGIN || DEFAULT_ORIGINS[0]);
   return {
     "Access-Control-Allow-Origin": requestOrigin,
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Max-Age": "86400",
+    "Vary": "Origin",
     "Content-Type": "application/json; charset=utf-8"
   };
 }
@@ -273,7 +278,7 @@ async function handleResearch(request, env) {
 
 export default {
   async fetch(request, env) {
-    if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders(env, request.headers.get("Origin")) });
+    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(env, request.headers.get("Origin")) });
     if (request.method !== "POST") return json({ success: false, error: "POST only" }, env, request, 405);
     const url = new URL(request.url);
     if (url.pathname === "/generate") return handleGenerate(request, env);
