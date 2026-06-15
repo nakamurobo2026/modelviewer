@@ -3,6 +3,7 @@ import { handleResearchWithTrend, handleTrends, corsHeaders } from "../trend-eng
 import { handleResearchWithPersistence } from "../draft-engine.js";
 import { handleDraftGenerateV2 } from "../draft-v2-engine.js";
 import { handleApprovalQueue, handleApproveDraft, handleDashboardWithApprovals, handleRejectDraft } from "../approval-engine.js";
+import { handleCreateSchedule, handleDeleteSchedule, handleListSchedule } from "../schedule-engine.js";
 
 export default {
   async fetch(request, env, ctx) {
@@ -10,6 +11,9 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(env, request.headers.get("Origin")) });
     if (request.method === "GET" && url.pathname === "/api/dashboard") return handleDashboardWithApprovals(request, env);
     if (request.method === "GET" && url.pathname === "/api/approval-queue") return handleApprovalQueue(request, env);
+    if (request.method === "GET" && url.pathname === "/api/schedule") return handleListSchedule(request, env);
+    if (request.method === "POST" && url.pathname === "/api/schedule") return handleCreateSchedule(request, env);
+    if (request.method === "DELETE" && url.pathname.startsWith("/api/schedule/")) return handleDeleteSchedule(request, env, url.pathname.split("/").pop());
     if (request.method === "GET" && url.pathname === "/api/trends") return handleTrends(request, env);
     if (request.method === "POST" && url.pathname === "/api/drafts/generate") return handleDraftGenerateV2(request, env);
     if (request.method === "POST" && url.pathname === "/api/drafts/approve") return handleApproveDraft(request, env);
