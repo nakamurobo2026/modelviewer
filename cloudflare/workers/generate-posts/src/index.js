@@ -7,10 +7,18 @@ import { handleDashboardWithSchedule } from "../dashboard-engine.js";
 import { handleCreateSchedule, handleDeleteSchedule, handleListSchedule } from "../schedule-engine.js";
 import { handleLearning, handlePostPerformance } from "../learning-engine.js";
 
+function routeCorsHeaders(env, origin) {
+  return {
+    ...corsHeaders(env, origin),
+    "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization"
+  };
+}
+
 function json(data, env, request, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: corsHeaders(env, request.headers.get("Origin"))
+    headers: routeCorsHeaders(env, request.headers.get("Origin"))
   });
 }
 
@@ -22,7 +30,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     try {
-      if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(env, request.headers.get("Origin")) });
+      if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: routeCorsHeaders(env, request.headers.get("Origin")) });
       if (request.method === "GET" && url.pathname === "/api/dashboard") return handleDashboardWithSchedule(request, env);
       if (request.method === "GET" && url.pathname === "/api/learning") return handleLearning(request, env);
       if (request.method === "POST" && url.pathname === "/api/performance") return handlePostPerformance(request, env);
