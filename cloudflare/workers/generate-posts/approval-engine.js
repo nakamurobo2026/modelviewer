@@ -16,7 +16,7 @@ function hasSupabase(env) {
 }
 
 function isUuid(value) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}-?[0-9a-f]*$/i.test(String(value || "")) || /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
 }
 
 function getAuthUserId(request) {
@@ -175,10 +175,10 @@ export async function handleApprovalQueue(request, env) {
   try {
     const rows = await supabaseRequest(
       env,
-      `approval_queue?status=eq.approved&select=*,draft:post_drafts(*)&draft.user_id=eq.${encodeURIComponent(userId)}&order=approved_at.desc.nullslast,created_at.desc`,
+      `approval_queue?status=eq.approved&select=*,draft:post_drafts!inner(*)&draft.user_id=eq.${encodeURIComponent(userId)}&order=approved_at.desc.nullslast,created_at.desc`,
       { method: "GET" }
     );
-    const approvals = (rows || []).filter((row) => row.draft).map(clientApproval);
+    const approvals = (rows || []).map(clientApproval);
     return json({ success: true, approvals }, env, request);
   } catch (error) {
     console.error("approval queue load failed", error);
@@ -193,13 +193,13 @@ export async function handleDashboardWithApprovals(request, env) {
       await ensureProfile(env, userId);
       const [draftRows, approvalRows, briefRows, jobRows, auditRows] = await Promise.all([
         supabaseRequest(env, `post_drafts?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=50`, { method: "GET" }),
-        supabaseRequest(env, `approval_queue?select=*,draft:post_drafts(*)&draft.user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc&limit=50`, { method: "GET" }),
+        supabaseRequest(env, `approval_queue?select=*,draft:post_drafts!inner(*)&draft.user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc&limit=50`, { method: "GET" }),
         supabaseRequest(env, `research_briefs?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=20`, { method: "GET" }),
         supabaseRequest(env, `publish_jobs?user_id=eq.${encodeURIComponent(userId)}&select=*&order=scheduled_at.asc&limit=20`, { method: "GET" }),
         supabaseRequest(env, `audit_events?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=20`, { method: "GET" })
       ]);
       const drafts = (draftRows || []).map(clientDraft).filter(Boolean);
-      const approvals = (approvalRows || []).filter((row) => row.draft).map(clientApproval);
+      const approvals = (approvalRows || []).map(clientApproval);
       const approvedDraftIds = new Set(approvals.filter((approval) => approval.status === "approved").map((approval) => approval.draftId));
       const rejectedDraftIds = new Set(approvals.filter((approval) => approval.status === "rejected").map((approval) => approval.draftId));
       const totalDrafts = drafts.length;
