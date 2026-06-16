@@ -18,7 +18,7 @@ function hasSupabase(env) {
 }
 
 function isUuid(value) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(String(value || ""));
 }
 
 function getAuthUserId(request) {
@@ -54,14 +54,16 @@ async function supabaseRequest(env, path, init = {}) {
 function cleanLine(value) {
   return String(value || "")
     .replace(/```[\s\S]*?```/g, "")
-    .replace(/[{}[\]"]+/g, "")
-    .replace(/\b(score|scoreDetail|viralScore|totalScore|hookScore|commentScore|saveScore|shareScore)\b\s*:?\s*\d*/gi, "")
+    .replace(/[{}\[\]"]+/g, "")
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/調査によると|この記事では|について解説します|出典|引用|ソース|研究|分析結果|レポート|SEO/gi, "")
+    .replace(/\b(score|scoreDetail|viralScore|totalScore|hookScore|commentScore|saveScore|shareScore|research_summary|sources|reasoning)\b\s*:?\s*\d*/gi, "")
     .replace(/\s+/g, " ")
     .trim();
 }
 
 function stripHashtagsUnlessExplicit(text, draft) {
-  const explicit = draft?.score_detail?.allowHashtags === true || draft?.allowHashtags === true;
+  const explicit = draft?.score_detail?.allowHashtags === true || draft?.scoreDetail?.allowHashtags === true || draft?.allowHashtags === true;
   if (explicit) return text;
   return text.replace(/(^|\s)#[\p{L}\p{N}_]+/gu, "").replace(/[ \t]+\n/g, "\n").trim();
 }
@@ -76,14 +78,27 @@ function dedupeLines(lines) {
   });
 }
 
+function publicPostText(draft, detail) {
+  return cleanLine(
+    detail.post_text ||
+    detail.postText ||
+    draft?.post_text ||
+    draft?.postText ||
+    draft?.text ||
+    ""
+  );
+}
+
 export function buildThreadsPost(draft) {
   const detail = draft?.score_detail || draft?.scoreDetail || {};
+  const directPostText = publicPostText(draft, detail);
+  if (directPostText) return stripHashtagsUnlessExplicit(directPostText, draft);
+
   const hook = cleanLine(detail.hook || draft?.hook || "");
-  const body = cleanLine(detail.body || draft?.body || draft?.text || "");
-  const cta = cleanLine(detail.cta || draft?.cta || "");
-  const lines = dedupeLines([hook, body, cta]).filter((line) => !/^\s*(title|category|status|score)\s*:/i.test(line));
-  let text = lines.join("\n\n").trim();
-  text = stripHashtagsUnlessExplicit(text, draft);
+  const body = cleanLine(detail.body || draft?.body || "");
+  const closing = cleanLine(detail.closing_line || detail.cta || draft?.closing_line || draft?.closingLine || draft?.cta || "");
+  const lines = dedupeLines([hook, body, closing]).filter((line) => !/^\s*(title|category|status|score|source|research)\s*:/i.test(line));
+  const text = stripHashtagsUnlessExplicit(lines.join("\n\n").trim(), draft);
   return text;
 }
 
@@ -93,7 +108,8 @@ function validatePreview(text, scheduledPost, draft) {
   if (!draft?.id) warnings.push("draftId is missing.");
   if (!text) warnings.push("Final Threads text is empty.");
   if (text.length > THREADS_FRIENDLY_LIMIT) warnings.push(`Text is ${text.length} chars. Keep it under ${THREADS_FRIENDLY_LIMIT} for Threads-friendly posting.`);
-  if (/\{\s*"|"\s*:|scoreDetail|viralScore|totalScore/.test(text)) warnings.push("Text may contain JSON or internal scoring artifacts.");
+  if (/\{\s*"|"\s*:|scoreDetail|viralScore|totalScore|research_summary|sources|reasoning/.test(text)) warnings.push("Text may contain JSON, research notes, or internal scoring artifacts.");
+  if (/調査によると|この記事では|について解説します|出典|引用|ソース|研究|分析結果|レポート|SEO/i.test(text)) warnings.push("Text may still read like a research report instead of a Threads post.");
   if (/(^|\s)#[\p{L}\p{N}_]+/u.test(text)) warnings.push("Hashtags were detected. Viral OS avoids hashtags unless explicitly requested.");
   if (scheduledPost?.status !== "scheduled") warnings.push(`Scheduled post status is ${scheduledPost?.status || "unknown"}, not scheduled.`);
   return warnings;
