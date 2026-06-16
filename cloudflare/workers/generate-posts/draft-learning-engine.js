@@ -1,5 +1,6 @@
 import { handleDraftGenerateV2 } from "./draft-v2-engine.js";
 import { loadLearningContext } from "./learning-engine.js";
+import { rewriteDraftsToThreadsNative } from "./threads-post-writer-v2.js";
 
 function hasSupabase(env) {
   return Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
@@ -59,34 +60,51 @@ function normalize(value) {
 }
 
 function draftText(draft) {
-  return draft.text || [draft.hook, draft.body, draft.cta].filter(Boolean).join("\n");
+  return draft.post_text || draft.postText || draft.text || [draft.hook, draft.body, draft.closing_line || draft.closingLine || draft.cta].filter(Boolean).join("\n");
 }
 
 function detailFromDraft(draft) {
+  const existing = draft.scoreDetail || {};
+  const postText = draft.post_text || draft.postText || existing.post_text || existing.postText || draft.text;
   return {
-    ...(draft.scoreDetail || {}),
-    title: draft.title || draft.scoreDetail?.title,
-    hook: draft.hook || draft.scoreDetail?.hook,
-    body: draft.body || draft.scoreDetail?.body,
-    cta: draft.cta || draft.scoreDetail?.cta,
-    emotionalTrigger: draft.emotionalTrigger || draft.scoreDetail?.emotionalTrigger || draft.hookType,
-    viralScore: draft.viralScore || draft.scoreDetail?.viralScore,
-    totalScore: draft.totalScore || draft.scoreDetail?.totalScore || draft.scoreTotal || draft.score
+    ...existing,
+    post_text: postText,
+    hook: draft.hook || existing.hook,
+    body: draft.body || existing.body,
+    closing_line: draft.closing_line || draft.closingLine || existing.closing_line || draft.cta || existing.cta,
+    comment_bait: draft.comment_bait || draft.commentBait || existing.comment_bait || existing.commentHook,
+    emotional_trigger: draft.emotional_trigger || draft.emotionalTrigger || existing.emotional_trigger || existing.emotionalTrigger || draft.hookType,
+    emotionalTrigger: draft.emotionalTrigger || draft.emotional_trigger || existing.emotionalTrigger || existing.emotional_trigger || draft.hookType,
+    viral_score: draft.viral_score || draft.viralScore?.total || existing.viral_score || existing.viralScore?.total,
+    viralScore: draft.viralScore || existing.viralScore,
+    source_ids: draft.source_ids || draft.sourceIds || existing.source_ids || draft.sourceTrace || [],
+    totalScore: draft.totalScore || existing.totalScore || draft.scoreTotal || draft.score
   };
 }
 
 function clientDraft(rowOrDraft) {
   if (rowOrDraft?.text && rowOrDraft?.score_total !== undefined) {
     const detail = rowOrDraft.score_detail || {};
+    const postText = detail.post_text || rowOrDraft.text;
     return {
       id: rowOrDraft.id,
+      post_text: postText,
+      postText,
       title: detail.title || rowOrDraft.category || "Threads draft",
       hook: detail.hook || "",
-      body: detail.body || rowOrDraft.text,
-      cta: detail.cta || "",
-      emotionalTrigger: detail.emotionalTrigger || rowOrDraft.hook_type || "empathy",
+      body: detail.body || postText,
+      cta: detail.closing_line || detail.cta || "",
+      closing_line: detail.closing_line || detail.cta || "",
+      closingLine: detail.closing_line || detail.cta || "",
+      comment_bait: detail.comment_bait || detail.commentHook || "",
+      commentBait: detail.comment_bait || detail.commentHook || "",
+      emotional_trigger: detail.emotional_trigger || detail.emotionalTrigger || rowOrDraft.hook_type || "empathy",
+      emotionalTrigger: detail.emotionalTrigger || detail.emotional_trigger || rowOrDraft.hook_type || "empathy",
+      viral_score: detail.viral_score || detail.viralScore?.total || rowOrDraft.score_total || 0,
       viralScore: detail.viralScore || { total: rowOrDraft.score_total || 0 },
-      text: rowOrDraft.text,
+      source_ids: detail.source_ids || rowOrDraft.source_trace || [],
+      sourceIds: detail.source_ids || rowOrDraft.source_trace || [],
+      text: postText,
       status: rowOrDraft.status,
       category: rowOrDraft.category,
       hookType: rowOrDraft.hook_type,
@@ -101,8 +119,8 @@ function clientDraft(rowOrDraft) {
 }
 
 function scoreDraftWithLearning(draft, learning) {
-  const text = `${draft.title || ""} ${draft.hook || ""} ${draft.body || ""} ${draft.cta || ""} ${draft.text || ""}`;
-  const trigger = draft.emotionalTrigger || draft.scoreDetail?.emotionalTrigger || draft.hookType || "empathy";
+  const text = draftText(draft);
+  const trigger = draft.emotional_trigger || draft.emotionalTrigger || draft.scoreDetail?.emotional_trigger || draft.scoreDetail?.emotionalTrigger || draft.hookType || "empathy";
   const category = draft.scoreDetail?.trendCategory || draft.category || "threads";
   const preferredTriggers = new Set((learning.preferredTriggers || []).map(normalize));
   const preferredCategories = new Set((learning.preferredCategories || []).map(normalize));
@@ -127,7 +145,7 @@ function scoreDraftWithLearning(draft, learning) {
   boost += Math.min(8, winningHits.length * 4);
   boost -= Math.min(12, losingHits.length * 6);
 
-  const baseTotal = draft.totalScore || draft.scoreDetail?.totalScore || draft.viralScore?.total || draft.scoreTotal || draft.score || 0;
+  const baseTotal = draft.totalScore || draft.scoreDetail?.totalScore || draft.viralScore?.total || draft.viral_score || draft.scoreTotal || draft.score || 0;
   const totalScore = clampScore(baseTotal + boost);
   const viralScore = { ...(draft.viralScore || draft.scoreDetail?.viralScore || {}), total: totalScore };
   const scoreDetail = {
@@ -144,7 +162,9 @@ function scoreDraftWithLearning(draft, learning) {
 
   return {
     ...draft,
-    text: draftText(draft),
+    text,
+    post_text: text,
+    postText: text,
     viralScore,
     scoreDetail,
     totalScore,
@@ -159,7 +179,7 @@ function applyLearningRanking(drafts, learning) {
   if (!Array.isArray(drafts) || !drafts.length) return drafts || [];
   const ranked = learning && (learning.preferredTriggers?.length || learning.preferredCategories?.length || learning.winningPatterns?.length || learning.losingPatterns?.length)
     ? drafts.map((draft) => scoreDraftWithLearning(draft, learning))
-    : drafts.map((draft) => ({ ...draft, text: draftText(draft), scoreDetail: detailFromDraft(draft) }));
+    : drafts.map((draft) => ({ ...draft, text: draftText(draft), post_text: draftText(draft), postText: draftText(draft), scoreDetail: detailFromDraft(draft) }));
 
   return ranked
     .sort((a, b) => (b.totalScore || b.scoreTotal || b.score || 0) - (a.totalScore || a.scoreTotal || a.score || 0))
@@ -200,10 +220,10 @@ async function persistGeneratedDrafts(env, request, researchId, drafts) {
     text: draftText(draft),
     status: "scored",
     category: draft.category || "threads",
-    hook_type: draft.emotionalTrigger || draft.hookType || draft.scoreDetail?.emotionalTrigger || "empathy",
+    hook_type: draft.emotional_trigger || draft.emotionalTrigger || draft.hookType || draft.scoreDetail?.emotional_trigger || "empathy",
     score_total: draft.totalScore || draft.scoreTotal || draft.score || 0,
-    score_detail: draft.scoreDetail || detailFromDraft(draft),
-    source_trace: draft.sourceTrace || [researchId]
+    score_detail: detailFromDraft(draft),
+    source_trace: draft.source_ids || draft.sourceIds || draft.sourceTrace || [researchId]
   }));
   const inserted = await supabaseRequest(env, "post_drafts", {
     method: "POST",
@@ -220,8 +240,9 @@ async function persistAdjustedDrafts(env, drafts) {
     return supabaseRequest(env, `post_drafts?id=eq.${encodeURIComponent(draft.id)}`, {
       method: "PATCH",
       body: JSON.stringify({
+        text: draftText(draft),
         score_total: draft.totalScore || draft.scoreTotal || draft.score || 0,
-        score_detail: draft.scoreDetail || detailFromDraft(draft)
+        score_detail: detailFromDraft(draft)
       })
     });
   }));
@@ -247,12 +268,13 @@ export async function handleDraftGenerateWithLearning(request, env) {
   }
 
   try {
+    const publicDrafts = rewriteDraftsToThreadsNative(data.drafts, researchId);
     const learning = await loadLearningContext(env);
-    const rankedDrafts = applyLearningRanking(data.drafts, learning);
+    const rankedDrafts = applyLearningRanking(publicDrafts, learning);
     const persistedDrafts = await persistGeneratedDrafts(env, request, researchId, rankedDrafts);
     const finalDrafts = applyLearningRanking(persistedDrafts, learning);
     await persistAdjustedDrafts(env, finalDrafts);
-    return new Response(JSON.stringify({ ...data, drafts: finalDrafts, learningApplied: true, learningSummary: learning.summary }), { status: response.status, headers });
+    return new Response(JSON.stringify({ ...data, drafts: finalDrafts, learningApplied: true, learningSummary: learning.summary, writer: "threads-post-writer-v2" }), { status: response.status, headers });
   } catch (error) {
     console.error("draft learning adjustment failed", error);
     return new Response(JSON.stringify({ ...data, learningApplied: false, learningError: String(error?.message || error) }), { status: response.status, headers });
