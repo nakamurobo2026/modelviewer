@@ -18,7 +18,7 @@ function hasSupabase(env) {
 }
 
 function isUuid(value) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(String(value || ""));
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
 }
 
 function getAuthUserId(request) {
@@ -98,8 +98,7 @@ export function buildThreadsPost(draft) {
   const body = cleanLine(detail.body || draft?.body || "");
   const closing = cleanLine(detail.closing_line || detail.cta || draft?.closing_line || draft?.closingLine || draft?.cta || "");
   const lines = dedupeLines([hook, body, closing]).filter((line) => !/^\s*(title|category|status|score|source|research)\s*:/i.test(line));
-  const text = stripHashtagsUnlessExplicit(lines.join("\n\n").trim(), draft);
-  return text;
+  return stripHashtagsUnlessExplicit(lines.join("\n\n").trim(), draft);
 }
 
 function validatePreview(text, scheduledPost, draft) {
