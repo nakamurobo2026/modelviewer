@@ -144,8 +144,9 @@ async function ensureProfile(env, userId, report) {
     }, "profiles.upsert");
     report.tables.profiles = { ok: true, operation: "profiles.upsert" };
   } catch (error) {
-    report.tables.profiles = { ok: false, operation: "profiles.upsert", error: errorDetails(error) };
-    throw error;
+    report.tables.profiles = { ok: false, operation: "profiles.upsert", nonBlocking: true, error: errorDetails(error) };
+    report.tableErrors.push({ table: "profiles", operation: "profiles.upsert", nonBlocking: true, error: errorDetails(error) });
+    console.error("non-blocking profile upsert failed", JSON.stringify(errorDetails(error)));
   }
 }
 
@@ -328,6 +329,31 @@ async function insertRowsWithFallback(env, table, rows, report, options = {}) {
   }
 }
 
+async function insertResearchBrief(env, fullRow, fallbackRow, minimalRow, report) {
+  try {
+    return await supabaseRequest(env, "research_briefs", {
+      method: "POST",
+      body: JSON.stringify([fullRow])
+    }, "research_briefs.insert");
+  } catch (fullError) {
+    if (!isSchemaMismatch(fullError)) throw fullError;
+    report.tableErrors.push({ table: "research_briefs", operation: "research_briefs.insert", fallback: "basic", error: errorDetails(fullError) });
+    try {
+      return await supabaseRequest(env, "research_briefs", {
+        method: "POST",
+        body: JSON.stringify([fallbackRow])
+      }, "research_briefs.insert.basic_fallback");
+    } catch (fallbackError) {
+      if (!isSchemaMismatch(fallbackError)) throw fallbackError;
+      report.tableErrors.push({ table: "research_briefs", operation: "research_briefs.insert.basic_fallback", fallback: "minimal", error: errorDetails(fallbackError) });
+      return supabaseRequest(env, "research_briefs", {
+        method: "POST",
+        body: JSON.stringify([minimalRow])
+      }, "research_briefs.insert.minimal_fallback");
+    }
+  }
+}
+
 async function persistResearchResponse(env, request, research) {
   const userId = getAuthUserId(request);
   if (!hasSupabase(env) || !userId || !research?.success) return research;
@@ -337,6 +363,8 @@ async function persistResearchResponse(env, request, research) {
   const report = { ok: true, partial_success: false, tables: {}, tableErrors: [] };
   await ensureProfile(env, userId, report);
   const topic = String(research.topic || requestBody.topic || trendContext.selectedTrend.keyword || "auto-discovered trend").slice(0, 500);
+  const persona = String(research.persona || requestBody.persona || "Viral OS").slice(0, 120);
+  const summary = String(research.summary || "").slice(0, 5000);
   const sources = uniqueByKey([
     ...trendContext.sources,
     ...(Array.isArray(research.sources) ? research.sources : [])
@@ -345,24 +373,24 @@ async function persistResearchResponse(env, request, research) {
     ...trendContext.elements,
     ...(Array.isArray(research.viralElements) ? research.viralElements.map((element) => normalizedElement(element)) : [])
   ], (element) => `${element?.elementType || element?.element_type || "angle"}:${element?.value || ""}`.slice(0, 300));
-  const briefRows = await supabaseRequest(env, "research_briefs", {
-    method: "POST",
-    body: JSON.stringify([{
-      user_id: userId,
-      topic,
-      persona: String(research.persona || requestBody.persona || "Viral OS").slice(0, 120),
-      summary: String(research.summary || "").slice(0, 5000),
-      source_count: sources.length,
-      trend_category: trendContext.trendCategory,
-      selected_trend: trendContext.selectedTrend,
-      viral_elements: elements,
-      metadata: {
-        tavilySource: research.tavilySource || null,
-        autoDiscovered: Boolean(research.autoDiscovered || !requestBody.topic),
-        persistenceVersion: "hardened-v2"
-      }
-    }])
-  }, "research_briefs.insert");
+  const fullBriefRow = {
+    user_id: userId,
+    topic,
+    persona,
+    summary,
+    source_count: sources.length,
+    trend_category: trendContext.trendCategory,
+    selected_trend: trendContext.selectedTrend,
+    viral_elements: elements,
+    metadata: {
+      tavilySource: research.tavilySource || null,
+      autoDiscovered: Boolean(research.autoDiscovered || !requestBody.topic),
+      persistenceVersion: "hardened-v3"
+    }
+  };
+  const fallbackBriefRow = { user_id: userId, topic, persona, summary, source_count: sources.length };
+  const minimalBriefRow = { user_id: userId, topic, summary };
+  const briefRows = await insertResearchBrief(env, fullBriefRow, fallbackBriefRow, minimalBriefRow, report);
   const brief = Array.isArray(briefRows) ? briefRows[0] : null;
   if (!brief?.id) {
     throw new SupabasePersistenceError("Supabase research_briefs insert returned no id.", {
