@@ -145,7 +145,8 @@ const RESEARCH_BRIEFS_SCHEMA = [
   { name: "id", type: "uuid", nullable: false, generated: true },
   { name: "user_id", type: "uuid", nullable: false, references: "profiles.id" },
   { name: "topic", type: "text", nullable: false },
-  { name: "query", type: "text", nullable: false },
+  { name: "query", type: "text", nullable: false, optionalInDeployedSchema: true },
+  { name: "persona", type: "text", nullable: true, optionalInDeployedSchema: true },
   { name: "summary", type: "text", nullable: true },
   { name: "source_count", type: "integer", nullable: false, default: 0 },
   { name: "created_at", type: "timestamptz", nullable: false, generated: true },
@@ -164,7 +165,7 @@ function valueKind(value) {
 
 function inspectResearchBriefPayload(payload, attemptedPayloads = {}, profileStatus = null) {
   const tableColumns = RESEARCH_BRIEFS_SCHEMA.map((column) => ({ ...column }));
-  const requiredColumns = tableColumns.filter((column) => !column.nullable && !column.generated && column.default === undefined);
+  const requiredColumns = tableColumns.filter((column) => !column.nullable && !column.generated && column.default === undefined && !column.optionalInDeployedSchema);
   const missingFields = requiredColumns
     .filter((column) => payload[column.name] === undefined || payload[column.name] === null || payload[column.name] === "")
     .map((column) => column.name);
@@ -173,13 +174,15 @@ function inspectResearchBriefPayload(payload, attemptedPayloads = {}, profileSta
   if (!isUuid(payload.user_id)) {
     typeMismatches.push({ field: "user_id", expected: "uuid", actual: valueKind(payload.user_id), value: payload.user_id || null });
   }
-  for (const field of ["topic", "query"]) {
+  for (const field of ["topic"]) {
     if (typeof payload[field] !== "string" || payload[field].length === 0) {
       typeMismatches.push({ field, expected: "non-empty text", actual: valueKind(payload[field]), value: payload[field] ?? null });
     }
   }
-  if (payload.summary !== null && payload.summary !== undefined && typeof payload.summary !== "string") {
-    typeMismatches.push({ field: "summary", expected: "text or null", actual: valueKind(payload.summary) });
+  for (const field of ["query", "persona", "summary"]) {
+    if (payload[field] !== null && payload[field] !== undefined && typeof payload[field] !== "string") {
+      typeMismatches.push({ field, expected: "text or omitted", actual: valueKind(payload[field]) });
+    }
   }
   if (!Number.isInteger(payload.source_count)) {
     typeMismatches.push({ field: "source_count", expected: "integer", actual: valueKind(payload.source_count), value: payload.source_count ?? null });
@@ -189,7 +192,7 @@ function inspectResearchBriefPayload(payload, attemptedPayloads = {}, profileSta
     table: "research_briefs",
     operation: "research_briefs.insert",
     table_columns: tableColumns,
-    not_null_columns: tableColumns.filter((column) => !column.nullable).map((column) => column.name),
+    not_null_columns: tableColumns.filter((column) => !column.nullable && !column.optionalInDeployedSchema).map((column) => column.name),
     insert_payload: payload,
     attempted_payloads: attemptedPayloads,
     missing_fields: missingFields,
@@ -471,31 +474,59 @@ async function insertRowsWithFallback(env, table, rows, report, options = {}) {
   }
 }
 
-async function insertResearchBrief(env, row, debugPayload, report) {
-  try {
-    const inserted = await supabaseRequest(env, "research_briefs", {
-      method: "POST",
-      body: JSON.stringify([row])
-    }, "research_briefs.insert");
-    report.tables.research_briefs = {
-      ok: true,
-      operation: "research_briefs.insert",
-      inserted: Array.isArray(inserted) ? inserted.length : 1,
-      research_briefs_payload: debugPayload
-    };
-    return inserted;
-  } catch (error) {
-    const diagnostic = persistenceDiagnostic({
-      ...errorDetails(error),
-      table: "research_briefs",
-      operation: "research_briefs.insert",
-      research_briefs_payload: debugPayload
-    });
-    report.tables.research_briefs = { ok: false, operation: "research_briefs.insert", error: diagnostic };
-    report.tableErrors.push({ table: "research_briefs", operation: "research_briefs.insert", error: diagnostic });
-    console.error("research_briefs insert failed", JSON.stringify(diagnostic));
-    throw new SupabasePersistenceError("research_briefs insert failed.", diagnostic);
+async function insertResearchBrief(env, rows, debugPayload, report) {
+  const attempts = rows.map((row, index) => ({
+    row,
+    operation: index === 0 ? "research_briefs.insert" : `research_briefs.insert.schema_fallback_${index}`
+  }));
+  const errors = [];
+
+  for (const attempt of attempts) {
+    try {
+      const inserted = await supabaseRequest(env, "research_briefs", {
+        method: "POST",
+        body: JSON.stringify([attempt.row])
+      }, attempt.operation);
+      report.tables.research_briefs = {
+        ok: true,
+        operation: attempt.operation,
+        inserted: Array.isArray(inserted) ? inserted.length : 1,
+        research_briefs_payload: {
+          ...debugPayload,
+          insert_payload: attempt.row,
+          runtime_attempts: attempts.map((item) => ({ operation: item.operation, insert_payload: item.row }))
+        }
+      };
+      return inserted;
+    } catch (error) {
+      const diagnostic = persistenceDiagnostic({
+        ...errorDetails(error),
+        table: "research_briefs",
+        operation: attempt.operation,
+        research_briefs_payload: {
+          ...debugPayload,
+          insert_payload: attempt.row,
+          runtime_attempts: attempts.map((item) => ({ operation: item.operation, insert_payload: item.row }))
+        }
+      });
+      errors.push({ operation: attempt.operation, insert_payload: attempt.row, error: diagnostic });
+      if (!isSchemaMismatch(error)) break;
+    }
   }
+
+  const last = errors[errors.length - 1]?.error || { table: "research_briefs", operation: "research_briefs.insert", message: "research_briefs insert failed." };
+  const payload = {
+    ...last,
+    research_briefs_payload: {
+      ...debugPayload,
+      runtime_attempts: attempts.map((item) => ({ operation: item.operation, insert_payload: item.row })),
+      attempt_errors: errors
+    }
+  };
+  report.tables.research_briefs = { ok: false, operation: "research_briefs.insert", error: payload };
+  report.tableErrors.push({ table: "research_briefs", operation: "research_briefs.insert", errors });
+  console.error("research_briefs insert failed", JSON.stringify(payload));
+  throw new SupabasePersistenceError("research_briefs insert failed.", payload);
 }
 
 async function persistResearchResponse(env, request, research) {
@@ -520,30 +551,39 @@ async function persistResearchResponse(env, request, research) {
     ...trendContext.elements,
     ...(Array.isArray(research.viralElements) ? research.viralElements.map((element) => normalizedElement(element)) : [])
   ], (element) => `${element?.elementType || element?.element_type || "angle"}:${element?.value || ""}`.slice(0, 300));
-  const previousPayload = {
-    user_id: userId,
-    topic,
-    persona,
-    summary,
-    source_count: sources.length,
-    trend_category: trendContext.trendCategory,
-    selected_trend: trendContext.selectedTrend,
-    viral_elements: elements,
-    metadata: {
-      tavilySource: research.tavilySource || null,
-      autoDiscovered: Boolean(research.autoDiscovered || !requestBody.topic),
-      persistenceVersion: "hardened-v3"
-    }
-  };
-  const briefRow = {
+  const briefRowWithQuery = {
     user_id: userId,
     topic,
     query,
     summary,
     source_count: sources.length
   };
-  const researchBriefsPayload = inspectResearchBriefPayload(briefRow, { previous_payload: previousPayload, schema_safe_payload: briefRow }, report.tables.profiles || null);
-  const briefRows = await insertResearchBrief(persistenceEnv, briefRow, researchBriefsPayload, report);
+  const briefRowWithPersona = {
+    user_id: userId,
+    topic,
+    persona,
+    summary,
+    source_count: sources.length
+  };
+  const briefRowWithoutQuery = {
+    user_id: userId,
+    topic,
+    summary,
+    source_count: sources.length
+  };
+  const minimalBriefRow = {
+    user_id: userId,
+    topic,
+    summary
+  };
+  const researchBriefRows = [briefRowWithQuery, briefRowWithPersona, briefRowWithoutQuery, minimalBriefRow];
+  const researchBriefsPayload = inspectResearchBriefPayload(briefRowWithQuery, {
+    schema_with_query_payload: briefRowWithQuery,
+    deployed_schema_with_persona_payload: briefRowWithPersona,
+    deployed_schema_without_query_payload: briefRowWithoutQuery,
+    minimal_payload: minimalBriefRow
+  }, report.tables.profiles || null);
+  const briefRows = await insertResearchBrief(persistenceEnv, researchBriefRows, researchBriefsPayload, report);
   const brief = Array.isArray(briefRows) ? briefRows[0] : null;
   if (!brief?.id) {
     throw new SupabasePersistenceError("Supabase research_briefs insert returned no id.", {
@@ -552,7 +592,7 @@ async function persistResearchResponse(env, request, research) {
       research_briefs_payload: researchBriefsPayload
     });
   }
-  report.tables.research_briefs = { ...report.tables.research_briefs, ok: true, operation: "research_briefs.insert", inserted: 1, id: brief.id };
+  report.tables.research_briefs = { ...report.tables.research_briefs, ok: true, inserted: 1, id: brief.id };
 
   const sourceRows = sources.slice(0, 20).map((source) => sourceRow(source, brief.id, "research_brief_id"));
   const sourceFallbackRows = sources.slice(0, 20).map((source) => sourceRow(source, brief.id, "brief_id"));
