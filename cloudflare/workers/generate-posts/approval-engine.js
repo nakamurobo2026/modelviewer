@@ -12,18 +12,47 @@ function apiError(code, message, details) {
 }
 
 function hasSupabase(env) {
-  return Boolean((env.SUPABASE_URL || env.SUPABASE_REST_URL || env.SUPABASE_PROJECT_REF) && env.SUPABASE_SERVICE_ROLE_KEY);
+  return Boolean((env.SUPABASE_URL || env.SUPABASE_REST_URL || env.SUPABASE_PROJECT_REF || env.SUPABASE_AUTH_ISSUER) && env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-function normalizeSupabaseRestBaseUrl(env) {
-  const configured = String(env.SUPABASE_REST_URL || env.SUPABASE_URL || "").trim();
-  const projectRef = String(env.SUPABASE_PROJECT_REF || "").trim();
-  let value = configured || (projectRef ? `https://${projectRef}.supabase.co` : "");
-  if (!value) throw new Error("Supabase URL is not configured.");
-  if (!/^https?:\/\//i.test(value)) {
-    value = /^[a-z0-9-]+$/i.test(value) ? `https://${value}.supabase.co` : `https://${value}`;
+function decodeAuthPayload(request) {
+  const token = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+  const payload = token.split(".")[1];
+  if (!payload) return null;
+  try {
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(payload.length / 4) * 4, "=");
+    return JSON.parse(atob(normalized));
+  } catch {
+    return null;
   }
-  const parsed = new URL(value);
+}
+
+function getAuthUserId(request) {
+  return decodeAuthPayload(request)?.sub || null;
+}
+
+function getAuthIssuerUrl(request) {
+  const issuer = decodeAuthPayload(request)?.iss;
+  if (typeof issuer !== "string" || !issuer) return "";
+  try {
+    const parsed = new URL(issuer);
+    if (!parsed.hostname.endsWith(".supabase.co")) return "";
+    parsed.pathname = "";
+    parsed.search = "";
+    parsed.hash = "";
+    return parsed.toString().replace(/\/$/, "");
+  } catch {
+    return "";
+  }
+}
+
+function normalizeSupabaseRestBaseUrlValue(value) {
+  let normalized = String(value || "").trim();
+  if (!normalized) return "";
+  if (!/^https?:\/\//i.test(normalized)) {
+    normalized = /^[a-z0-9-]+$/i.test(normalized) ? `https://${normalized}.supabase.co` : `https://${normalized}`;
+  }
+  const parsed = new URL(normalized);
   const pathname = parsed.pathname.replace(/\/+$/, "");
   parsed.pathname = (pathname.endsWith("/rest/v1") ? pathname : `${pathname}/rest/v1`).replace(/\/+/g, "/");
   parsed.search = "";
@@ -31,45 +60,73 @@ function normalizeSupabaseRestBaseUrl(env) {
   return parsed.toString().replace(/\/$/, "");
 }
 
+function supabaseRestBaseUrlCandidates(env) {
+  const candidates = [
+    env.SUPABASE_REST_URL,
+    env.SUPABASE_URL,
+    env.SUPABASE_AUTH_ISSUER,
+    env.SUPABASE_PROJECT_REF ? `https://${String(env.SUPABASE_PROJECT_REF).trim()}.supabase.co` : ""
+  ];
+  const seen = new Set();
+  const normalized = [];
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const baseUrl = normalizeSupabaseRestBaseUrlValue(candidate);
+    if (!baseUrl || seen.has(baseUrl)) continue;
+    seen.add(baseUrl);
+    normalized.push(baseUrl);
+  }
+  if (!normalized.length) throw new Error("Supabase URL is not configured.");
+  return normalized;
+}
+
 function isUuid(value) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
 }
 
-function getAuthUserId(request) {
-  const token = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-  const payload = token.split(".")[1];
-  if (!payload) return null;
-  try {
-    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(payload.length / 4) * 4, "=");
-    return JSON.parse(atob(normalized)).sub || null;
-  } catch {
-    return null;
-  }
-}
-
 async function supabaseRequest(env, path, init = {}, operation = path) {
   if (!hasSupabase(env)) throw new Error("Supabase service environment variables are not configured.");
-  const baseUrl = normalizeSupabaseRestBaseUrl(env);
-  const url = `${baseUrl}/${path.replace(/^\/+/, "")}`;
-  const response = await fetch(url, {
-    ...init,
-    headers: {
-      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-      "Content-Type": "application/json",
-      Prefer: "return=representation",
-      ...(init.headers || {})
+  const baseUrls = supabaseRestBaseUrlCandidates(env);
+  const attemptedHosts = [];
+  let lastError = null;
+
+  for (let index = 0; index < baseUrls.length; index += 1) {
+    const baseUrl = baseUrls[index];
+    const url = `${baseUrl}/${path.replace(/^\/+/, "")}`;
+    const endpoint = new URL(url);
+    attemptedHosts.push(endpoint.hostname);
+    let response;
+    let raw = "";
+    try {
+      response = await fetch(url, {
+        ...init,
+        headers: {
+          apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+          "Content-Type": "application/json",
+          Prefer: "return=representation",
+          ...(init.headers || {})
+        }
+      });
+      raw = await response.text();
+    } catch (error) {
+      lastError = new Error(`${operation} fetch failed at ${endpoint.hostname}: ${String(error?.message || error)}`);
+      continue;
     }
-  });
-  const raw = await response.text();
-  if (!response.ok) {
-    let parsed = null;
-    try { parsed = raw ? JSON.parse(raw) : null; } catch {}
-    const message = parsed?.message || raw.slice(0, 500) || response.statusText;
-    const code = parsed?.code || response.status;
-    throw new Error(`${operation} failed: ${code} ${message}`);
+
+    if (!response.ok) {
+      let parsed = null;
+      try { parsed = raw ? JSON.parse(raw) : null; } catch {}
+      const cloudflareCode = raw.match(/error\s+code:\s*(\d+)/i)?.[1] || raw.match(/code\s*[:=]\s*(\d+)/i)?.[1] || parsed?.code;
+      const message = parsed?.message || raw.slice(0, 500) || response.statusText;
+      lastError = new Error(`${operation} failed: ${cloudflareCode || parsed?.code || response.status} ${message}. attemptedHosts=${attemptedHosts.join(",")}`);
+      if (String(cloudflareCode) === "1016" && index < baseUrls.length - 1) continue;
+      throw lastError;
+    }
+    return raw ? JSON.parse(raw) : null;
   }
-  return raw ? JSON.parse(raw) : null;
+
+  throw lastError || new Error(`${operation} failed. attemptedHosts=${attemptedHosts.join(",")}`);
 }
 
 async function ensureProfile(env, userId) {
@@ -171,30 +228,32 @@ async function saveApproval(env, draftId, row) {
 }
 
 async function upsertApproval(env, request, status) {
-  if (!hasSupabase(env)) return json(apiError("missing_supabase", "Supabase service environment variables are not configured."), env, request, 500);
+  const authIssuer = getAuthIssuerUrl(request);
+  const persistenceEnv = authIssuer ? { ...env, SUPABASE_AUTH_ISSUER: authIssuer } : env;
+  if (!hasSupabase(persistenceEnv)) return json(apiError("missing_supabase", "Supabase service environment variables are not configured."), persistenceEnv, request, 500);
   const userId = getAuthUserId(request);
-  if (!userId) return json(apiError("unauthorized", "A valid Supabase session token is required."), env, request, 401);
+  if (!userId) return json(apiError("unauthorized", "A valid Supabase session token is required."), persistenceEnv, request, 401);
   const body = await request.json().catch(() => ({}));
   const draftId = String(body.draftId || "").trim();
   const notes = typeof body.notes === "string" ? body.notes.trim().slice(0, 2000) : null;
-  if (!draftId) return json(apiError("missing_draft_id", "draftId is required."), env, request, 400);
+  if (!draftId) return json(apiError("missing_draft_id", "draftId is required."), persistenceEnv, request, 400);
 
-  await ensureProfile(env, userId);
-  const draft = await loadDraftForUser(env, draftId, userId);
-  if (!draft) return json(apiError("draft_not_found", "Draft was not found for this user."), env, request, 404);
+  await ensureProfile(persistenceEnv, userId);
+  const draft = await loadDraftForUser(persistenceEnv, draftId, userId);
+  if (!draft) return json(apiError("draft_not_found", "Draft was not found for this user."), persistenceEnv, request, 404);
 
   const now = new Date().toISOString();
-  const approval = await saveApproval(env, draftId, {
+  const approval = await saveApproval(persistenceEnv, draftId, {
     status,
     approved_at: status === "approved" ? now : null,
     rejected_at: status === "rejected" ? now : null,
     notes
   });
-  await supabaseRequest(env, `post_drafts?id=eq.${encodeURIComponent(draftId)}&user_id=eq.${encodeURIComponent(userId)}`, {
+  await supabaseRequest(persistenceEnv, `post_drafts?id=eq.${encodeURIComponent(draftId)}&user_id=eq.${encodeURIComponent(userId)}`, {
     method: "PATCH",
     body: JSON.stringify({ status })
   }, "post_drafts.patch_status");
-  return json({ success: true, approval: clientApproval({ ...approval, draft }) }, env, request);
+  return json({ success: true, approval: clientApproval({ ...approval, draft }) }, persistenceEnv, request);
 }
 
 export async function handleApproveDraft(request, env) {
@@ -216,35 +275,39 @@ export async function handleRejectDraft(request, env) {
 }
 
 export async function handleApprovalQueue(request, env) {
-  if (!hasSupabase(env)) return json({ success: true, approvals: [] }, env, request);
+  const authIssuer = getAuthIssuerUrl(request);
+  const persistenceEnv = authIssuer ? { ...env, SUPABASE_AUTH_ISSUER: authIssuer } : env;
+  if (!hasSupabase(persistenceEnv)) return json({ success: true, approvals: [] }, persistenceEnv, request);
   const userId = getAuthUserId(request);
-  if (!userId) return json(apiError("unauthorized", "A valid Supabase session token is required."), env, request, 401);
+  if (!userId) return json(apiError("unauthorized", "A valid Supabase session token is required."), persistenceEnv, request, 401);
   try {
     const rows = await supabaseRequest(
-      env,
+      persistenceEnv,
       `approval_queue?status=eq.approved&select=*,draft:post_drafts!inner(*)&draft.user_id=eq.${encodeURIComponent(userId)}&order=approved_at.desc.nullslast,created_at.desc`,
       { method: "GET" },
       "approval_queue.select"
     );
     const approvals = (rows || []).map(clientApproval);
-    return json({ success: true, approvals }, env, request);
+    return json({ success: true, approvals }, persistenceEnv, request);
   } catch (error) {
     console.error("approval queue load failed", error);
-    return json(apiError("approval_queue_failed", "Approval queue could not be loaded.", String(error?.message || error)), env, request, 500);
+    return json(apiError("approval_queue_failed", "Approval queue could not be loaded.", String(error?.message || error)), persistenceEnv, request, 500);
   }
 }
 
 export async function handleDashboardWithApprovals(request, env) {
+  const authIssuer = getAuthIssuerUrl(request);
+  const persistenceEnv = authIssuer ? { ...env, SUPABASE_AUTH_ISSUER: authIssuer } : env;
   const userId = getAuthUserId(request);
-  if (hasSupabase(env) && userId) {
+  if (hasSupabase(persistenceEnv) && userId) {
     try {
-      await ensureProfile(env, userId);
+      await ensureProfile(persistenceEnv, userId);
       const [draftRows, approvalRows, briefRows, jobRows, auditRows] = await Promise.all([
-        supabaseRequest(env, `post_drafts?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=50`, { method: "GET" }, "post_drafts.dashboard"),
-        supabaseRequest(env, `approval_queue?select=*,draft:post_drafts!inner(*)&draft.user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc&limit=50`, { method: "GET" }, "approval_queue.dashboard"),
-        supabaseRequest(env, `research_briefs?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=20`, { method: "GET" }, "research_briefs.dashboard"),
-        supabaseRequest(env, `publish_jobs?user_id=eq.${encodeURIComponent(userId)}&select=*&order=scheduled_at.asc&limit=20`, { method: "GET" }, "publish_jobs.dashboard"),
-        supabaseRequest(env, `audit_events?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=20`, { method: "GET" }, "audit_events.dashboard")
+        supabaseRequest(persistenceEnv, `post_drafts?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=50`, { method: "GET" }, "post_drafts.dashboard"),
+        supabaseRequest(persistenceEnv, `approval_queue?select=*,draft:post_drafts!inner(*)&draft.user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc&limit=50`, { method: "GET" }, "approval_queue.dashboard"),
+        supabaseRequest(persistenceEnv, `research_briefs?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=20`, { method: "GET" }, "research_briefs.dashboard"),
+        supabaseRequest(persistenceEnv, `publish_jobs?user_id=eq.${encodeURIComponent(userId)}&select=*&order=scheduled_at.asc&limit=20`, { method: "GET" }, "publish_jobs.dashboard"),
+        supabaseRequest(persistenceEnv, `audit_events?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=20`, { method: "GET" }, "audit_events.dashboard")
       ]);
       const drafts = (draftRows || []).map(clientDraft).filter(Boolean);
       const approvals = (approvalRows || []).map(clientApproval);
@@ -267,7 +330,7 @@ export async function handleDashboardWithApprovals(request, env) {
         profile: {
           id: userId,
           displayName: "Viral OS Operator",
-          threadsConnected: Boolean(env.THREADS_ACCESS_TOKEN)
+          threadsConnected: Boolean(persistenceEnv.THREADS_ACCESS_TOKEN)
         },
         drafts,
         approvalQueue: approvals.filter((approval) => approval.status === "approved"),
@@ -305,7 +368,7 @@ export async function handleDashboardWithApprovals(request, env) {
           averageScore,
           sourceBackedDrafts: drafts.filter((draft) => draft.sourceTrace?.length).length
         }
-      }, env, request);
+      }, persistenceEnv, request);
     } catch (error) {
       console.error("dashboard approval fallback", error);
     }
@@ -319,7 +382,7 @@ export async function handleDashboardWithApprovals(request, env) {
     profile: {
       id: "iwakan-lab",
       displayName: "Iwakan Lab",
-      threadsConnected: Boolean(env.THREADS_ACCESS_TOKEN)
+      threadsConnected: Boolean(persistenceEnv.THREADS_ACCESS_TOKEN)
     },
     drafts: [],
     approvalQueue: [],
@@ -337,5 +400,5 @@ export async function handleDashboardWithApprovals(request, env) {
       averageScore: 0,
       sourceBackedDrafts: 0
     }
-  }, env, request);
+  }, persistenceEnv, request);
 }
