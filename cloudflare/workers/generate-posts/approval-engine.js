@@ -12,7 +12,23 @@ function apiError(code, message, details) {
 }
 
 function hasSupabase(env) {
-  return Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
+  return Boolean((env.SUPABASE_URL || env.SUPABASE_REST_URL || env.SUPABASE_PROJECT_REF) && env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+function normalizeSupabaseRestBaseUrl(env) {
+  const configured = String(env.SUPABASE_REST_URL || env.SUPABASE_URL || "").trim();
+  const projectRef = String(env.SUPABASE_PROJECT_REF || "").trim();
+  let value = configured || (projectRef ? `https://${projectRef}.supabase.co` : "");
+  if (!value) throw new Error("Supabase URL is not configured.");
+  if (!/^https?:\/\//i.test(value)) {
+    value = /^[a-z0-9-]+$/i.test(value) ? `https://${value}.supabase.co` : `https://${value}`;
+  }
+  const parsed = new URL(value);
+  const pathname = parsed.pathname.replace(/\/+$/, "");
+  parsed.pathname = (pathname.endsWith("/rest/v1") ? pathname : `${pathname}/rest/v1`).replace(/\/+/g, "/");
+  parsed.search = "";
+  parsed.hash = "";
+  return parsed.toString().replace(/\/$/, "");
 }
 
 function isUuid(value) {
@@ -31,9 +47,10 @@ function getAuthUserId(request) {
   }
 }
 
-async function supabaseRequest(env, path, init = {}) {
+async function supabaseRequest(env, path, init = {}, operation = path) {
   if (!hasSupabase(env)) throw new Error("Supabase service environment variables are not configured.");
-  const url = `${String(env.SUPABASE_URL).replace(/\/$/, "")}/rest/v1/${path}`;
+  const baseUrl = normalizeSupabaseRestBaseUrl(env);
+  const url = `${baseUrl}/${path.replace(/^\/+/, "")}`;
   const response = await fetch(url, {
     ...init,
     headers: {
@@ -45,7 +62,13 @@ async function supabaseRequest(env, path, init = {}) {
     }
   });
   const raw = await response.text();
-  if (!response.ok) throw new Error(`Supabase ${response.status}: ${raw.slice(0, 500)}`);
+  if (!response.ok) {
+    let parsed = null;
+    try { parsed = raw ? JSON.parse(raw) : null; } catch {}
+    const message = parsed?.message || raw.slice(0, 500) || response.statusText;
+    const code = parsed?.code || response.status;
+    throw new Error(`${operation} failed: ${code} ${message}`);
+  }
   return raw ? JSON.parse(raw) : null;
 }
 
@@ -55,7 +78,7 @@ async function ensureProfile(env, userId) {
     method: "POST",
     headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
     body: JSON.stringify([{ id: userId, display_name: "Viral OS Operator" }])
-  });
+  }, "profiles.upsert");
 }
 
 function clientDraft(rowOrDraft) {
@@ -122,7 +145,28 @@ function clientApproval(row) {
 
 async function loadDraftForUser(env, draftId, userId) {
   if (!isUuid(draftId)) return null;
-  const rows = await supabaseRequest(env, `post_drafts?id=eq.${encodeURIComponent(draftId)}&user_id=eq.${encodeURIComponent(userId)}&select=*`, { method: "GET" });
+  const rows = await supabaseRequest(env, `post_drafts?id=eq.${encodeURIComponent(draftId)}&user_id=eq.${encodeURIComponent(userId)}&select=*`, { method: "GET" }, "post_drafts.select");
+  return Array.isArray(rows) ? rows[0] : null;
+}
+
+async function loadExistingApproval(env, draftId) {
+  const rows = await supabaseRequest(env, `approval_queue?draft_id=eq.${encodeURIComponent(draftId)}&select=*`, { method: "GET" }, "approval_queue.select_existing");
+  return Array.isArray(rows) ? rows[0] : null;
+}
+
+async function saveApproval(env, draftId, row) {
+  const existing = await loadExistingApproval(env, draftId);
+  if (existing?.id) {
+    const rows = await supabaseRequest(env, `approval_queue?id=eq.${encodeURIComponent(existing.id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(row)
+    }, "approval_queue.patch_existing");
+    return Array.isArray(rows) ? rows[0] : null;
+  }
+  const rows = await supabaseRequest(env, "approval_queue", {
+    method: "POST",
+    body: JSON.stringify([{ draft_id: draftId, ...row }])
+  }, "approval_queue.insert");
   return Array.isArray(rows) ? rows[0] : null;
 }
 
@@ -140,32 +184,35 @@ async function upsertApproval(env, request, status) {
   if (!draft) return json(apiError("draft_not_found", "Draft was not found for this user."), env, request, 404);
 
   const now = new Date().toISOString();
-  const row = {
-    draft_id: draftId,
+  const approval = await saveApproval(env, draftId, {
     status,
     approved_at: status === "approved" ? now : null,
     rejected_at: status === "rejected" ? now : null,
     notes
-  };
-  const approvalRows = await supabaseRequest(env, "approval_queue?on_conflict=draft_id", {
-    method: "POST",
-    headers: { Prefer: "resolution=merge-duplicates,return=representation" },
-    body: JSON.stringify([row])
   });
   await supabaseRequest(env, `post_drafts?id=eq.${encodeURIComponent(draftId)}&user_id=eq.${encodeURIComponent(userId)}`, {
     method: "PATCH",
     body: JSON.stringify({ status })
-  });
-  const approval = Array.isArray(approvalRows) ? approvalRows[0] : null;
+  }, "post_drafts.patch_status");
   return json({ success: true, approval: clientApproval({ ...approval, draft }) }, env, request);
 }
 
-export function handleApproveDraft(request, env) {
-  return upsertApproval(env, request, "approved");
+export async function handleApproveDraft(request, env) {
+  try {
+    return await upsertApproval(env, request, "approved");
+  } catch (error) {
+    console.error("approve draft failed", error);
+    return json(apiError("approve_failed", "Draft could not be approved.", String(error?.message || error)), env, request, 500);
+  }
 }
 
-export function handleRejectDraft(request, env) {
-  return upsertApproval(env, request, "rejected");
+export async function handleRejectDraft(request, env) {
+  try {
+    return await upsertApproval(env, request, "rejected");
+  } catch (error) {
+    console.error("reject draft failed", error);
+    return json(apiError("reject_failed", "Draft could not be rejected.", String(error?.message || error)), env, request, 500);
+  }
 }
 
 export async function handleApprovalQueue(request, env) {
@@ -176,13 +223,14 @@ export async function handleApprovalQueue(request, env) {
     const rows = await supabaseRequest(
       env,
       `approval_queue?status=eq.approved&select=*,draft:post_drafts!inner(*)&draft.user_id=eq.${encodeURIComponent(userId)}&order=approved_at.desc.nullslast,created_at.desc`,
-      { method: "GET" }
+      { method: "GET" },
+      "approval_queue.select"
     );
     const approvals = (rows || []).map(clientApproval);
     return json({ success: true, approvals }, env, request);
   } catch (error) {
     console.error("approval queue load failed", error);
-    return json(apiError("approval_queue_failed", "Approval queue could not be loaded.", String(error)), env, request, 500);
+    return json(apiError("approval_queue_failed", "Approval queue could not be loaded.", String(error?.message || error)), env, request, 500);
   }
 }
 
@@ -192,11 +240,11 @@ export async function handleDashboardWithApprovals(request, env) {
     try {
       await ensureProfile(env, userId);
       const [draftRows, approvalRows, briefRows, jobRows, auditRows] = await Promise.all([
-        supabaseRequest(env, `post_drafts?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=50`, { method: "GET" }),
-        supabaseRequest(env, `approval_queue?select=*,draft:post_drafts!inner(*)&draft.user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc&limit=50`, { method: "GET" }),
-        supabaseRequest(env, `research_briefs?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=20`, { method: "GET" }),
-        supabaseRequest(env, `publish_jobs?user_id=eq.${encodeURIComponent(userId)}&select=*&order=scheduled_at.asc&limit=20`, { method: "GET" }),
-        supabaseRequest(env, `audit_events?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=20`, { method: "GET" })
+        supabaseRequest(env, `post_drafts?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=50`, { method: "GET" }, "post_drafts.dashboard"),
+        supabaseRequest(env, `approval_queue?select=*,draft:post_drafts!inner(*)&draft.user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc&limit=50`, { method: "GET" }, "approval_queue.dashboard"),
+        supabaseRequest(env, `research_briefs?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=20`, { method: "GET" }, "research_briefs.dashboard"),
+        supabaseRequest(env, `publish_jobs?user_id=eq.${encodeURIComponent(userId)}&select=*&order=scheduled_at.asc&limit=20`, { method: "GET" }, "publish_jobs.dashboard"),
+        supabaseRequest(env, `audit_events?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=20`, { method: "GET" }, "audit_events.dashboard")
       ]);
       const drafts = (draftRows || []).map(clientDraft).filter(Boolean);
       const approvals = (approvalRows || []).map(clientApproval);
