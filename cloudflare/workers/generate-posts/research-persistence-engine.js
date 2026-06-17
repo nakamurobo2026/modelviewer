@@ -76,6 +76,26 @@ function errorDetails(error) {
   return { cause: String(error?.message || error) };
 }
 
+function tableFromOperation(operation) {
+  return String(operation || "unknown").split(".")[0] || "unknown";
+}
+
+function persistenceDiagnostic(details) {
+  const response = details?.response && typeof details.response === "object" ? details.response : null;
+  return {
+    table: details?.table || tableFromOperation(details?.operation),
+    operation: details?.operation || "unknown",
+    code: response?.code || details?.cloudflareCode || details?.status || "unknown",
+    message: response?.message || details?.statusText || details?.cause || "Supabase persistence failed.",
+    details: response?.details || details?.response || details?.cause || null,
+    hint: response?.hint || details?.hint || null,
+    status: details?.status,
+    host: details?.host,
+    path: details?.path,
+    cloudflareCode: details?.cloudflareCode
+  };
+}
+
 function isSchemaMismatch(error) {
   const details = errorDetails(error);
   const body = typeof details.response === "string" ? details.response : JSON.stringify(details.response || {});
@@ -144,9 +164,10 @@ async function ensureProfile(env, userId, report) {
     }, "profiles.upsert");
     report.tables.profiles = { ok: true, operation: "profiles.upsert" };
   } catch (error) {
-    report.tables.profiles = { ok: false, operation: "profiles.upsert", nonBlocking: true, error: errorDetails(error) };
-    report.tableErrors.push({ table: "profiles", operation: "profiles.upsert", nonBlocking: true, error: errorDetails(error) });
-    console.error("non-blocking profile upsert failed", JSON.stringify(errorDetails(error)));
+    const diagnostic = persistenceDiagnostic(errorDetails(error));
+    report.tables.profiles = { ok: false, operation: "profiles.upsert", nonBlocking: true, error: diagnostic };
+    report.tableErrors.push({ table: "profiles", operation: "profiles.upsert", nonBlocking: true, error: diagnostic });
+    console.error("non-blocking profile upsert failed", JSON.stringify(diagnostic));
   }
 }
 
@@ -291,7 +312,8 @@ async function insertRowsWithFallback(env, table, rows, report, options = {}) {
         report.tables[table] = { ok: true, operation: `${operation}.fallback`, inserted: Array.isArray(inserted) ? inserted.length : fallbackRows.length, skipped: 0 };
         return Array.isArray(inserted) ? inserted : [];
       } catch (fallbackError) {
-        report.tableErrors.push({ table, operation: `${operation}.fallback`, error: errorDetails(fallbackError) });
+        const diagnostic = persistenceDiagnostic(errorDetails(fallbackError));
+        report.tableErrors.push({ table, operation: `${operation}.fallback`, error: diagnostic });
       }
     }
 
@@ -316,11 +338,11 @@ async function insertRowsWithFallback(env, table, rows, report, options = {}) {
             if (Array.isArray(single)) inserted.push(...single);
             continue;
           } catch (fallbackRowError) {
-            errors.push({ index, error: errorDetails(fallbackRowError) });
+            errors.push({ index, error: persistenceDiagnostic(errorDetails(fallbackRowError)) });
             continue;
           }
         }
-        errors.push({ index, error: errorDetails(rowError) });
+        errors.push({ index, error: persistenceDiagnostic(errorDetails(rowError)) });
       }
     }
     report.tables[table] = { ok: errors.length === 0, operation, inserted: inserted.length, skipped: errors.length, errors };
@@ -337,7 +359,7 @@ async function insertResearchBrief(env, fullRow, fallbackRow, minimalRow, report
     }, "research_briefs.insert");
   } catch (fullError) {
     if (!isSchemaMismatch(fullError)) throw fullError;
-    report.tableErrors.push({ table: "research_briefs", operation: "research_briefs.insert", fallback: "basic", error: errorDetails(fullError) });
+    report.tableErrors.push({ table: "research_briefs", operation: "research_briefs.insert", fallback: "basic", error: persistenceDiagnostic(errorDetails(fullError)) });
     try {
       return await supabaseRequest(env, "research_briefs", {
         method: "POST",
@@ -345,7 +367,7 @@ async function insertResearchBrief(env, fullRow, fallbackRow, minimalRow, report
       }, "research_briefs.insert.basic_fallback");
     } catch (fallbackError) {
       if (!isSchemaMismatch(fallbackError)) throw fallbackError;
-      report.tableErrors.push({ table: "research_briefs", operation: "research_briefs.insert.basic_fallback", fallback: "minimal", error: errorDetails(fallbackError) });
+      report.tableErrors.push({ table: "research_briefs", operation: "research_briefs.insert.basic_fallback", fallback: "minimal", error: persistenceDiagnostic(errorDetails(fallbackError)) });
       return supabaseRequest(env, "research_briefs", {
         method: "POST",
         body: JSON.stringify([minimalRow])
@@ -420,23 +442,28 @@ async function persistResearchResponse(env, request, research) {
 }
 
 function persistenceErrorPayload(data, error) {
-  const details = errorDetails(error);
+  const diagnostic = persistenceDiagnostic(errorDetails(error));
   return {
     ...data,
     success: false,
     persistence: {
       ok: false,
       partial_success: false,
-      failedOperation: details.operation || "unknown",
-      host: details.host,
-      path: details.path,
-      status: details.status,
-      cloudflareCode: details.cloudflareCode
+      failedTable: diagnostic.table,
+      failedOperation: diagnostic.operation,
+      code: diagnostic.code,
+      message: diagnostic.message,
+      details: diagnostic.details,
+      hint: diagnostic.hint,
+      status: diagnostic.status,
+      host: diagnostic.host,
+      path: diagnostic.path,
+      cloudflareCode: diagnostic.cloudflareCode
     },
     error: {
       code: "research_persistence_failed",
       message: "Research completed, but Supabase persistence failed.",
-      details
+      details: diagnostic
     }
   };
 }
