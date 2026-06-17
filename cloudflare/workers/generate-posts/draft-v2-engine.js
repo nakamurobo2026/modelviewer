@@ -25,11 +25,11 @@ function clamp(value, min = 0, max = 100) {
 }
 
 function hasSupabase(env) {
-  return Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
+  return Boolean((env.SUPABASE_URL || env.SUPABASE_REST_URL || env.SUPABASE_PROJECT_REF) && env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
 function isUuid(value) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(String(value || ""));
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
 }
 
 function getAuthUserId(request) {
@@ -44,9 +44,22 @@ function getAuthUserId(request) {
   }
 }
 
+function normalizeSupabaseRestBaseUrl(env) {
+  const configured = String(env.SUPABASE_REST_URL || env.SUPABASE_URL || "").trim();
+  const projectRef = String(env.SUPABASE_PROJECT_REF || "").trim();
+  let value = configured || (projectRef ? `https://${projectRef}.supabase.co` : "");
+  if (!/^https?:\/\//i.test(value)) value = /^[a-z0-9-]+$/i.test(value) ? `https://${value}.supabase.co` : `https://${value}`;
+  const parsed = new URL(value);
+  const pathname = parsed.pathname.replace(/\/+$/, "");
+  parsed.pathname = (pathname.endsWith("/rest/v1") ? pathname : `${pathname}/rest/v1`).replace(/\/+/g, "/");
+  parsed.search = "";
+  parsed.hash = "";
+  return parsed.toString().replace(/\/$/, "");
+}
+
 async function supabaseRequest(env, path, init = {}) {
   if (!hasSupabase(env)) throw new Error("Supabase service environment variables are not configured.");
-  const url = `${String(env.SUPABASE_URL).replace(/\/$/, "")}/rest/v1/${path}`;
+  const url = `${normalizeSupabaseRestBaseUrl(env)}/${path.replace(/^\/+/, "")}`;
   const response = await fetch(url, {
     ...init,
     headers: {
@@ -71,13 +84,24 @@ async function ensureProfile(env, userId) {
   });
 }
 
+async function queryByResearchId(env, table, researchId, order = "") {
+  const primaryPath = `${table}?research_brief_id=eq.${encodeURIComponent(researchId)}&select=*${order}`;
+  try {
+    return await supabaseRequest(env, primaryPath, { method: "GET" });
+  } catch (error) {
+    const message = String(error?.message || error);
+    if (!/PGRST204|column|schema cache|brief_id|research_brief_id|does not exist/i.test(message)) throw error;
+    return supabaseRequest(env, `${table}?brief_id=eq.${encodeURIComponent(researchId)}&select=*${order}`, { method: "GET" });
+  }
+}
+
 async function loadResearchContext(env, researchId) {
   if (!hasSupabase(env) || !isUuid(researchId)) return null;
   const briefRows = await supabaseRequest(env, `research_briefs?id=eq.${encodeURIComponent(researchId)}&select=*`, { method: "GET" });
   const brief = Array.isArray(briefRows) ? briefRows[0] : null;
   if (!brief) return null;
-  const sourceRows = await supabaseRequest(env, `research_sources?brief_id=eq.${encodeURIComponent(researchId)}&select=*&order=impact.desc`, { method: "GET" });
-  const elementRows = await supabaseRequest(env, `viral_elements?brief_id=eq.${encodeURIComponent(researchId)}&select=*&order=score.desc`, { method: "GET" });
+  const sourceRows = await queryByResearchId(env, "research_sources", researchId, "&order=impact.desc");
+  const elementRows = await queryByResearchId(env, "viral_elements", researchId, "&order=score.desc");
   return { brief, sources: sourceRows || [], elements: elementRows || [] };
 }
 
@@ -449,11 +473,39 @@ function clientDraft(rowOrDraft) {
   };
 }
 
+async function insertPostDraftRows(env, rows, fallbackRows) {
+  try {
+    return await supabaseRequest(env, "post_drafts", {
+      method: "POST",
+      body: JSON.stringify(rows)
+    });
+  } catch (error) {
+    const message = String(error?.message || error);
+    if (!/PGRST204|column|schema cache|brief_id|research_brief_id|does not exist/i.test(message)) throw error;
+    return supabaseRequest(env, "post_drafts", {
+      method: "POST",
+      body: JSON.stringify(fallbackRows)
+    });
+  }
+}
+
 async function persistDrafts(env, request, researchId, drafts) {
   const userId = getAuthUserId(request);
   if (!hasSupabase(env) || !userId) return drafts.map(clientDraft);
   await ensureProfile(env, userId);
   const rows = drafts.map((draft) => ({
+    user_id: userId,
+    research_brief_id: isUuid(researchId) ? researchId : null,
+    text: draft.text,
+    status: "scored",
+    category: "threads",
+    hook_type: draft.emotionalTrigger,
+    persona: "Viral OS Draft Engine v2",
+    score_total: draft.totalScore,
+    score_detail: detailFromDraft(draft),
+    source_trace: draft.sourceTrace
+  }));
+  const fallbackRows = drafts.map((draft) => ({
     user_id: userId,
     brief_id: isUuid(researchId) ? researchId : null,
     text: draft.text,
@@ -465,10 +517,7 @@ async function persistDrafts(env, request, researchId, drafts) {
     score_detail: detailFromDraft(draft),
     source_trace: draft.sourceTrace
   }));
-  const inserted = await supabaseRequest(env, "post_drafts", {
-    method: "POST",
-    body: JSON.stringify(rows)
-  });
+  const inserted = await insertPostDraftRows(env, rows, fallbackRows);
   return (Array.isArray(inserted) ? inserted : []).map(clientDraft).sort((a, b) => (b.totalScore || b.scoreTotal || 0) - (a.totalScore || a.scoreTotal || 0));
 }
 
