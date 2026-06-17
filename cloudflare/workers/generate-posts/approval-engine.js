@@ -292,6 +292,18 @@ async function loadDraftForUser(env, draftId, userId) {
   return Array.isArray(rows) ? rows[0] : null;
 }
 
+async function loadDraftsByIdsForUser(env, draftIds, userId) {
+  const ids = [...new Set((draftIds || []).filter(isUuid))];
+  if (!ids.length) return new Map();
+  const rows = await supabaseRequest(
+    env,
+    `post_drafts?user_id=eq.${encodeURIComponent(userId)}&id=in.(${ids.map(encodeURIComponent).join(",")})&select=*`,
+    { method: "GET" },
+    "post_drafts.select_for_approvals"
+  );
+  return new Map((Array.isArray(rows) ? rows : []).map((row) => [row.id, row]));
+}
+
 async function createDraftFromSnapshot(env, snapshot, userId, draftId) {
   if (!snapshot || typeof snapshot !== "object") return null;
   const row = draftRowFromSnapshot(snapshot, userId, draftId);
@@ -332,6 +344,21 @@ async function saveApproval(env, draftId, row) {
   return Array.isArray(rows) ? rows[0] : null;
 }
 
+async function loadApprovalsForUser(env, userId, status) {
+  const statusFilter = status ? `status=eq.${encodeURIComponent(status)}&` : "";
+  const rows = await supabaseRequest(
+    env,
+    `approval_queue?${statusFilter}select=*&order=approved_at.desc.nullslast,created_at.desc&limit=100`,
+    { method: "GET" },
+    "approval_queue.select_plain"
+  );
+  const approvalRows = Array.isArray(rows) ? rows : [];
+  const draftsById = await loadDraftsByIdsForUser(env, approvalRows.map((row) => row.draft_id), userId);
+  return approvalRows
+    .map((row) => clientApproval({ ...row, draft: draftsById.get(row.draft_id) || null }))
+    .filter((approval) => approval.draft);
+}
+
 async function upsertApproval(env, request, status) {
   const authIssuer = getAuthIssuerUrl(request);
   const persistenceEnv = authIssuer ? { ...env, SUPABASE_AUTH_ISSUER: authIssuer } : env;
@@ -361,7 +388,7 @@ async function upsertApproval(env, request, status) {
     method: "PATCH",
     body: JSON.stringify({ status })
   }, "post_drafts.patch_status");
-  return json({ success: true, approval: clientApproval({ ...approval, draft: resolved.draft }) }, persistenceEnv, request);
+  return json({ success: true, approval: clientApproval({ ...approval, draft: { ...resolved.draft, status } }) }, persistenceEnv, request);
 }
 
 export async function handleApproveDraft(request, env) {
@@ -389,13 +416,7 @@ export async function handleApprovalQueue(request, env) {
   const userId = getAuthUserId(request);
   if (!userId) return json(apiError("unauthorized", "A valid Supabase session token is required."), persistenceEnv, request, 401);
   try {
-    const rows = await supabaseRequest(
-      persistenceEnv,
-      `approval_queue?status=eq.approved&select=*,draft:post_drafts!inner(*)&draft.user_id=eq.${encodeURIComponent(userId)}&order=approved_at.desc.nullslast,created_at.desc`,
-      { method: "GET" },
-      "approval_queue.select"
-    );
-    const approvals = (rows || []).map(clientApproval);
+    const approvals = await loadApprovalsForUser(persistenceEnv, userId, "approved");
     return json({ success: true, approvals }, persistenceEnv, request);
   } catch (error) {
     console.error("approval queue load failed", error);
@@ -410,15 +431,14 @@ export async function handleDashboardWithApprovals(request, env) {
   if (hasSupabase(persistenceEnv) && userId) {
     try {
       await ensureProfile(persistenceEnv, userId);
-      const [draftRows, approvalRows, briefRows, jobRows, auditRows] = await Promise.all([
+      const [draftRows, briefRows, jobRows, auditRows, approvals] = await Promise.all([
         supabaseRequest(persistenceEnv, `post_drafts?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=50`, { method: "GET" }, "post_drafts.dashboard"),
-        supabaseRequest(persistenceEnv, `approval_queue?select=*,draft:post_drafts!inner(*)&draft.user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc&limit=50`, { method: "GET" }, "approval_queue.dashboard"),
         supabaseRequest(persistenceEnv, `research_briefs?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=20`, { method: "GET" }, "research_briefs.dashboard"),
         supabaseRequest(persistenceEnv, `publish_jobs?user_id=eq.${encodeURIComponent(userId)}&select=*&order=scheduled_at.asc&limit=20`, { method: "GET" }, "publish_jobs.dashboard"),
-        supabaseRequest(persistenceEnv, `audit_events?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=20`, { method: "GET" }, "audit_events.dashboard")
+        supabaseRequest(persistenceEnv, `audit_events?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=20`, { method: "GET" }, "audit_events.dashboard"),
+        loadApprovalsForUser(persistenceEnv, userId)
       ]);
       const drafts = (draftRows || []).map(clientDraft).filter(Boolean);
-      const approvals = (approvalRows || []).map(clientApproval);
       const approvedDraftIds = new Set(approvals.filter((approval) => approval.status === "approved").map((approval) => approval.draftId));
       const rejectedDraftIds = new Set(approvals.filter((approval) => approval.status === "rejected").map((approval) => approval.draftId));
       const totalDrafts = drafts.length;
