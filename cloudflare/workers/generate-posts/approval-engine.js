@@ -84,6 +84,85 @@ function isUuid(value) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
 }
 
+function clampScore(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Math.max(0, Math.min(100, Math.round(number)));
+}
+
+function safeArray(value) {
+  if (Array.isArray(value)) return value.filter(Boolean).map((item) => String(item).slice(0, 240));
+  if (!value) return [];
+  return [String(value).slice(0, 240)];
+}
+
+function draftText(draft) {
+  if (!draft || typeof draft !== "object") return "";
+  const detail = draft.score_detail || draft.scoreDetail || {};
+  return String(
+    draft.post_text ||
+    draft.postText ||
+    detail.post_text ||
+    detail.postText ||
+    draft.text ||
+    [draft.hook || detail.hook, draft.body || detail.body, draft.closing_line || draft.closingLine || detail.closing_line || draft.cta || detail.cta]
+      .filter(Boolean)
+      .join("\n")
+  ).trim();
+}
+
+function detailFromSnapshot(draft) {
+  const existing = draft?.score_detail || draft?.scoreDetail || {};
+  const text = draftText(draft);
+  const trigger = draft?.emotional_trigger || draft?.emotionalTrigger || existing.emotional_trigger || existing.emotionalTrigger || draft?.hookType || "empathy";
+  const total = clampScore(draft?.totalScore || existing.totalScore || draft?.scoreTotal || draft?.score || draft?.viral_score || draft?.viralScore?.total || existing.viral_score || existing.viralScore?.total || 0);
+  return {
+    ...existing,
+    post_text: text,
+    hook: draft?.hook || existing.hook || "",
+    body: draft?.body || existing.body || text,
+    closing_line: draft?.closing_line || draft?.closingLine || existing.closing_line || draft?.cta || existing.cta || "",
+    comment_bait: draft?.comment_bait || draft?.commentBait || existing.comment_bait || existing.commentHook || draft?.commentHook || "",
+    emotional_trigger: trigger,
+    emotionalTrigger: trigger,
+    viral_score: draft?.viral_score || draft?.viralScore?.total || existing.viral_score || existing.viralScore?.total || total,
+    viralScore: draft?.viralScore || existing.viralScore || { total },
+    source_ids: safeArray(draft?.source_ids || draft?.sourceIds || existing.source_ids || draft?.sourceTrace),
+    totalScore: total,
+    hookScore: clampScore(draft?.hookScore || existing.hookScore || total),
+    commentScore: clampScore(draft?.commentScore || existing.commentScore || draft?.commentability || total),
+    saveScore: clampScore(draft?.saveScore || existing.saveScore || total),
+    shareScore: clampScore(draft?.shareScore || existing.shareScore || total),
+    noveltyScore: clampScore(draft?.noveltyScore || existing.noveltyScore || total),
+    clarityScore: clampScore(draft?.clarityScore || existing.clarityScore || total),
+    emotionScore: clampScore(draft?.emotionScore || existing.emotionScore || total),
+    isWinner: Boolean(draft?.isWinner || existing.isWinner),
+    winnerReason: draft?.winnerReason || existing.winnerReason || "",
+    weakness: draft?.weakness || existing.weakness || "",
+    improvementSuggestion: draft?.improvementSuggestion || existing.improvementSuggestion || "",
+    bestCommentBait: draft?.bestCommentBait || existing.bestCommentBait || draft?.commentHook || existing.commentHook || "",
+    riskNote: draft?.riskNote || existing.riskNote || ""
+  };
+}
+
+function draftRowFromSnapshot(snapshot, userId, draftId) {
+  const detail = detailFromSnapshot(snapshot);
+  const text = detail.post_text || draftText(snapshot);
+  if (!text) return null;
+  const row = {
+    user_id: userId,
+    text,
+    status: "scored",
+    category: snapshot?.category || "threads",
+    hook_type: snapshot?.hook_type || snapshot?.hookType || detail.emotional_trigger || "empathy",
+    score_total: clampScore(snapshot?.totalScore || snapshot?.scoreTotal || snapshot?.score || detail.totalScore || detail.viralScore?.total || 0),
+    score_detail: detail,
+    source_trace: safeArray(snapshot?.sourceTrace || snapshot?.source_trace || detail.source_ids || snapshot?.source_ids || snapshot?.sourceIds)
+  };
+  if (isUuid(draftId)) row.id = draftId;
+  return row;
+}
+
 async function supabaseRequest(env, path, init = {}, operation = path) {
   if (!hasSupabase(env)) throw new Error("Supabase service environment variables are not configured.");
   const baseUrls = supabaseRestBaseUrlCandidates(env);
@@ -142,13 +221,20 @@ function clientDraft(rowOrDraft) {
   if (!rowOrDraft) return null;
   const detail = rowOrDraft.score_detail || rowOrDraft.scoreDetail || {};
   const viralScore = detail.viralScore || detail.viral_score || rowOrDraft.viralScore || { total: rowOrDraft.score_total || rowOrDraft.scoreTotal || 0 };
+  const text = draftText(rowOrDraft);
   return {
     id: rowOrDraft.id,
     title: detail.title || rowOrDraft.title || rowOrDraft.category || "Threads draft",
     hook: detail.hook || rowOrDraft.hook || "",
-    body: detail.body || rowOrDraft.body || rowOrDraft.text || "",
-    cta: detail.cta || rowOrDraft.cta || "",
-    emotionalTrigger: detail.emotionalTrigger || rowOrDraft.hook_type || rowOrDraft.emotionalTrigger || "empathy",
+    body: detail.body || rowOrDraft.body || text,
+    cta: detail.closing_line || detail.cta || rowOrDraft.cta || "",
+    closing_line: detail.closing_line || rowOrDraft.closing_line || rowOrDraft.cta || "",
+    closingLine: detail.closing_line || rowOrDraft.closingLine || rowOrDraft.cta || "",
+    comment_bait: detail.comment_bait || rowOrDraft.comment_bait || rowOrDraft.commentBait || detail.commentHook || "",
+    commentBait: detail.comment_bait || rowOrDraft.commentBait || detail.commentHook || "",
+    post_text: detail.post_text || rowOrDraft.post_text || rowOrDraft.postText || text,
+    postText: detail.post_text || rowOrDraft.postText || text,
+    emotionalTrigger: detail.emotionalTrigger || detail.emotional_trigger || rowOrDraft.hook_type || rowOrDraft.emotionalTrigger || "empathy",
     viralScore,
     commentHook: detail.commentHook || rowOrDraft.commentHook || "",
     saveReason: detail.saveReason || rowOrDraft.saveReason || "",
@@ -171,7 +257,7 @@ function clientDraft(rowOrDraft) {
     improvementSuggestion: detail.improvementSuggestion || rowOrDraft.improvementSuggestion || "",
     bestCommentBait: detail.bestCommentBait || detail.commentHook || rowOrDraft.bestCommentBait || "",
     riskNote: detail.riskNote || rowOrDraft.riskNote || "",
-    text: rowOrDraft.text || [detail.hook, detail.body, detail.cta].filter(Boolean).join("\n"),
+    text,
     status: rowOrDraft.status,
     category: rowOrDraft.category,
     hookType: rowOrDraft.hook_type,
@@ -206,6 +292,25 @@ async function loadDraftForUser(env, draftId, userId) {
   return Array.isArray(rows) ? rows[0] : null;
 }
 
+async function createDraftFromSnapshot(env, snapshot, userId, draftId) {
+  if (!snapshot || typeof snapshot !== "object") return null;
+  const row = draftRowFromSnapshot(snapshot, userId, draftId);
+  if (!row) return null;
+  const rows = await supabaseRequest(env, "post_drafts", {
+    method: "POST",
+    body: JSON.stringify([row])
+  }, "post_drafts.insert_from_approval_snapshot");
+  return Array.isArray(rows) ? rows[0] : null;
+}
+
+async function ensureDraftForApproval(env, draftId, userId, snapshot) {
+  const existing = await loadDraftForUser(env, draftId, userId);
+  if (existing) return { draft: existing, draftId: existing.id };
+  const created = await createDraftFromSnapshot(env, snapshot, userId, draftId);
+  if (created) return { draft: created, draftId: created.id };
+  return { draft: null, draftId };
+}
+
 async function loadExistingApproval(env, draftId) {
   const rows = await supabaseRequest(env, `approval_queue?draft_id=eq.${encodeURIComponent(draftId)}&select=*`, { method: "GET" }, "approval_queue.select_existing");
   return Array.isArray(rows) ? rows[0] : null;
@@ -236,24 +341,27 @@ async function upsertApproval(env, request, status) {
   const body = await request.json().catch(() => ({}));
   const draftId = String(body.draftId || "").trim();
   const notes = typeof body.notes === "string" ? body.notes.trim().slice(0, 2000) : null;
+  const draftSnapshot = body.draft && typeof body.draft === "object" ? body.draft : null;
   if (!draftId) return json(apiError("missing_draft_id", "draftId is required."), persistenceEnv, request, 400);
 
   await ensureProfile(persistenceEnv, userId);
-  const draft = await loadDraftForUser(persistenceEnv, draftId, userId);
-  if (!draft) return json(apiError("draft_not_found", "Draft was not found for this user."), persistenceEnv, request, 404);
+  const resolved = await ensureDraftForApproval(persistenceEnv, draftId, userId, draftSnapshot);
+  if (!resolved.draft) {
+    return json(apiError("draft_not_found", "Draft was not found for this user and no draft snapshot was provided."), persistenceEnv, request, 404);
+  }
 
   const now = new Date().toISOString();
-  const approval = await saveApproval(persistenceEnv, draftId, {
+  const approval = await saveApproval(persistenceEnv, resolved.draftId, {
     status,
     approved_at: status === "approved" ? now : null,
     rejected_at: status === "rejected" ? now : null,
     notes
   });
-  await supabaseRequest(persistenceEnv, `post_drafts?id=eq.${encodeURIComponent(draftId)}&user_id=eq.${encodeURIComponent(userId)}`, {
+  await supabaseRequest(persistenceEnv, `post_drafts?id=eq.${encodeURIComponent(resolved.draftId)}&user_id=eq.${encodeURIComponent(userId)}`, {
     method: "PATCH",
     body: JSON.stringify({ status })
   }, "post_drafts.patch_status");
-  return json({ success: true, approval: clientApproval({ ...approval, draft }) }, persistenceEnv, request);
+  return json({ success: true, approval: clientApproval({ ...approval, draft: resolved.draft }) }, persistenceEnv, request);
 }
 
 export async function handleApproveDraft(request, env) {
@@ -327,47 +435,13 @@ export async function handleDashboardWithApprovals(request, env) {
         draftCount: totalDrafts,
         queueCount: approvedDrafts,
         success: true,
-        profile: {
-          id: userId,
-          displayName: "Viral OS Operator",
-          threadsConnected: Boolean(persistenceEnv.THREADS_ACCESS_TOKEN)
-        },
+        profile: { id: userId, displayName: "Viral OS Operator", threadsConnected: Boolean(persistenceEnv.THREADS_ACCESS_TOKEN) },
         drafts,
         approvalQueue: approvals.filter((approval) => approval.status === "approved"),
-        researchBriefs: (briefRows || []).map((brief) => ({
-          id: brief.id,
-          topic: brief.topic,
-          summary: brief.summary,
-          sourceCount: brief.source_count || 0,
-          createdAt: brief.created_at
-        })),
-        publishJobs: (jobRows || []).map((job) => ({
-          id: job.id,
-          draftId: job.draft_id,
-          status: job.status,
-          scheduledAt: job.scheduled_at,
-          attemptCount: job.attempt_count,
-          lastError: job.last_error
-        })),
-        auditEvents: (auditRows || []).map((event) => ({
-          id: event.id,
-          entityType: event.entity_type,
-          entityId: event.entity_id,
-          action: event.action,
-          metadata: event.metadata || {},
-          createdAt: event.created_at
-        })),
-        metrics: {
-          totalDrafts,
-          approvedDrafts,
-          rejectedDrafts,
-          awaitingApproval,
-          scheduled,
-          failed,
-          published,
-          averageScore,
-          sourceBackedDrafts: drafts.filter((draft) => draft.sourceTrace?.length).length
-        }
+        researchBriefs: (briefRows || []).map((brief) => ({ id: brief.id, topic: brief.topic, summary: brief.summary, sourceCount: brief.source_count || 0, createdAt: brief.created_at })),
+        publishJobs: (jobRows || []).map((job) => ({ id: job.id, draftId: job.draft_id, status: job.status, scheduledAt: job.scheduled_at, attemptCount: job.attempt_count, lastError: job.last_error })),
+        auditEvents: (auditRows || []).map((event) => ({ id: event.id, entityType: event.entity_type, entityId: event.entity_id, action: event.action, metadata: event.metadata || {}, createdAt: event.created_at })),
+        metrics: { totalDrafts, approvedDrafts, rejectedDrafts, awaitingApproval, scheduled, failed, published, averageScore, sourceBackedDrafts: drafts.filter((draft) => draft.sourceTrace?.length).length }
       }, persistenceEnv, request);
     } catch (error) {
       console.error("dashboard approval fallback", error);
@@ -379,26 +453,12 @@ export async function handleDashboardWithApprovals(request, env) {
     draftCount: 0,
     queueCount: 0,
     success: true,
-    profile: {
-      id: "iwakan-lab",
-      displayName: "Iwakan Lab",
-      threadsConnected: Boolean(persistenceEnv.THREADS_ACCESS_TOKEN)
-    },
+    profile: { id: "iwakan-lab", displayName: "Iwakan Lab", threadsConnected: Boolean(persistenceEnv.THREADS_ACCESS_TOKEN) },
     drafts: [],
     approvalQueue: [],
     researchBriefs: [],
     publishJobs: [],
     auditEvents: [],
-    metrics: {
-      totalDrafts: 0,
-      approvedDrafts: 0,
-      rejectedDrafts: 0,
-      awaitingApproval: 0,
-      scheduled: 0,
-      failed: 0,
-      published: 0,
-      averageScore: 0,
-      sourceBackedDrafts: 0
-    }
+    metrics: { totalDrafts: 0, approvedDrafts: 0, rejectedDrafts: 0, awaitingApproval: 0, scheduled: 0, failed: 0, published: 0, averageScore: 0, sourceBackedDrafts: 0 }
   }, persistenceEnv, request);
 }
