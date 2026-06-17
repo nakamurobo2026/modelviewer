@@ -208,6 +208,28 @@ function clientApproval(row) {
   };
 }
 
+function fallbackApprovalFromDraft(draft) {
+  return {
+    id: `approved-draft-${draft.id}`,
+    draftId: draft.id,
+    status: "approved",
+    approvedAt: draft.updatedAt || draft.publishedAt || new Date().toISOString(),
+    rejectedAt: null,
+    notes: "",
+    createdAt: draft.createdAt || draft.updatedAt || new Date().toISOString(),
+    updatedAt: draft.updatedAt || new Date().toISOString(),
+    draft
+  };
+}
+
+function mergeApprovalFallbacks(approvals, drafts) {
+  const existingDraftIds = new Set(approvals.map((approval) => approval.draftId).filter(Boolean));
+  const fallbackApprovals = drafts
+    .filter((draft) => draft.status === "approved" && !existingDraftIds.has(draft.id))
+    .map(fallbackApprovalFromDraft);
+  return [...approvals, ...fallbackApprovals];
+}
+
 function clientScheduledPost(row) {
   const draft = clientDraft(row?.draft || row?.post_drafts || row?.draft_id);
   return {
@@ -268,14 +290,21 @@ export async function handleDashboardWithSchedule(request, env) {
   if (hasSupabase(persistenceEnv) && userId) {
     try {
       await ensureProfile(persistenceEnv, userId);
-      const [draftRows, approvals, scheduledPosts, briefRows, auditRows] = await Promise.all([
+      const [draftRows, persistedApprovals, scheduledPosts, briefRows, auditRows] = await Promise.all([
         supabaseRequest(persistenceEnv, `post_drafts?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=50`, { method: "GET" }, "post_drafts.dashboard"),
-        loadApprovalsForUser(persistenceEnv, userId),
-        loadScheduledPostsForUser(persistenceEnv, userId),
+        loadApprovalsForUser(persistenceEnv, userId).catch((error) => {
+          console.error("approval queue dashboard load failed; falling back to approved drafts", error);
+          return [];
+        }),
+        loadScheduledPostsForUser(persistenceEnv, userId).catch((error) => {
+          console.error("scheduled posts dashboard load failed", error);
+          return [];
+        }),
         supabaseRequest(persistenceEnv, `research_briefs?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=20`, { method: "GET" }, "research_briefs.dashboard"),
         supabaseRequest(persistenceEnv, `audit_events?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=20`, { method: "GET" }, "audit_events.dashboard")
       ]);
       const drafts = (draftRows || []).map(clientDraft).filter(Boolean);
+      const approvals = mergeApprovalFallbacks(persistedApprovals, drafts);
       const approvedDraftIds = new Set(approvals.filter((approval) => approval.status === "approved").map((approval) => approval.draftId));
       const rejectedDraftIds = new Set(approvals.filter((approval) => approval.status === "rejected").map((approval) => approval.draftId));
       const totalDrafts = drafts.length;
