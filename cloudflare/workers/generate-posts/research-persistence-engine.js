@@ -169,6 +169,69 @@ function safeObject(value) {
   return {};
 }
 
+function normalizedElement(element, fallbackType = "angle") {
+  if (element && typeof element === "object" && !Array.isArray(element)) {
+    return {
+      elementType: element.elementType || element.element_type || fallbackType,
+      value: element.value || element.text || element.label || element.summary || fallbackType,
+      score: safeNumber(element.score, 0),
+      metadata: safeObject(element.metadata)
+    };
+  }
+  return {
+    elementType: fallbackType,
+    value: String(element || fallbackType).slice(0, 240),
+    score: 0,
+    metadata: {}
+  };
+}
+
+function uniqueByKey(items, keyFn) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = keyFn(item);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function trendPersistenceContext(research, requestBody) {
+  const selectedTrend = safeObject(research.selectedTrend || requestBody.selectedTrend);
+  const trendCategory = research.trendCategory || requestBody.trendCategory || selectedTrend.category || null;
+  const emotionalAngle = requestBody.emotionalAngle || selectedTrend.emotional_angle || selectedTrend.emotionalAngle || null;
+  const suggestedPostAngle = requestBody.suggestedPostAngle || selectedTrend.suggested_post_angle || selectedTrend.suggestedPostAngle || null;
+  const trendKeyword = selectedTrend.keyword || requestBody.topic || research.topic || "trend discovery";
+  const sourceHint = selectedTrend.source_hint || selectedTrend.sourceBackedHint || "Trend discovery context";
+  const score = safeNumber(selectedTrend.score, 72);
+
+  const sources = [];
+  if (trendCategory || emotionalAngle || suggestedPostAngle || selectedTrend.keyword) {
+    sources.push({
+      sourceType: "trend_discovery",
+      priority: "A",
+      weight: 0.8,
+      title: `${trendCategory || "trend"}: ${String(trendKeyword).slice(0, 120)}`,
+      summary: [emotionalAngle, suggestedPostAngle, sourceHint].filter(Boolean).join(" / "),
+      content: [emotionalAngle, suggestedPostAngle, sourceHint].filter(Boolean).join(" / "),
+      reason: "Trend discovery enriched this research before persistence.",
+      reliability: score,
+      relevance: score,
+      impact: Math.round(score * 0.8),
+      extractedElements: [emotionalAngle, suggestedPostAngle].filter(Boolean),
+      metadata: { selectedTrend }
+    });
+  }
+
+  const elements = [
+    trendCategory ? { elementType: "trend_category", value: trendCategory, score } : null,
+    emotionalAngle ? { elementType: "emotional_angle", value: emotionalAngle, score } : null,
+    suggestedPostAngle ? { elementType: "suggested_post_angle", value: suggestedPostAngle, score } : null
+  ].filter(Boolean);
+
+  return { selectedTrend, trendCategory, sources, elements };
+}
+
 function sourceRow(source, briefId, linkColumn = "research_brief_id") {
   const row = {
     [linkColumn]: briefId,
@@ -193,12 +256,13 @@ function sourceRow(source, briefId, linkColumn = "research_brief_id") {
 }
 
 function elementRow(element, briefId, linkColumn = "research_brief_id") {
+  const normalized = normalizedElement(element);
   return {
     [linkColumn]: briefId,
-    element_type: String(element?.elementType || element?.element_type || "angle").slice(0, 80),
-    value: String(element?.value || "").slice(0, 240) || "observation angle",
-    score: safeNumber(element?.score, 0),
-    metadata: safeObject(element?.metadata)
+    element_type: String(normalized.elementType || "angle").slice(0, 80),
+    value: String(normalized.value || "").slice(0, 240) || "observation angle",
+    score: safeNumber(normalized.score, 0),
+    metadata: safeObject(normalized.metadata)
   };
 }
 
@@ -268,25 +332,34 @@ async function persistResearchResponse(env, request, research) {
   const userId = getAuthUserId(request);
   if (!hasSupabase(env) || !userId || !research?.success) return research;
 
+  const requestBody = await request.clone().json().catch(() => ({}));
+  const trendContext = trendPersistenceContext(research, requestBody);
   const report = { ok: true, partial_success: false, tables: {}, tableErrors: [] };
   await ensureProfile(env, userId, report);
-  const topic = String(research.topic || research.selectedTrend?.keyword || "auto-discovered trend").slice(0, 500);
-  const sources = Array.isArray(research.sources) ? research.sources : [];
-  const elements = Array.isArray(research.viralElements) ? research.viralElements : [];
+  const topic = String(research.topic || requestBody.topic || trendContext.selectedTrend.keyword || "auto-discovered trend").slice(0, 500);
+  const sources = uniqueByKey([
+    ...trendContext.sources,
+    ...(Array.isArray(research.sources) ? research.sources : [])
+  ], (source) => `${source?.url || ""}:${source?.title || source?.summary || source?.content || ""}`.slice(0, 500));
+  const elements = uniqueByKey([
+    ...trendContext.elements,
+    ...(Array.isArray(research.viralElements) ? research.viralElements.map((element) => normalizedElement(element)) : [])
+  ], (element) => `${element?.elementType || element?.element_type || "angle"}:${element?.value || ""}`.slice(0, 300));
   const briefRows = await supabaseRequest(env, "research_briefs", {
     method: "POST",
     body: JSON.stringify([{
       user_id: userId,
       topic,
-      persona: String(research.persona || "Viral OS").slice(0, 120),
+      persona: String(research.persona || requestBody.persona || "Viral OS").slice(0, 120),
       summary: String(research.summary || "").slice(0, 5000),
       source_count: sources.length,
-      trend_category: research.trendCategory || research.selectedTrend?.category || null,
-      selected_trend: safeObject(research.selectedTrend),
-      viral_elements: elements.map((element) => safeObject(element).value ? element : safeObject(element)),
+      trend_category: trendContext.trendCategory,
+      selected_trend: trendContext.selectedTrend,
+      viral_elements: elements,
       metadata: {
         tavilySource: research.tavilySource || null,
-        autoDiscovered: Boolean(research.autoDiscovered)
+        autoDiscovered: Boolean(research.autoDiscovered || !requestBody.topic),
+        persistenceVersion: "hardened-v2"
       }
     }])
   }, "research_briefs.insert");
