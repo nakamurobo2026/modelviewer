@@ -8,18 +8,37 @@ function json(data, env, request, status = 200) {
 }
 
 function hasSupabase(env) {
-  return Boolean((env.SUPABASE_URL || env.SUPABASE_REST_URL || env.SUPABASE_PROJECT_REF) && env.SUPABASE_SERVICE_ROLE_KEY);
+  return Boolean((env.SUPABASE_URL || env.SUPABASE_REST_URL || env.SUPABASE_PROJECT_REF || env.SUPABASE_AUTH_ISSUER) && env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-function getAuthUserId(request) {
+function decodeAuthPayload(request) {
   const token = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   const payload = token.split(".")[1];
   if (!payload) return null;
   try {
     const normalized = payload.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(payload.length / 4) * 4, "=");
-    return JSON.parse(atob(normalized)).sub || null;
+    return JSON.parse(atob(normalized));
   } catch {
     return null;
+  }
+}
+
+function getAuthUserId(request) {
+  return decodeAuthPayload(request)?.sub || null;
+}
+
+function getAuthIssuerUrl(request) {
+  const issuer = decodeAuthPayload(request)?.iss;
+  if (typeof issuer !== "string" || !issuer) return "";
+  try {
+    const parsed = new URL(issuer);
+    if (!parsed.hostname.endsWith(".supabase.co")) return "";
+    parsed.pathname = "";
+    parsed.search = "";
+    parsed.hash = "";
+    return parsed.toString().replace(/\/$/, "");
+  } catch {
+    return "";
   }
 }
 
@@ -39,27 +58,20 @@ function safeJsonParse(value) {
   }
 }
 
-function normalizeSupabaseRestBaseUrl(env) {
-  const configured = String(env.SUPABASE_REST_URL || env.SUPABASE_URL || "").trim();
-  const projectRef = String(env.SUPABASE_PROJECT_REF || "").trim();
-  let value = configured || (projectRef ? `https://${projectRef}.supabase.co` : "");
-  if (!value) {
-    throw new SupabasePersistenceError("Supabase URL is not configured.", {
-      operation: "config",
-      missing: ["SUPABASE_URL or SUPABASE_REST_URL or SUPABASE_PROJECT_REF"]
-    });
-  }
-  if (!/^https?:\/\//i.test(value)) {
-    if (/^[a-z0-9-]+$/i.test(value)) value = `https://${value}.supabase.co`;
-    else value = `https://${value}`;
+function normalizeSupabaseRestBaseUrlValue(value, operation = "config") {
+  let normalized = String(value || "").trim();
+  if (!normalized) return "";
+  if (!/^https?:\/\//i.test(normalized)) {
+    if (/^[a-z0-9-]+$/i.test(normalized)) normalized = `https://${normalized}.supabase.co`;
+    else normalized = `https://${normalized}`;
   }
   let parsed;
   try {
-    parsed = new URL(value);
+    parsed = new URL(normalized);
   } catch (error) {
     throw new SupabasePersistenceError("Supabase URL is invalid.", {
-      operation: "config",
-      value: value.replace(/\/rest\/v1.*$/i, ""),
+      operation,
+      value: normalized.replace(/\/rest\/v1.*$/i, ""),
       cause: String(error?.message || error)
     });
   }
@@ -69,6 +81,31 @@ function normalizeSupabaseRestBaseUrl(env) {
   parsed.search = "";
   parsed.hash = "";
   return parsed.toString().replace(/\/$/, "");
+}
+
+function supabaseRestBaseUrlCandidates(env, operation = "config") {
+  const candidates = [
+    env.SUPABASE_REST_URL,
+    env.SUPABASE_URL,
+    env.SUPABASE_AUTH_ISSUER,
+    env.SUPABASE_PROJECT_REF ? `https://${String(env.SUPABASE_PROJECT_REF).trim()}.supabase.co` : ""
+  ];
+  const normalized = [];
+  const seen = new Set();
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const baseUrl = normalizeSupabaseRestBaseUrlValue(candidate, operation);
+    if (!baseUrl || seen.has(baseUrl)) continue;
+    seen.add(baseUrl);
+    normalized.push(baseUrl);
+  }
+  if (!normalized.length) {
+    throw new SupabasePersistenceError("Supabase URL is not configured.", {
+      operation,
+      missing: ["SUPABASE_URL or SUPABASE_REST_URL or SUPABASE_PROJECT_REF"]
+    });
+  }
+  return normalized;
 }
 
 function errorDetails(error) {
@@ -92,6 +129,7 @@ function persistenceDiagnostic(details) {
     status: details?.status,
     host: details?.host,
     path: details?.path,
+    attemptedHosts: details?.attemptedHosts,
     cloudflareCode: details?.cloudflareCode,
     research_briefs_payload: details?.research_briefs_payload || null
   };
@@ -178,48 +216,62 @@ async function supabaseRequest(env, path, init = {}, operation = path) {
     });
   }
 
-  const baseUrl = normalizeSupabaseRestBaseUrl(env);
-  const url = `${baseUrl}/${path.replace(/^\/+/, "")}`;
-  const endpoint = new URL(url);
-  let response;
-  let raw = "";
-  try {
-    response = await fetch(url, {
-      ...init,
-      headers: {
-        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-        "Content-Type": "application/json",
-        Prefer: "return=representation",
-        ...(init.headers || {})
-      }
-    });
-    raw = await response.text();
-  } catch (error) {
-    throw new SupabasePersistenceError("Supabase fetch failed before an HTTP response was returned.", {
-      operation,
-      method: init.method || "GET",
-      host: endpoint.hostname,
-      path: endpoint.pathname,
-      cause: String(error?.message || error)
-    });
+  const baseUrls = supabaseRestBaseUrlCandidates(env, operation);
+  const attemptedHosts = [];
+  let lastError = null;
+
+  for (let index = 0; index < baseUrls.length; index += 1) {
+    const baseUrl = baseUrls[index];
+    const url = `${baseUrl}/${path.replace(/^\/+/, "")}`;
+    const endpoint = new URL(url);
+    attemptedHosts.push(endpoint.hostname);
+    let response;
+    let raw = "";
+    try {
+      response = await fetch(url, {
+        ...init,
+        headers: {
+          apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+          "Content-Type": "application/json",
+          Prefer: "return=representation",
+          ...(init.headers || {})
+        }
+      });
+      raw = await response.text();
+    } catch (error) {
+      lastError = new SupabasePersistenceError("Supabase fetch failed before an HTTP response was returned.", {
+        operation,
+        method: init.method || "GET",
+        host: endpoint.hostname,
+        path: endpoint.pathname,
+        attemptedHosts,
+        cause: String(error?.message || error)
+      });
+      continue;
+    }
+
+    if (!response.ok) {
+      const parsed = safeJsonParse(raw);
+      const cloudflareCode = raw.match(/error\s+code:\s*(\d+)/i)?.[1] || raw.match(/code\s*[:=]\s*(\d+)/i)?.[1] || parsed?.code;
+      lastError = new SupabasePersistenceError(`Supabase ${response.status} during ${operation}.`, {
+        operation,
+        method: init.method || "GET",
+        host: endpoint.hostname,
+        path: endpoint.pathname,
+        attemptedHosts,
+        status: response.status,
+        statusText: response.statusText,
+        cloudflareCode,
+        response: parsed || raw.slice(0, 1000)
+      });
+      if (String(cloudflareCode) === "1016" && index < baseUrls.length - 1) continue;
+      throw lastError;
+    }
+    return raw ? JSON.parse(raw) : null;
   }
 
-  if (!response.ok) {
-    const parsed = safeJsonParse(raw);
-    const cloudflareCode = raw.match(/error\s+code:\s*(\d+)/i)?.[1] || raw.match(/code\s*[:=]\s*(\d+)/i)?.[1] || parsed?.code;
-    throw new SupabasePersistenceError(`Supabase ${response.status} during ${operation}.`, {
-      operation,
-      method: init.method || "GET",
-      host: endpoint.hostname,
-      path: endpoint.pathname,
-      status: response.status,
-      statusText: response.statusText,
-      cloudflareCode,
-      response: parsed || raw.slice(0, 1000)
-    });
-  }
-  return raw ? JSON.parse(raw) : null;
+  throw lastError || new SupabasePersistenceError("Supabase request failed.", { operation, attemptedHosts });
 }
 
 async function ensureProfile(env, userId, report) {
@@ -448,12 +500,14 @@ async function insertResearchBrief(env, row, debugPayload, report) {
 
 async function persistResearchResponse(env, request, research) {
   const userId = getAuthUserId(request);
-  if (!hasSupabase(env) || !userId || !research?.success) return research;
+  const authIssuer = getAuthIssuerUrl(request);
+  const persistenceEnv = authIssuer ? { ...env, SUPABASE_AUTH_ISSUER: authIssuer } : env;
+  if (!hasSupabase(persistenceEnv) || !userId || !research?.success) return research;
 
   const requestBody = await request.clone().json().catch(() => ({}));
   const trendContext = trendPersistenceContext(research, requestBody);
   const report = { ok: true, partial_success: false, tables: {}, tableErrors: [] };
-  await ensureProfile(env, userId, report);
+  await ensureProfile(persistenceEnv, userId, report);
   const topic = String(research.topic || requestBody.topic || trendContext.selectedTrend.keyword || "auto-discovered trend").slice(0, 500);
   const query = String(research.query || requestBody.query || requestBody.topic || topic || "auto-discovered trend").slice(0, 500);
   const persona = String(research.persona || requestBody.persona || "Viral OS").slice(0, 120);
@@ -489,7 +543,7 @@ async function persistResearchResponse(env, request, research) {
     source_count: sources.length
   };
   const researchBriefsPayload = inspectResearchBriefPayload(briefRow, { previous_payload: previousPayload, schema_safe_payload: briefRow }, report.tables.profiles || null);
-  const briefRows = await insertResearchBrief(env, briefRow, researchBriefsPayload, report);
+  const briefRows = await insertResearchBrief(persistenceEnv, briefRow, researchBriefsPayload, report);
   const brief = Array.isArray(briefRows) ? briefRows[0] : null;
   if (!brief?.id) {
     throw new SupabasePersistenceError("Supabase research_briefs insert returned no id.", {
@@ -502,14 +556,14 @@ async function persistResearchResponse(env, request, research) {
 
   const sourceRows = sources.slice(0, 20).map((source) => sourceRow(source, brief.id, "research_brief_id"));
   const sourceFallbackRows = sources.slice(0, 20).map((source) => sourceRow(source, brief.id, "brief_id"));
-  await insertRowsWithFallback(env, "research_sources", sourceRows, report, {
+  await insertRowsWithFallback(persistenceEnv, "research_sources", sourceRows, report, {
     operation: "research_sources.insert",
     fallbackRows: sourceFallbackRows
   });
 
   const elementRows = elements.slice(0, 24).map((element) => elementRow(element, brief.id, "research_brief_id"));
   const elementFallbackRows = elements.slice(0, 24).map((element) => elementRow(element, brief.id, "brief_id"));
-  await insertRowsWithFallback(env, "viral_elements", elementRows, report, {
+  await insertRowsWithFallback(persistenceEnv, "viral_elements", elementRows, report, {
     operation: "viral_elements.insert",
     fallbackRows: elementFallbackRows
   });
@@ -537,6 +591,7 @@ function persistenceErrorPayload(data, error) {
       status: diagnostic.status,
       host: diagnostic.host,
       path: diagnostic.path,
+      attemptedHosts: diagnostic.attemptedHosts,
       cloudflareCode: diagnostic.cloudflareCode,
       research_briefs_payload: diagnostic.research_briefs_payload || null
     },
