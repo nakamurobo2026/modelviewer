@@ -85,9 +85,9 @@ function persistenceDiagnostic(details) {
   return {
     table: details?.table || tableFromOperation(details?.operation),
     operation: details?.operation || "unknown",
-    code: response?.code || details?.cloudflareCode || details?.status || "unknown",
-    message: response?.message || details?.statusText || details?.cause || "Supabase persistence failed.",
-    details: response?.details || details?.response || details?.cause || null,
+    code: response?.code || details?.code || details?.cloudflareCode || details?.status || "unknown",
+    message: response?.message || details?.message || details?.statusText || details?.cause || "Supabase persistence failed.",
+    details: response?.details || details?.details || details?.response || details?.cause || null,
     hint: response?.hint || details?.hint || null,
     status: details?.status,
     host: details?.host,
