@@ -1,73 +1,72 @@
 const GENRE_TAXONOMY = [
-  { genre: "empathy", label: "共感", trigger: "empathy", buzz_elements: ["共感", "あるある", "コメント余白"], score: 86 },
-  { genre: "nostalgia", label: "懐かしさ", trigger: "nostalgia", buzz_elements: ["懐かしさ", "記憶", "保存されやすい"], score: 82 },
-  { genre: "curiosity", label: "好奇心", trigger: "curiosity", buzz_elements: ["なぜ感", "違和感", "続きを考えたくなる"], score: 84 },
-  { genre: "surprise", label: "驚き", trigger: "surprise", buzz_elements: ["意外性", "見方の反転", "発見"], score: 83 },
-  { genre: "controversy", label: "賛否", trigger: "controversy", buzz_elements: ["賛否", "価値観", "語りたくなる"], score: 85 },
-  { genre: "personal_story", label: "個人体験", trigger: "empathy", buzz_elements: ["自分語り", "生活感", "人間味"], score: 81 },
-  { genre: "one_line_punch", label: "一言パンチ", trigger: "surprise", buzz_elements: ["短文", "刺さる一言", "引用されやすい"], score: 80 },
-  { genre: "comment_bait", label: "コメント誘発", trigger: "comment bait", buzz_elements: ["答えたくなる", "経験募集", "余白"], score: 88 },
-  { genre: "failure_story", label: "失敗談", trigger: "empathy", buzz_elements: ["失敗", "反省", "人間味"], score: 83 },
-  { genre: "before_after", label: "Before/After", trigger: "surprise", buzz_elements: ["変化", "比較", "保存性"], score: 84 },
-  { genre: "unpopular_opinion", label: "逆張り", trigger: "controversy", buzz_elements: ["少数派", "賛否", "反応"], score: 84 },
-  { genre: "micro_observation", label: "微細観察", trigger: "curiosity", buzz_elements: ["細部", "情景", "分かる感"], score: 82 },
-  { genre: "weird_gap", label: "変なズレ", trigger: "curiosity", buzz_elements: ["違和感", "ズレ", "不思議"], score: 83 },
-  { genre: "lifehack", label: "ライフハック", trigger: "save", buzz_elements: ["保存", "実用", "あとで使える"], score: 85 },
-  { genre: "hot_take", label: "炎上話題", trigger: "controversy", buzz_elements: ["反応が分かれる", "意見募集", "注意"], score: 82 }
+  { genre: "female_truth", label: "女の本音", trigger: "empathy", buzz_elements: ["女の本音", "共感", "余白"], score: 90 },
+  { genre: "subtle_hint", label: "匂わせ", trigger: "curiosity", buzz_elements: ["匂わせ", "曖昧さ", "察してほしい"], score: 88 },
+  { genre: "night_line", label: "夜のLINE", trigger: "empathy", buzz_elements: ["深夜", "LINE", "未読"], score: 89 },
+  { genre: "green_or_red_flag", label: "脈あり脈なし", trigger: "curiosity", buzz_elements: ["脈あり脈なし", "判定", "返信速度"], score: 87 },
+  { genre: "ex_memory", label: "元カレ元カノ", trigger: "nostalgia", buzz_elements: ["元カレ", "記憶", "未練"], score: 86 },
+  { genre: "jealousy", label: "嫉妬", trigger: "controversy", buzz_elements: ["嫉妬", "ストーリー", "足跡"], score: 88 },
+  { genre: "situationship", label: "都合のいい関係", trigger: "controversy", buzz_elements: ["曖昧な関係", "都合のよさ", "距離感"], score: 89 },
+  { genre: "more_than_friends", label: "友達以上恋人未満", trigger: "empathy", buzz_elements: ["友達以上恋人未満", "境界線", "言えない"], score: 87 },
+  { genre: "strong_girl", label: "強がり", trigger: "empathy", buzz_elements: ["強がり", "本音", "大丈夫じゃない"], score: 86 },
+  { genre: "沼", label: "沼", trigger: "curiosity", buzz_elements: ["沼", "依存", "待ってしまう"], score: 88 },
+  { genre: "romance_aruaru", label: "恋愛あるある", trigger: "empathy", buzz_elements: ["恋愛あるある", "分かる", "コメント余白"], score: 90 },
+  { genre: "comment_bait", label: "コメント誘発", trigger: "comment bait", buzz_elements: ["コメント誘発", "経験募集", "賛否"], score: 91 },
+  { genre: "adult_distance", label: "大人の距離感", trigger: "empathy", buzz_elements: ["大人の距離感", "寂しさ", "余裕のふり"], score: 87 },
+  { genre: "sns_love", label: "SNSと恋愛", trigger: "surprise", buzz_elements: ["SNS", "恋愛", "承認欲求"], score: 86 }
 ];
 
 const CATEGORY_TO_GENRES = {
   "自動ミックス": [], Auto: [],
-  "共感": ["empathy", "personal_story", "micro_observation", "comment_bait"],
-  "懐かしさ": ["nostalgia", "before_after", "personal_story", "empathy"],
-  "違和感": ["weird_gap", "curiosity", "micro_observation", "surprise"],
-  "賛否": ["controversy", "unpopular_opinion", "hot_take", "comment_bait"],
-  "驚き": ["surprise", "curiosity", "before_after", "weird_gap"],
-  "あるある": ["empathy", "micro_observation", "comment_bait", "personal_story"],
-  "失敗談": ["failure_story", "personal_story", "empathy", "comment_bait"],
-  "制作過程": ["failure_story", "lifehack", "personal_story", "micro_observation"],
-  "地元文化": ["micro_observation", "nostalgia", "empathy", "comment_bait"],
-  "一言パンチ": ["one_line_punch", "weird_gap", "unpopular_opinion", "surprise"],
-  "コメント誘発": ["comment_bait", "controversy", "empathy", "weird_gap"],
-  "Before / After": ["before_after", "nostalgia", "surprise", "lifehack"],
-  "Before/After": ["before_after", "nostalgia", "surprise", "lifehack"],
-  "炎上注意": ["hot_take", "unpopular_opinion", "controversy", "comment_bait"]
+  "女の本音": ["female_truth", "strong_girl", "adult_distance", "romance_aruaru"],
+  "匂わせ": ["subtle_hint", "sns_love", "jealousy", "comment_bait"],
+  "夜のLINE": ["night_line", "green_or_red_flag", "沼", "adult_distance"],
+  "脈あり脈なし": ["green_or_red_flag", "comment_bait", "night_line", "female_truth"],
+  "元カレ元カノ": ["ex_memory", "nostalgia", "sns_love", "strong_girl"],
+  "嫉妬": ["jealousy", "sns_love", "controversy", "female_truth"],
+  "都合のいい関係": ["situationship", "adult_distance", "strong_girl", "comment_bait"],
+  "友達以上恋人未満": ["more_than_friends", "subtle_hint", "night_line", "comment_bait"],
+  "強がり": ["strong_girl", "female_truth", "adult_distance", "empathy"],
+  "沼": ["沼", "night_line", "situationship", "green_or_red_flag"],
+  "恋愛あるある": ["romance_aruaru", "female_truth", "comment_bait", "green_or_red_flag"],
+  "賛否": ["situationship", "jealousy", "comment_bait", "adult_distance"],
+  "コメント誘発": ["comment_bait", "green_or_red_flag", "romance_aruaru", "situationship"]
 };
 
 const PERSONA_PROFILES = {
-  "違和感ハンター": { tone: "違和感を短く言語化", prefer: ["weird_gap", "curiosity", "micro_observation"] },
-  "地元あるある職人": { tone: "生活のあるある", prefer: ["empathy", "comment_bait", "micro_observation"] },
-  "昭和ノスタルジー語り": { tone: "懐かしさと記憶", prefer: ["nostalgia", "before_after", "personal_story"] },
-  "炎上しない賛否メーカー": { tone: "安全な賛否", prefer: ["controversy", "unpopular_opinion", "hot_take"] },
-  "深夜ラジオの独白": { tone: "独り言と余白", prefer: ["personal_story", "empathy", "weird_gap"] },
-  "町の観察者": { tone: "生活の細部観察", prefer: ["micro_observation", "curiosity", "empathy"] },
-  "職人の裏側語り": { tone: "過程と気づき", prefer: ["failure_story", "lifehack", "one_line_punch"] },
-  "失敗談コレクター": { tone: "失敗と人間味", prefer: ["failure_story", "personal_story", "empathy"] },
-  "一言パンチ職人": { tone: "短文の切れ味", prefer: ["one_line_punch", "weird_gap", "unpopular_opinion"] },
-  "コメント誘発屋": { tone: "答えたくなる余白", prefer: ["comment_bait", "controversy", "empathy"] }
+  "匂わせ女子": { tone: "短く曖昧。説明しすぎず、気づいてほしい余白を残す", prefer: ["subtle_hint", "sns_love", "adult_distance"] },
+  "夜更かし女子": { tone: "深夜の弱さと鋭さ。やわらかいけど刺さる", prefer: ["night_line", "沼", "strong_girl"] },
+  "恋愛相談室のお姉さん": { tone: "落ち着いた経験値。責めずに関係性の本質を見る", prefer: ["female_truth", "adult_distance", "comment_bait"] },
+  "元カレ研究家": { tone: "未練を笑える距離で観察する", prefer: ["ex_memory", "sns_love", "strong_girl"] },
+  "本音を言わない女": { tone: "言えない本音を短く漏らす", prefer: ["female_truth", "subtle_hint", "more_than_friends"] },
+  "強がり女子": { tone: "大丈夫なふりの裏にある弱さ", prefer: ["strong_girl", "night_line", "adult_distance"] },
+  "重くならない毒舌女子": { tone: "軽く毒を混ぜる。攻撃的にはしない", prefer: ["green_or_red_flag", "situationship", "comment_bait"] },
+  "恋愛あるある収集家": { tone: "あるあるを自然に置く。決めつけない", prefer: ["romance_aruaru", "female_truth", "comment_bait"] },
+  "返信速度分析女子": { tone: "返信速度と温度差を観察する", prefer: ["green_or_red_flag", "night_line", "沼"] },
+  "脈なし判定女子": { tone: "現実を見るけど冷たすぎない", prefer: ["green_or_red_flag", "situationship", "comment_bait"] },
+  "沼らせ観察女子": { tone: "沼る瞬間を少し引いて見る", prefer: ["沼", "subtle_hint", "jealousy"] },
+  "大人の距離感女子": { tone: "近づきすぎない寂しさ。静かな恋愛心理", prefer: ["adult_distance", "situationship", "female_truth"] }
 };
 
 const COHERENT_SCENE_CARDS = [
-  { domain: "人間関係", topic: "返信が遅いだけで距離を感じる瞬間", scene_lines: ["22時の部屋。", "未読の通知がスマホの通知欄に一つだけ残っている。", "友達が返事を打ちかけて画面を閉じている。"], object: "未読の通知", human_action: "友達が返事を打ちかけて画面を閉じている", emotion: "嫌われたわけじゃないのに少し気になる", meaning: "返信速度より、止まっている時間の方に距離が出る", comment_question: "返信って、どこから遅いと感じるんだろう" },
-  { domain: "恋愛", topic: "好きなのに疲れる関係", scene_lines: ["夜のコンビニ前。", "ぬるくなったコーヒーを片手で持っている。", "待っている人が短いLINEを何度も読み返している。"], object: "ぬるくなったコーヒー", human_action: "待っている人が短いLINEを何度も読み返している", emotion: "楽しいはずなのに少し消耗する", meaning: "好きな気持ちと安心できる気持ちは別物かもしれない", comment_question: "安心できる恋愛って、どんな状態なんだろう" },
-  { domain: "仕事", topic: "頑張ってる人ほど損して見える職場", scene_lines: ["18時のオフィス。", "コピー用紙の束がコピー機の横に置かれている。", "真面目な人が誰にも言わずにコピー用紙を補充している。"], object: "コピー用紙", human_action: "真面目な人が誰にも言わずにコピー用紙を補充している", emotion: "評価されない仕事だけが静かに増える", meaning: "頑張りが見えない場所ほど、誰かの負担で回っている", comment_question: "こういう小さい仕事、誰が気づいてるんだろう" },
-  { domain: "お金", topic: "節約してるのに不安が減らない", scene_lines: ["スーパーの袋詰め台。", "レシートの端数が買い物袋の上に残っている。", "買い物を終えた人が袋を持ったまま家計簿アプリを開いている。"], object: "レシートの端数", human_action: "買い物を終えた人が袋を持ったまま家計簿アプリを開いている", emotion: "削っているのに安心が増えない", meaning: "節約は数字を減らすことより、不安と付き合う作業に近い", comment_question: "節約って、どこから我慢になるんだろう" },
-  { domain: "AI", topic: "AIで楽になるはずなのに考える量が増える", scene_lines: ["深夜のデスク。", "生成された文章が画面いっぱいに並んでいる。", "作業している人が採用する一文を選べずにカーソルだけ動かしている。"], object: "生成された文章", human_action: "作業している人が採用する一文を選べずにカーソルだけ動かしている", emotion: "便利なのに判断だけが増えている", meaning: "AIが減らすのは作業で、迷いはまだ人間側に残る", comment_question: "AIで楽になったはずなのに、別の疲れ方してない？" },
-  { domain: "SNS", topic: "投稿しない人の方が幸せそうに見える", scene_lines: ["寝る前の布団。", "更新されないプロフィールがそのまま残っている。", "見るだけの人が通知を消してスマホを伏せている。"], object: "更新されないプロフィール", human_action: "見るだけの人が通知を消してスマホを伏せている", emotion: "見せない生活の方が軽く見える", meaning: "発信しない選択にも、ちゃんと強さがある", comment_question: "投稿しない人の方が生活うまそうに見える時ない？" },
-  { domain: "メンタル", topic: "休んでいるのに休まらない日", scene_lines: ["休日の昼の部屋。", "閉めたカーテンの隙間から細い光が入っている。", "布団の中の人が通知だけ消してまた目を閉じている。"], object: "閉めたカーテン", human_action: "布団の中の人が通知だけ消してまた目を閉じている", emotion: "何もしていないのに頭だけ忙しい", meaning: "休むことと、回復することは同じじゃない", comment_question: "本当に休めた日って、最近いつだったんだろう" },
-  { domain: "子育て", topic: "親の普通が子どもには重い瞬間", scene_lines: ["朝の玄関。", "開いたランドセルが床に置かれている。", "親が忘れ物を確認しながら子どもの顔色を見ている。"], object: "開いたランドセル", human_action: "親が忘れ物を確認しながら子どもの顔色を見ている", emotion: "心配のつもりが少し圧になる", meaning: "正しさは近すぎると、相手には管理に見えることがある", comment_question: "心配とコントロールの境目ってどこだろう" },
-  { domain: "健康", topic: "健康のための行動がストレスになる", scene_lines: ["夜の洗面所。", "歩数アプリの数字だけが明るく表示されている。", "寝る前の人が歯ブラシを持ったまま今日の歩数を見ている。"], object: "歩数アプリ", human_action: "寝る前の人が歯ブラシを持ったまま今日の歩数を見ている", emotion: "正しい習慣なのに少し追われている", meaning: "健康を数字で追いすぎると、体より先に気持ちが疲れる", comment_question: "健康管理って、いつから義務っぽくなるんだろう" },
-  { domain: "学校", topic: "学校でしか通じない謎ルール", scene_lines: ["放課後の廊下。", "古い掲示物が曲がって貼られている。", "学生がその前で一度止まってから何も言わずに通り過ぎている。"], object: "古い掲示物", human_action: "学生がその前で一度止まってから何も言わずに通り過ぎている", emotion: "守っている理由が誰にも分からない感じが残る", meaning: "謎ルールは、説明されないまま空気として受け継がれる", comment_question: "学校にしかない謎ルール、まだ覚えてる？" },
-  { domain: "エンタメ", topic: "倍速視聴で感動だけ薄くなる", scene_lines: ["ソファの上。", "再生速度ボタンが1.5倍のまま光っている。", "見ている人が泣く場面だけ通常速度に戻している。"], object: "再生速度ボタン", human_action: "見ている人が泣く場面だけ通常速度に戻している", emotion: "効率よく見たのに何かが残りにくい", meaning: "物語は短くできても、気持ちは倍速に追いつかない", comment_question: "楽しむことまで時短していいのか、たまに迷う" },
-  { domain: "ライフハック", topic: "便利グッズを買うほど部屋が散らかる", scene_lines: ["片付け途中の部屋。", "使っていない収納用品が床に二つ並んでいる。", "片付けようとした人が空のケースを持ったまま置き場所を探している。"], object: "使っていない収納用品", human_action: "片付けようとした人が空のケースを持ったまま置き場所を探している", emotion: "整えるための物がまた増えている", meaning: "便利さは、買うより減らす方が難しい", comment_question: "片付けグッズで散らかったこと、普通にあるよね" },
-  { domain: "転職", topic: "辞めたい理由が給料だけじゃない時", scene_lines: ["朝の改札。", "通勤定期が読み取られて小さく音が鳴る。", "会社へ向かう人が改札を抜けたあと一瞬だけ立ち止まっている。"], object: "通勤定期", human_action: "会社へ向かう人が改札を抜けたあと一瞬だけ立ち止まっている", emotion: "条件は悪くないのに気持ちだけ削れている", meaning: "辞めたい理由は、数字より朝の体の重さに出る", comment_question: "仕事を変えたい理由って、言葉にしにくい時ある" },
-  { domain: "炎上話題", topic: "正論なのに嫌われる言い方", scene_lines: ["投稿画面。", "短いコメントが入力欄に残ったままになっている。", "書いた人が送信せずに語尾だけ何度も直している。"], object: "短いコメント", human_action: "書いた人が送信せずに語尾だけ何度も直している", emotion: "内容より温度で反発される怖さがある", meaning: "正しさは、言い方で負けることがある", comment_question: "同じこと言ってるのに、言い方で全然変わるよね" },
-  { domain: "比較ネタ", topic: "昔より便利なのに幸福感が増えない", scene_lines: ["店のメニュー前。", "タッチパネルの選択肢が多すぎて光っている。", "注文する人が戻るボタンを押してまた最初から見直している。"], object: "タッチパネル", human_action: "注文する人が戻るボタンを押してまた最初から見直している", emotion: "選べるほど迷いが増える", meaning: "便利になるほど、決める疲れが増えることがある", comment_question: "選択肢が多いほど幸せ、って本当なんだろうか" },
-  { domain: "地域ネタ", topic: "地方スーパーの閉店前", scene_lines: ["17時過ぎの地方スーパー。", "半額シールの惣菜だけが棚に残っている。", "買い物客が惣菜棚の前で一度止まり、買わずに通り過ぎている。"], object: "半額シールの惣菜", human_action: "買い物客が惣菜棚の前で一度止まり、買わずに通り過ぎている", emotion: "店内より町の静けさの方が濃く見える", meaning: "地方の夕方は、売れ残りより人の少なさが先に目に入る", comment_question: "夕方のスーパーだけ空気が変わる感じ、あるよね" }
+  { domain: "恋愛", topic: "夜中だけ優しい人", scene_lines: ["深夜1時のLINE画面。", "青白い通知だけがベッドの上で光っている。", "女の子が返事を打って、送信前に一度だけ消している。"], object: "青白い通知", human_action: "女の子が返事を打って、送信前に一度だけ消している", emotion: "優しいのに、朝にはなかったことにされそうで少し寂しい", meaning: "夜中の優しさって、約束じゃなくて気分のこともある", comment_question: "朝になっても同じ温度でいてくれる人、どれくらいいるんだろう" },
+  { domain: "返信速度", topic: "返信遅いのにストーリーは見てる", scene_lines: ["ベッドの上のスマホ。", "未読のLINEの横で、ストーリーの足跡だけが増えている。", "女の子が画面を閉じて、またすぐ開いている。"], object: "ストーリーの足跡", human_action: "女の子が画面を閉じて、またすぐ開いている", emotion: "見てるなら返せるでしょ、って思う自分が少し嫌になる", meaning: "返信より先に足跡が来ると、距離感だけはっきり見える", comment_question: "これ、気にしないでいられる人いる？" },
+  { domain: "脈あり脈なし", topic: "即レスと未読の温度差", scene_lines: ["夜のキッチン。", "冷めたマグカップの横でスマホが伏せられている。", "女の子が通知音のたびに、関係ないアプリまで確認している。"], object: "冷めたマグカップ", human_action: "女の子が通知音のたびに、関係ないアプリまで確認している", emotion: "期待してないふりをしてる時ほど、期待してる", meaning: "脈ありかどうかって、相手より自分の待ち方に出る", comment_question: "待ってる時点で、もう負けてる気がする時ない？" },
+  { domain: "元カレ元カノ", topic: "元カレの匂わせ投稿", scene_lines: ["帰り道の駅のホーム。", "元カレの新しい投稿が画面に残っている。", "女の子が見なかったふりでスクロールして、結局もう一回戻っている。"], object: "元カレの新しい投稿", human_action: "女の子が見なかったふりでスクロールして、結局もう一回戻っている", emotion: "もう関係ないはずなのに、知らない女の影だけは分かる", meaning: "忘れたかどうかは、名前じゃなくて指の戻り方に出る", comment_question: "見なきゃいいのに見る投稿、あるよね" },
+  { domain: "匂わせ", topic: "見てほしい人にだけ届いてほしい投稿", scene_lines: ["夜の部屋。", "消した下書きがスマホのメモに残っている。", "女の子が言えなかった一言の代わりに、何でもないストーリーを上げている。"], object: "消した下書き", human_action: "女の子が言えなかった一言の代わりに、何でもないストーリーを上げている", emotion: "みんなに見せてるふりで、一人だけに気づいてほしい", meaning: "匂わせって、言えない本音のいちばん安全な置き場所かもしれない", comment_question: "見てほしい人ほど、直接送れないのなんでだろう" },
+  { domain: "嫉妬", topic: "いいね欄で知る距離感", scene_lines: ["深夜の布団の中。", "相手のいいね欄だけがやけに明るく見える。", "女の子が知らない名前を見つけて、何も起きてないのに胸がざわついている。"], object: "相手のいいね欄", human_action: "女の子が知らない名前を見つけて、何も起きてないのに胸がざわついている", emotion: "責めるほどじゃないのに、平気なふりもできない", meaning: "嫉妬って証拠より、想像の方が先に刺さる", comment_question: "見なきゃいい場所ほど見ちゃうの、あれ何" },
+  { domain: "友達以上恋人未満", topic: "言えない関係の帰り道", scene_lines: ["終電前の改札。", "渡せなかったコンビニの袋が手元に残っている。", "女の子がまたねだけ言って、少しだけ振り返っている。"], object: "渡せなかったコンビニの袋", human_action: "女の子がまたねだけ言って、少しだけ振り返っている", emotion: "好きって言ったら終わりそうで、友達のふりをしてる", meaning: "曖昧な関係は、進まないんじゃなくて壊さないように止まってる時がある", comment_question: "友達以上って、どこから恋人未満になるんだろう" },
+  { domain: "都合のいい関係", topic: "会いたい時だけ来る連絡", scene_lines: ["金曜の夜のLINE画面。", "短い『今なにしてる？』だけが通知に残っている。", "女の子が返事を打つ前に、前回泣いた日を思い出している。"], object: "短い『今なにしてる？』", human_action: "女の子が返事を打つ前に、前回泣いた日を思い出している", emotion: "分かってるのに、まだ期待してしまう自分がいる", meaning: "都合よく扱われてる時ほど、優しさの一回が重くなる", comment_question: "分かってるのに返したこと、ある？" },
+  { domain: "片思い", topic: "送れなかった一言", scene_lines: ["夜中のトーク画面。", "入力欄に『会いたい』だけが残っている。", "女の子が送信ボタンの手前で止まって、全部消している。"], object: "『会いたい』の一言", human_action: "女の子が送信ボタンの手前で止まって、全部消している", emotion: "重いと思われたくなくて、本音だけいつも下書きになる", meaning: "言えない言葉ほど、こっちの中では何回も送ってる", comment_question: "送らなかったLINEの方が、長く残ることない？" },
+  { domain: "承認欲求", topic: "好きな人だけに見てほしいSNS", scene_lines: ["夜の洗面台。", "撮り直した自撮りがカメラロールに何枚も残っている。", "女の子が投稿ボタンを押す前に、あの人が見る時間だけ考えている。"], object: "撮り直した自撮り", human_action: "女の子が投稿ボタンを押す前に、あの人が見る時間だけ考えている", emotion: "みんなに褒められたいんじゃなくて、一人に気づかれたい", meaning: "承認欲求って、人数じゃなくて相手が決まってる時がある", comment_question: "誰に見られたいかまで決まってる投稿、あるよね" },
+  { domain: "大人の距離感", topic: "踏み込まない優しさ", scene_lines: ["雨上がりの帰り道。", "濡れた傘が駅の壁に立てかけられている。", "女の子が聞きたいことを飲み込んで、今日はありがとうだけ送っている。"], object: "濡れた傘", human_action: "女の子が聞きたいことを飲み込んで、今日はありがとうだけ送っている", emotion: "大人っぽく見える距離感ほど、本当は我慢でできてる", meaning: "踏み込まない優しさと、踏み込めない寂しさは似ている", comment_question: "大人の恋愛って、言わないこと増えすぎない？" },
+  { domain: "人間関係", topic: "女友達への嫉妬", scene_lines: ["カフェのテーブル。", "友達のスマホに届いた通知だけがちらっと見える。", "女の子が笑いながら、聞きたいことを聞かずにストローを回している。"], object: "友達のスマホ通知", human_action: "女の子が笑いながら、聞きたいことを聞かずにストローを回している", emotion: "仲良いからこそ、比べちゃう自分を見せたくない", meaning: "女同士の距離感は、好きと嫉妬が同じ場所に置かれる時がある", comment_question: "友達なのに少し苦しくなる瞬間、ない？" },
+  { domain: "恋愛あるある", topic: "好きじゃない人からの即レス", scene_lines: ["昼休みのスマホ画面。", "好きじゃない人からの即レスが通知欄に並んでいる。", "女の子がその通知を見ながら、好きな人の未読だけ何度も確認している。"], object: "好きじゃない人からの即レス", human_action: "女の子がその通知を見ながら、好きな人の未読だけ何度も確認している", emotion: "欲しい優しさだけ、なかなか欲しい場所から来ない", meaning: "恋愛って、量より相手で全部変わる", comment_question: "即レスがうれしいかどうか、相手次第すぎる" },
+  { domain: "沼", topic: "既読だけで機嫌が変わる", scene_lines: ["朝の電車。", "既読だけついたトーク画面が膝の上で光っている。", "女の子が返信は来てないのに、少しだけ口角を戻している。"], object: "既読だけついたトーク画面", human_action: "女の子が返信は来てないのに、少しだけ口角を戻している", emotion: "返事じゃないのに、見てくれた事実だけで今日が少し持つ", meaning: "沼って、幸せの基準がどんどん低くなる", comment_question: "既読だけで安心したこと、ある？" },
+  { domain: "浮気疑惑", topic: "スマホを伏せる瞬間", scene_lines: ["二人でいるテーブル。", "伏せられたスマホがコップの横に置かれている。", "女の子が何も言わずに、その置き方だけ覚えている。"], object: "伏せられたスマホ", human_action: "女の子が何も言わずに、その置き方だけ覚えている", emotion: "証拠はないのに、空気だけ先に変わる", meaning: "疑いって、見たものより見せなかったものから始まる", comment_question: "スマホの置き方で察する瞬間、あるよね" }
 ];
 
 const BAD_PUBLIC_PHRASES = /調査によると|この記事では|について解説します|出典|引用|ソース|研究|分析結果|レポート|SEO|信頼度|取得元|source|research|reliability|score|viralScore|totalScore|source_ids/gi;
-const ABSTRACT_ONLY = /^(頑張ってる人|人間関係|恋愛|仕事|お金|AI|SNS|健康|メンタル|共感|賛否|違和感|懐かしさ|幸せ|不安|孤独|努力|正論|便利)[^。！？]{0,40}$/;
+const UNSAFE_ROMANCE = /未成年|中学生|高校生|児童|裸|性器|性交|セックス|レイプ|強姦|無理やり|脅し|監禁|盗撮|痴漢|暴力|殴|殺|自殺|死ね|ブス|デブ|消えろ/i;
 
 function stripBadPhrases(value) {
   BAD_PUBLIC_PHRASES.lastIndex = 0;
@@ -75,23 +74,24 @@ function stripBadPhrases(value) {
 }
 
 function countJapaneseChars(value) { return [...String(value || "")].length; }
-function compactToLimit(text, max = 220) {
+function compactToLimit(text, max = 180) {
   const chars = [...String(text || "")];
   if (chars.length <= max) return text;
-  return chars.slice(0, max - 1).join("") + "。";
+  const sliced = chars.slice(0, max - 1).join("");
+  const lastBreak = Math.max(sliced.lastIndexOf("。"), sliced.lastIndexOf("？"), sliced.lastIndexOf("\n"));
+  return (lastBreak > 80 ? sliced.slice(0, lastBreak + 1) : sliced) || sliced;
 }
 function scoreBoost(genre, options = {}) {
   let boost = 0;
-  if (options.prioritizeCommentability && ["comment_bait", "controversy", "hot_take", "empathy"].includes(genre)) boost += 7;
-  if (options.prioritizeSaveability && ["lifehack", "before_after", "nostalgia", "micro_observation"].includes(genre)) boost += 6;
-  if (options.prioritizeLocalShareability) boost += 2;
-  if (options.strongStyle && ["one_line_punch", "weird_gap", "unpopular_opinion", "hot_take"].includes(genre)) boost += 4;
-  if (options.safeMode && ["hot_take", "unpopular_opinion", "controversy"].includes(genre)) boost -= 4;
+  if (options.prioritizeCommentability && ["comment_bait", "green_or_red_flag", "romance_aruaru", "situationship"].includes(genre)) boost += 8;
+  if (options.prioritizeSaveability && ["female_truth", "adult_distance", "ex_memory"].includes(genre)) boost += 4;
+  if (options.strongStyle && ["重くならない毒舌女子", "脈なし判定女子"].includes(options.persona)) boost += 5;
+  if (options.safeMode && ["jealousy", "situationship"].includes(genre)) boost -= 2;
   return boost;
 }
 function selectGenres(options = {}) {
   const category = String(options.buzzCategory || "自動ミックス");
-  const persona = PERSONA_PROFILES[options.persona] || null;
+  const persona = PERSONA_PROFILES[options.persona] || PERSONA_PROFILES["匂わせ女子"];
   const categoryPreferred = CATEGORY_TO_GENRES[category] || [];
   const personaPreferred = persona?.prefer || [];
   const first = [...new Set([...categoryPreferred, ...personaPreferred])];
@@ -101,57 +101,62 @@ function selectGenres(options = {}) {
 function sceneCardsFromDrafts(drafts, options = {}) {
   const material = stripBadPhrases((drafts || []).map((draft) => `${draft.title || ""} ${draft.text || ""} ${draft.body || ""} ${draft.category || ""}`).join(" "));
   if (!material || String(options.buzzCategory || "自動ミックス") === "自動ミックス") return COHERENT_SCENE_CARDS;
-  const matched = COHERENT_SCENE_CARDS.filter((card) => [card.domain, card.topic, card.object, card.meaning].some((value) => material.includes(String(value).slice(0, 6))));
+  const matched = COHERENT_SCENE_CARDS.filter((card) => [card.domain, card.topic, card.object, card.meaning].some((value) => material.includes(String(value).slice(0, 5))));
   return matched.length ? [...matched, ...COHERENT_SCENE_CARDS.filter((card) => !matched.includes(card))] : COHERENT_SCENE_CARDS;
 }
 
 function buildScene(sceneCard) {
   const sceneText = sceneCard.scene_lines.join("\n");
-  return { ...sceneCard, scene: sceneText, place: sceneCard.scene_lines[0].replace(/[。\s]+$/g, ""), human_behavior: sceneCard.human_action, comment_invitation: sceneCard.comment_question, observation: `${sceneCard.object}に、${sceneCard.emotion}が出ている。` };
+  return { ...sceneCard, scene: sceneText, place: sceneCard.scene_lines[0].replace(/[。\s]+$/g, ""), human_behavior: sceneCard.human_action, comment_invitation: sceneCard.comment_question, observation: `${sceneCard.object}に、${sceneCard.emotion}。` };
 }
 
 function sceneStrength(scene, text) {
   let score = 0;
-  if (scene.scene_lines?.length >= 3 && scene.scene_lines.every(Boolean)) score += 20;
+  if (scene.scene_lines?.length >= 3 && scene.scene_lines.every(Boolean)) score += 18;
   if (scene.object && text.includes(scene.object)) score += 22;
   if (scene.human_action && text.includes(scene.human_action)) score += 24;
-  if (scene.emotion && text.includes(scene.emotion)) score += 12;
+  if (scene.emotion && text.includes(scene.emotion)) score += 14;
   if (scene.meaning && text.includes(scene.meaning)) score += 12;
   if (scene.comment_question && text.includes(scene.comment_question)) score += 10;
   return Math.max(0, Math.min(100, score));
 }
 
 function buildTextForGenre(item, scene) {
-  const separator = "\n\n";
-  const endings = {
-    empathy: `${scene.emotion}。こういう小さい場面に本音が出る気がする。`,
-    nostalgia: `${scene.emotion}。昔は気にしてなかったのに、今見ると妙に残る。`,
-    curiosity: `${scene.emotion}。なんでここで一回止まるんだろう。`,
-    surprise: `${scene.emotion}。ただの${scene.object}なのに、見方が急に変わる。`,
-    controversy: `${scene.emotion}。これ、気にする人と気にしない人で分かれそう。`,
-    personal_story: `${scene.emotion}。自分も同じ場面で止まったことがある。`,
-    one_line_punch: `${scene.object}のところで止まる人、だいたい何かを飲み込んでる。`,
-    comment_bait: `${scene.emotion}。似た場面、ほかにもありそう。`,
-    failure_story: `${scene.emotion}。見なかったことにした時ほど、あとで残る。`,
-    before_after: `${scene.emotion}。前は普通だったのに、今はそこだけ意味が変わって見える。`,
-    unpopular_opinion: `${scene.emotion}。正直、ここを気にする人の方が信用できる。`,
-    micro_observation: `${scene.emotion}。派手な出来事より、こういう細部の方が生活の本音に近い。`,
-    weird_gap: `${scene.emotion}。変と言うほどじゃない。でも、ずっと引っかかる。`,
-    lifehack: `${scene.emotion}。気合いより、仕組みを変えた方が早い時がある。`,
-    hot_take: `${scene.emotion}。言い方を間違えると反応が分かれるけど、見ないふりもできない。`
+  const intro = {
+    female_truth: `${scene.scene}\n\n${scene.emotion}。${scene.meaning}。`,
+    subtle_hint: `${scene.scene}\n\n${scene.emotion}。言わないだけで、ちゃんと見てほしい人はいる。`,
+    night_line: `${scene.scene}\n\n${scene.emotion}。夜のLINEって、言葉より温度が残る。`,
+    green_or_red_flag: `${scene.scene}\n\n${scene.emotion}。脈ありかどうかって、返事の速さより待たされ方に出る。`,
+    ex_memory: `${scene.scene}\n\n${scene.emotion}。もう終わったはずの人ほど、変なところで現在形になる。`,
+    jealousy: `${scene.scene}\n\n${scene.emotion}。嫉妬って、証拠より想像の方が先に刺さる。`,
+    situationship: `${scene.scene}\n\n${scene.emotion}。曖昧な関係って、優しさ一回でまた戻される。`,
+    more_than_friends: `${scene.scene}\n\n${scene.emotion}。友達のふりって、好きより難しい日がある。`,
+    strong_girl: `${scene.scene}\n\n${scene.emotion}。大丈夫って言う時ほど、全然大丈夫じゃない。`,
+    "沼": `${scene.scene}\n\n${scene.emotion}。沼って、うれしいの基準がどんどん低くなる。`,
+    romance_aruaru: `${scene.scene}\n\n${scene.emotion}。恋愛あるあるって笑えるけど、当事者の時だけ全然笑えない。`,
+    comment_bait: `${scene.scene}\n\n${scene.emotion}。これ、気にする側が重いのか、気にさせる側がずるいのか分からない。`,
+    adult_distance: `${scene.scene}\n\n${scene.emotion}。大人の距離感って、余裕じゃなくて我慢でできてる時がある。`,
+    sns_love: `${scene.scene}\n\n${scene.emotion}。SNSで恋愛すると、見なくていいものまで見えてしまう。`
   };
-  return stripBadPhrases([scene.scene, scene.observation, endings[item.genre] || endings.micro_observation, scene.meaning, scene.comment_question].join(separator));
+  return stripBadPhrases(`${intro[item.genre] || intro.female_truth}\n\n${scene.comment_question}`);
 }
 
 function applyPersonaTone(text, item, options = {}) {
-  const personaName = options.persona || "町の観察者";
+  const personaName = options.persona || "匂わせ女子";
   let output = text;
-  if (personaName === "一言パンチ職人") output = output.split("\n\n").slice(0, 4).join("\n\n");
-  if (personaName === "深夜ラジオの独白") output = `これ、夜中にふと思い出したんだけど。\n\n${output}`;
-  if (personaName === "炎上しない賛否メーカー") output = output.replace(/正直、/, "好み分かれるけど、");
-  if (personaName === "コメント誘発屋" && item.genre !== "comment_bait") output = `${output}\n\n似た場面、他にもありそう。`;
-  if (options.strongStyle) output = output.replace(/小さい/g, "妙に小さい").replace(/気になる/g, "引っかかる");
-  if (options.safeMode) output = output.replace(/信用できる/g, "分かる気がする").replace(/反応が分かれる/g, "意見が分かれる");
+  if (personaName === "匂わせ女子") output = output.replace(/これ、/g, "たぶん、").replace(/分からない。/g, "分からないままにしてる。");
+  if (personaName === "夜更かし女子") output = `夜中ってさ。\n\n${output}`;
+  if (personaName === "恋愛相談室のお姉さん") output = output.replace(/ずるい/g, "誠実ではない").replace(/重い/g, "少し苦しい");
+  if (personaName === "元カレ研究家") output = output.replace(/もう終わったはずの人/g, "元カレ");
+  if (personaName === "本音を言わない女") output = output.replace(/見てほしい/g, "気づいてほしい").replace(/言葉/g, "言えないこと");
+  if (personaName === "強がり女子") output = output.replace(/寂しい/g, "平気なふりしてるだけで寂しい");
+  if (personaName === "重くならない毒舌女子") output = output.replace(/ずるい/g, "まあまあずるい").replace(/待ってる/g, "待ってる自分もだいぶ面白い");
+  if (personaName === "返信速度分析女子") output = output.replace(/返事/g, "返信").replace(/待たされ方/g, "返信速度のムラ");
+  if (personaName === "脈なし判定女子") output = output.replace(/脈ありかどうか/g, "脈なしって分かる瞬間");
+  if (personaName === "沼らせ観察女子") output = output.replace(/沼って/g, "沼らされる時って");
+  if (personaName === "大人の距離感女子") output = output.replace(/好き/g, "大事").replace(/恋愛/g, "大人の恋愛");
+  if (options.strongStyle) output = output.replace(/少し/g, "ちゃんと").replace(/気がする/g, "気がしてしまう");
+  if (options.safeMode) output = output.replace(/ずるい/g, "曖昧").replace(/毒/g, "本音");
   return stripBadPhrases(output);
 }
 
@@ -162,25 +167,25 @@ function validateSceneCoherence(draft) {
   if (!scene.human_action || !text.includes(scene.human_action)) return { ok: false, reason: "missing_scene_human_action" };
   if (scene.domain !== draft.domain) return { ok: false, reason: "domain_mismatch" };
   if (/前で[\s\S]*前で/.test(text)) return { ok: false, reason: "duplicated_location_grammar" };
-  if (/(の前で|前で).{0,18}(の前で|前で)/.test(text)) return { ok: false, reason: "duplicated_location_grammar" };
   if (!scene.comment_question || !text.includes(scene.comment_question)) return { ok: false, reason: "unrelated_comment_question" };
-  if (scene.object === "未読の通知" && /送信ボタン/.test(text)) return { ok: false, reason: "mixed_action_from_other_scene" };
   return { ok: true, reason: "" };
 }
 
 function rejectReason(draft) {
   const text = draft.post_text || draft.text || "";
-  if (ABSTRACT_ONLY.test(text.replace(/\n/g, ""))) return "abstract_only";
+  if (UNSAFE_ROMANCE.test(text)) return "unsafe_romance_content";
   const coherence = validateSceneCoherence(draft);
   if (!coherence.ok) return coherence.reason;
-  if (!/(不安|疲れ|距離|消耗|寂し|怖|気になる|迷う|引っかかる|残る|分かれそう|軽く見える|削れている|濃く見える)/.test(text)) return "missing_emotional_interpretation";
-  if (!/(だろう|かもしれない|ありそう|どこから|何なんだろう|ある？|よね|ない？|迷う)/.test(text)) return "missing_comment_space";
+  if (!/(寂し|好き|嫉妬|未読|返信|元カレ|匂わせ|脈|沼|会いたい|大丈夫|距離|優し|期待|本音|恋愛|大人)/.test(text)) return "missing_romance_tension";
+  if (!/(ある？|よね|なんで|どれくらい|ない？|分からない|だろう)/.test(text)) return "missing_comment_space";
+  const chars = countJapaneseChars(text);
+  if (chars < 55 || chars > 190) return "length_outside_romance_target";
   return "";
 }
 
 function spreadReason(item, scene, sceneScore, options = {}) {
-  const persona = PERSONA_PROFILES[options.persona] || PERSONA_PROFILES["町の観察者"];
-  return `${scene.place}の${scene.object}という一貫した場面があり、${scene.domain}の話を自分の経験に置き換えやすい。scene_strength ${sceneScore}。文体: ${persona.tone}。`;
+  const persona = PERSONA_PROFILES[options.persona] || PERSONA_PROFILES["匂わせ女子"];
+  return `${scene.place}の${scene.object}という恋愛シーンが明確で、${scene.domain}の温度差を自分ごと化しやすい。scene_strength ${sceneScore}。文体: ${persona.tone}。`;
 }
 
 function sceneScoreFromDraft(draft) {
@@ -190,13 +195,13 @@ function sceneScoreFromDraft(draft) {
 function buildPublicPost(item, sceneCard, index, options) {
   const scene = buildScene(sceneCard);
   const raw = applyPersonaTone(buildTextForGenre(item, scene), item, options);
-  const postText = compactToLimit(raw, 220);
+  const postText = compactToLimit(raw, 180);
   const sceneScore = sceneStrength(scene, postText);
-  const total = Math.max(0, Math.min(100, Math.round(item.score + scoreBoost(item.genre, options) + sceneScore * 0.24 + ((index * 3) % 6))));
-  const persona = options.persona || "町の観察者";
-  const buzzElements = [...new Set([scene.domain, item.label, "coherent_scene", ...item.buzz_elements])];
+  const total = Math.max(0, Math.min(100, Math.round(item.score + scoreBoost(item.genre, options) + sceneScore * 0.2 + ((index * 3) % 5))));
+  const persona = options.persona || "匂わせ女子";
+  const buzzElements = [...new Set([scene.domain, item.label, "female_voice", "romance_scene", ...item.buzz_elements])];
   const why = spreadReason(item, scene, sceneScore, options);
-  const detail = { post_text: postText, hook: scene.scene_lines[0], body: scene.observation, closing_line: scene.comment_question, comment_bait: scene.comment_question, emotional_trigger: item.trigger, emotionalTrigger: item.trigger, persona, domain: scene.domain, genre: item.genre, angle_type: item.label, angleType: item.label, buzz_elements: buzzElements, buzzElements, scene_strength: sceneScore, sceneStrength: sceneScore, scene, why_it_may_spread: why, whyItMaySpread: why, viral_score: total, viralScore: { curiosity: item.genre === "curiosity" || item.genre === "weird_gap" ? 88 : 70, nostalgia: item.genre === "nostalgia" || item.genre === "before_after" ? 86 : 68, surprise: item.genre === "surprise" || item.genre === "one_line_punch" ? 85 : 69, empathy: item.genre === "empathy" || item.genre === "personal_story" ? 88 : 70, controversy: item.genre === "controversy" || item.genre === "unpopular_opinion" || item.genre === "hot_take" ? 86 : 58, commentability: item.genre === "comment_bait" || item.genre === "controversy" ? 92 : 78, total }, totalScore: total, internal: { domain: scene.domain, source_topic: scene.topic, writer: "scene-engine-v2" } };
+  const detail = { post_text: postText, hook: scene.scene_lines[0], body: scene.observation, closing_line: scene.comment_question, comment_bait: scene.comment_question, emotional_trigger: item.trigger, emotionalTrigger: item.trigger, persona, domain: scene.domain, genre: item.genre, angle_type: item.label, angleType: item.label, buzz_elements: buzzElements, buzzElements, scene_strength: sceneScore, sceneStrength: sceneScore, scene, why_it_may_spread: why, whyItMaySpread: why, viral_score: total, viralScore: { curiosity: ["subtle_hint", "green_or_red_flag", "沼"].includes(item.genre) ? 90 : 72, nostalgia: item.genre === "ex_memory" ? 88 : 64, surprise: ["sns_love", "comment_bait"].includes(item.genre) ? 84 : 70, empathy: ["female_truth", "romance_aruaru", "strong_girl"].includes(item.genre) ? 91 : 74, controversy: ["situationship", "jealousy"].includes(item.genre) ? 88 : 58, commentability: ["comment_bait", "green_or_red_flag", "romance_aruaru"].includes(item.genre) ? 94 : 80, total }, totalScore: total, internal: { domain: scene.domain, source_topic: scene.topic, writer: "female-romance-scene-engine" } };
   const draft = { id: crypto.randomUUID(), persona, domain: scene.domain, genre: item.genre, angle_type: item.label, angleType: item.label, buzz_elements: buzzElements, buzzElements, scene_strength: sceneScore, sceneStrength: sceneScore, scene, why_it_may_spread: why, whyItMaySpread: why, post_text: postText, postText, text: postText, hook: detail.hook, body: detail.body, closing_line: scene.comment_question, closingLine: scene.comment_question, comment_bait: scene.comment_question, commentBait: scene.comment_question, cta: scene.comment_question, emotional_trigger: item.trigger, emotionalTrigger: item.trigger, viral_score: total, viralScore: detail.viralScore, source_ids: [], sourceIds: [], category: scene.domain, hookType: item.genre, score: total, scoreTotal: total, totalScore: total, scoreDetail: detail, sourceTrace: [] };
   const reason = rejectReason(draft);
   if (reason) draft.rejectedBySceneEngine = reason;
@@ -207,36 +212,31 @@ function isUsablePost(draft) {
   const text = draft.post_text || draft.postText || draft.text || "";
   if (draft.rejectedBySceneEngine) return false;
   if (sceneScoreFromDraft(draft) < 70) return false;
-  if (countJapaneseChars(text) < 50 || countJapaneseChars(text) > 230) return false;
   if (/https?:\/\/|www\./.test(text)) return false;
   BAD_PUBLIC_PHRASES.lastIndex = 0;
   const hasBadPhrase = BAD_PUBLIC_PHRASES.test(text);
   BAD_PUBLIC_PHRASES.lastIndex = 0;
-  return !hasBadPhrase;
+  return !hasBadPhrase && !UNSAFE_ROMANCE.test(text);
 }
 
 function diversify(posts) {
   const selected = [];
   const seenDomains = new Map();
   const seenGenres = new Set();
-  const canUseDomain = (post) => (seenDomains.get(post.domain || post.category || "general") || 0) < 2;
+  const canUseDomain = (post) => (seenDomains.get(post.domain || post.category || "romance") || 0) < 2;
   const rememberDomain = (post) => {
-    const domain = post.domain || post.category || "general";
+    const domain = post.domain || post.category || "romance";
     seenDomains.set(domain, (seenDomains.get(domain) || 0) + 1);
   };
-
   for (const post of posts.sort((a, b) => sceneScoreFromDraft(b) - sceneScoreFromDraft(a))) {
-    if (!isUsablePost(post)) continue;
-    if (!canUseDomain(post)) continue;
-    if (seenGenres.has(post.genre)) continue;
+    if (!isUsablePost(post) || !canUseDomain(post) || seenGenres.has(post.genre)) continue;
     selected.push(post);
     seenGenres.add(post.genre);
     rememberDomain(post);
     if (selected.length >= 10) break;
   }
   for (const post of posts.sort((a, b) => ((b.totalScore || 0) + sceneScoreFromDraft(b) * 0.2) - ((a.totalScore || 0) + sceneScoreFromDraft(a) * 0.2))) {
-    if (selected.includes(post) || !isUsablePost(post)) continue;
-    if (!canUseDomain(post)) continue;
+    if (selected.includes(post) || !isUsablePost(post) || !canUseDomain(post)) continue;
     selected.push(post);
     rememberDomain(post);
     if (selected.length >= 10) break;
@@ -248,7 +248,7 @@ export function rewriteDraftsToThreadsNative(drafts, researchId, options = {}) {
   const scenes = sceneCardsFromDrafts(Array.isArray(drafts) ? drafts : [], options);
   const genres = selectGenres(options);
   const posts = [];
-  const count = Math.max(14, Math.min(24, genres.length + scenes.length));
+  const count = Math.max(18, Math.min(28, genres.length + scenes.length));
   for (let index = 0; index < count; index += 1) {
     const item = genres[index % genres.length];
     const sceneCard = scenes[index % scenes.length];
