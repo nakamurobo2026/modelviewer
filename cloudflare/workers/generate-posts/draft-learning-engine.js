@@ -154,18 +154,19 @@ function detailFromDraft(draft) {
     comment_bait: draft.comment_bait || draft.commentBait || existing.comment_bait || existing.commentHook || "",
     emotional_trigger: draft.emotional_trigger || draft.emotionalTrigger || existing.emotional_trigger || existing.emotionalTrigger || draft.hookType || "empathy",
     emotionalTrigger: draft.emotionalTrigger || draft.emotional_trigger || existing.emotionalTrigger || existing.emotional_trigger || draft.hookType || "empathy",
-    persona: draft.persona || existing.persona || "町の観察者",
-    genre: draft.genre || existing.genre || draft.hookType || "micro_observation",
-    angle_type: draft.angle_type || draft.angleType || existing.angle_type || existing.angleType || "observation",
-    angleType: draft.angleType || draft.angle_type || existing.angleType || existing.angle_type || "observation",
+    persona: draft.persona || existing.persona || "匂わせ女子",
+    genre: draft.genre || existing.genre || draft.hookType || "female_truth",
+    angle_type: draft.angle_type || draft.angleType || existing.angle_type || existing.angleType || "romance_observation",
+    angleType: draft.angleType || draft.angle_type || existing.angleType || existing.angle_type || "romance_observation",
     buzz_elements: safeArray(draft.buzz_elements || draft.buzzElements || existing.buzz_elements || existing.buzzElements),
     buzzElements: safeArray(draft.buzzElements || draft.buzz_elements || existing.buzzElements || existing.buzz_elements),
-    why_it_may_spread: draft.why_it_may_spread || draft.whyItMaySpread || existing.why_it_may_spread || existing.whyItMaySpread || "共感やコメントの余白があるため反応されやすい。",
-    whyItMaySpread: draft.whyItMaySpread || draft.why_it_may_spread || existing.whyItMaySpread || existing.why_it_may_spread || "共感やコメントの余白があるため反応されやすい。",
+    why_it_may_spread: draft.why_it_may_spread || draft.whyItMaySpread || existing.why_it_may_spread || existing.whyItMaySpread || "恋愛の温度差を女性目線の場面で書いているため、共感とコメントが起きやすい。",
+    whyItMaySpread: draft.whyItMaySpread || draft.why_it_may_spread || existing.whyItMaySpread || existing.why_it_may_spread || "恋愛の温度差を女性目線の場面で書いているため、共感とコメントが起きやすい。",
     viral_score: draft.viral_score || draft.viralScore?.total || existing.viral_score || existing.viralScore?.total || draft.scoreTotal || draft.score || 0,
     viralScore: draft.viralScore || existing.viralScore || { total: draft.scoreTotal || draft.score || 0 },
     source_ids: safeArray(draft.source_ids || draft.sourceIds || existing.source_ids || draft.sourceTrace),
-    totalScore: draft.totalScore || existing.totalScore || draft.scoreTotal || draft.score || 0
+    totalScore: draft.totalScore || existing.totalScore || draft.scoreTotal || draft.score || 0,
+    generationDiagnostics: draft.generationDiagnostics || existing.generationDiagnostics
   };
 }
 
@@ -187,14 +188,14 @@ function clientDraft(rowOrDraft) {
       commentBait: detail.comment_bait || detail.commentHook || "",
       emotional_trigger: detail.emotional_trigger || detail.emotionalTrigger || rowOrDraft.hook_type || "empathy",
       emotionalTrigger: detail.emotionalTrigger || detail.emotional_trigger || rowOrDraft.hook_type || "empathy",
-      persona: detail.persona || "町の観察者",
-      genre: detail.genre || rowOrDraft.hook_type || "micro_observation",
-      angle_type: detail.angle_type || detail.angleType || "observation",
-      angleType: detail.angleType || detail.angle_type || "observation",
+      persona: detail.persona || "匂わせ女子",
+      genre: detail.genre || rowOrDraft.hook_type || "female_truth",
+      angle_type: detail.angle_type || detail.angleType || "romance_observation",
+      angleType: detail.angleType || detail.angle_type || "romance_observation",
       buzz_elements: detail.buzz_elements || detail.buzzElements || [],
       buzzElements: detail.buzzElements || detail.buzz_elements || [],
-      why_it_may_spread: detail.why_it_may_spread || detail.whyItMaySpread || "共感やコメントの余白があるため反応されやすい。",
-      whyItMaySpread: detail.whyItMaySpread || detail.why_it_may_spread || "共感やコメントの余白があるため反応されやすい。",
+      why_it_may_spread: detail.why_it_may_spread || detail.whyItMaySpread || "恋愛の温度差を女性目線の場面で書いているため、共感とコメントが起きやすい。",
+      whyItMaySpread: detail.whyItMaySpread || detail.why_it_may_spread || "恋愛の温度差を女性目線の場面で書いているため、共感とコメントが起きやすい。",
       viral_score: detail.viral_score || detail.viralScore?.total || rowOrDraft.score_total || 0,
       viralScore: detail.viralScore || { total: rowOrDraft.score_total || 0 },
       source_ids: detail.source_ids || rowOrDraft.source_trace || [],
@@ -212,6 +213,80 @@ function clientDraft(rowOrDraft) {
     };
   }
   return rowOrDraft;
+}
+
+function fallbackRomanceDrafts(researchId, options = {}, diagnostics = {}) {
+  const persona = options.persona || "匂わせ女子";
+  const rows = [
+    {
+      genre: "night_line",
+      category: "夜のLINE",
+      text: "深夜1時のLINE画面。\n青白い通知だけがベッドの上で光ってる。\n夜だけ優しい人って、朝になるとこっちだけ昨日の続きにいる。\nこれ、気にしないでいられる人いる？",
+      score: 86
+    },
+    {
+      genre: "sns_love",
+      category: "匂わせ",
+      text: "会いたいって言えない日は、ストーリーだけ更新する。\nみんなに見せてるふりで、本当は一人だけに気づいてほしい。\n直接送れない言葉ほど、遠回りするよね。",
+      score: 84
+    },
+    {
+      genre: "romance_aruaru",
+      category: "恋愛あるある",
+      text: "好きじゃない人からの即レスは少し重いのに、好きな人からの未読はずっと待てる。\n恋愛って、優しさの量より相手で全部変わる。\nこういうの、あるよね。",
+      score: 85
+    }
+  ];
+  return rows.map((row) => {
+    const detail = {
+      post_text: row.text,
+      hook: row.text.split("\n")[0],
+      body: row.text,
+      closing_line: row.text.split("\n").slice(-1)[0],
+      comment_bait: row.text.split("\n").slice(-1)[0],
+      emotional_trigger: "empathy",
+      emotionalTrigger: "empathy",
+      persona,
+      domain: row.category,
+      genre: row.genre,
+      angle_type: row.category,
+      angleType: row.category,
+      buzz_elements: [row.category, "female_voice", "romance_fallback"],
+      buzzElements: [row.category, "female_voice", "romance_fallback"],
+      scene_strength: 82,
+      sceneStrength: 82,
+      viral_score: row.score,
+      viralScore: { curiosity: 78, nostalgia: 65, surprise: 70, empathy: 90, controversy: 60, commentability: 88, total: row.score },
+      totalScore: row.score,
+      generationDiagnostics: diagnostics,
+      internal: { writer: "romance-safe-fallback", researchId }
+    };
+    return {
+      id: crypto.randomUUID(),
+      post_text: row.text,
+      postText: row.text,
+      text: row.text,
+      persona,
+      domain: row.category,
+      genre: row.genre,
+      category: row.category,
+      hookType: row.genre,
+      score: row.score,
+      scoreTotal: row.score,
+      totalScore: row.score,
+      emotional_trigger: "empathy",
+      emotionalTrigger: "empathy",
+      buzz_elements: detail.buzz_elements,
+      buzzElements: detail.buzzElements,
+      viralScore: detail.viralScore,
+      viral_score: row.score,
+      source_ids: [researchId].filter(Boolean),
+      sourceIds: [researchId].filter(Boolean),
+      sourceTrace: [researchId].filter(Boolean),
+      scoreDetail: detail,
+      generationDiagnostics: diagnostics
+    };
+  });
 }
 
 function scoreDraftWithLearning(draft, learning) {
@@ -378,7 +453,7 @@ async function persistGeneratedDrafts(env, request, researchId, drafts) {
 }
 
 async function persistAdjustedDrafts(env, drafts) {
-  if (!hasSupabase(env)) return { ok: true, skipped: true };
+  if (!hasSupabase(env) || !Array.isArray(drafts) || !drafts.length) return { ok: true, skipped: true };
   const results = await Promise.allSettled(drafts.map((draft) => {
     if (!isUuid(draft.id)) return null;
     return supabaseRequest(env, `post_drafts?id=eq.${encodeURIComponent(draft.id)}`, {
@@ -396,7 +471,7 @@ async function persistAdjustedDrafts(env, drafts) {
 
 function draftOptionsFromBody(body) {
   return {
-    persona: body.persona || "町の観察者",
+    persona: body.persona || "匂わせ女子",
     buzzCategory: body.buzzCategory || body.buzz_category || "自動ミックス",
     mixAllGenres: body.mixAllGenres !== false && body.mix_all_genres !== false,
     prioritizeCommentability: Boolean(body.prioritizeCommentability || body.prioritize_commentability),
@@ -404,6 +479,26 @@ function draftOptionsFromBody(body) {
     prioritizeLocalShareability: Boolean(body.prioritizeLocalShareability || body.prioritize_local_shareability),
     strongStyle: Boolean(body.strongStyle || body.strong_style),
     safeMode: Boolean(body.safeMode || body.safe_mode)
+  };
+}
+
+function draftDiagnostics(researchId, originalDrafts, publicDrafts, draftOptions, fallbackUsed = false) {
+  const rejected = Array.isArray(publicDrafts) ? publicDrafts.filter((draft) => draft.rejectedBySceneEngine) : [];
+  const reasonCounts = rejected.reduce((acc, draft) => {
+    const reason = draft.rejectedBySceneEngine || "unknown";
+    acc[reason] = (acc[reason] || 0) + 1;
+    return acc;
+  }, {});
+  return {
+    researchId,
+    generatedCount: Array.isArray(originalDrafts) ? originalDrafts.length : 0,
+    returnedCount: Array.isArray(publicDrafts) ? publicDrafts.length : 0,
+    rejectedCount: rejected.length,
+    rejectionReasons: reasonCounts,
+    activePersona: draftOptions.persona,
+    activeBuzzCategory: draftOptions.buzzCategory,
+    fallbackUsed,
+    note: fallbackUsed ? "Scene/safety validator returned zero usable drafts, so safe romance fallback drafts were generated." : "Draft generation completed."
   };
 }
 
@@ -428,13 +523,25 @@ export async function handleDraftGenerateWithLearning(request, env) {
 
   try {
     const draftOptions = draftOptionsFromBody(body);
-    const publicDrafts = rewriteDraftsToThreadsNative(data.drafts, researchId, draftOptions);
+    let publicDrafts = rewriteDraftsToThreadsNative(data.drafts, researchId, draftOptions);
+    let diagnostics = draftDiagnostics(researchId, data.drafts, publicDrafts, draftOptions, false);
+    if (!publicDrafts.length) {
+      diagnostics = draftDiagnostics(researchId, data.drafts, publicDrafts, draftOptions, true);
+      publicDrafts = fallbackRomanceDrafts(researchId, draftOptions, diagnostics);
+      console.error("romance draft generation returned zero usable drafts", diagnostics);
+    }
     const learning = await loadLearningContext(env);
-    const rankedDrafts = applyLearningRanking(publicDrafts, learning);
+    const rankedDrafts = applyLearningRanking(publicDrafts, learning).map((draft) => ({
+      ...draft,
+      generationDiagnostics: diagnostics,
+      scoreDetail: { ...(draft.scoreDetail || {}), generationDiagnostics: diagnostics }
+    }));
     const persisted = await persistGeneratedDrafts(env, request, researchId, rankedDrafts);
     const finalDrafts = applyLearningRanking(persisted.drafts, learning).map((draft) => ({
       ...draft,
-      persistence: persisted.persistence
+      generationDiagnostics: diagnostics,
+      persistence: persisted.persistence,
+      scoreDetail: { ...(draft.scoreDetail || {}), generationDiagnostics: diagnostics }
     }));
     const patchPersistence = await persistAdjustedDrafts(env, finalDrafts);
     const partialSuccess = Boolean(persisted.persistence?.partial_success || persisted.persistence?.ok === false || patchPersistence.ok === false);
@@ -443,8 +550,10 @@ export async function handleDraftGenerateWithLearning(request, env) {
       drafts: finalDrafts,
       learningApplied: true,
       learningSummary: learning.summary,
-      writer: "threads-post-writer-v3",
+      writer: "romance-threads-writer-v3",
       draftOptions,
+      draftDiagnostics: diagnostics,
+      generationDiagnostics: diagnostics,
       persistence: {
         ok: !partialSuccess,
         partial_success: partialSuccess,
