@@ -196,6 +196,10 @@ function spreadReason(item, topic, scene, sceneScore, options = {}) {
   return `${scene.place}の${scene.object}という具体場面があり、${topic.domain}の話を自分の経験に置き換えやすい。scene_strength ${sceneScore}。文体: ${persona.tone}。`;
 }
 
+function sceneScoreFromDraft(draft) {
+  return Number(draft.scene_strength ?? draft.sceneStrength ?? draft.scoreDetail?.scene_strength ?? draft.scoreDetail?.sceneStrength ?? 0);
+}
+
 function buildPublicPost(item, topic, index, options) {
   const scene = buildScene(topic, index);
   const raw = applyPersonaTone(buildTextForGenre(item, topic, scene), item, options);
@@ -239,6 +243,7 @@ function buildPublicPost(item, topic, index, options) {
 function isUsablePost(draft) {
   const text = draft.post_text || draft.postText || draft.text || "";
   if (draft.rejectedBySceneEngine) return false;
+  if (sceneScoreFromDraft(draft) < 70) return false;
   if (countJapaneseChars(text) < 50 || countJapaneseChars(text) > 230) return false;
   if (/https?:\/\/|www\./.test(text)) return false;
   BAD_PUBLIC_PHRASES.lastIndex = 0;
@@ -251,19 +256,26 @@ function diversify(posts) {
   const selected = [];
   const seenDomains = new Map();
   const seenGenres = new Set();
-  for (const post of posts.sort((a, b) => (b.scene_strength || 0) - (a.scene_strength || 0))) {
-    if (!isUsablePost(post)) continue;
+  const canUseDomain = (post) => (seenDomains.get(post.domain || post.category || "general") || 0) < 2;
+  const rememberDomain = (post) => {
     const domain = post.domain || post.category || "general";
-    if ((seenDomains.get(domain) || 0) >= 2) continue;
+    seenDomains.set(domain, (seenDomains.get(domain) || 0) + 1);
+  };
+
+  for (const post of posts.sort((a, b) => sceneScoreFromDraft(b) - sceneScoreFromDraft(a))) {
+    if (!isUsablePost(post)) continue;
+    if (!canUseDomain(post)) continue;
     if (seenGenres.has(post.genre)) continue;
     selected.push(post);
     seenGenres.add(post.genre);
-    seenDomains.set(domain, (seenDomains.get(domain) || 0) + 1);
+    rememberDomain(post);
     if (selected.length >= 10) break;
   }
-  for (const post of posts.sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0))) {
+  for (const post of posts.sort((a, b) => ((b.totalScore || 0) + sceneScoreFromDraft(b) * 0.2) - ((a.totalScore || 0) + sceneScoreFromDraft(a) * 0.2))) {
     if (selected.includes(post) || !isUsablePost(post)) continue;
+    if (!canUseDomain(post)) continue;
     selected.push(post);
+    rememberDomain(post);
     if (selected.length >= 10) break;
   }
   return selected.slice(0, 10);
