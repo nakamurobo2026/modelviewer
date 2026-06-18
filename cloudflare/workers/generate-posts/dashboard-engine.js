@@ -7,6 +7,10 @@ function json(data, env, request, status = 200) {
   });
 }
 
+function apiError(code, message, details) {
+  return { success: false, error: { code, message, details } };
+}
+
 function hasSupabase(env) {
   return Boolean((env.SUPABASE_URL || env.SUPABASE_REST_URL || env.SUPABASE_PROJECT_REF || env.SUPABASE_AUTH_ISSUER) && env.SUPABASE_SERVICE_ROLE_KEY);
 }
@@ -80,6 +84,10 @@ function isUuid(value) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
 }
 
+function errorDetails(error) {
+  return String(error?.message || error || "unknown error");
+}
+
 async function supabaseRequest(env, path, init = {}, operation = path) {
   if (!hasSupabase(env)) throw new Error("Supabase service environment variables are not configured.");
   const baseUrls = supabaseRestBaseUrlCandidates(env);
@@ -106,7 +114,7 @@ async function supabaseRequest(env, path, init = {}, operation = path) {
       });
       raw = await response.text();
     } catch (error) {
-      lastError = new Error(`${operation} fetch failed at ${endpoint.hostname}: ${String(error?.message || error)}`);
+      lastError = new Error(`${operation} fetch failed at ${endpoint.hostname}: ${errorDetails(error)}`);
       continue;
     }
 
@@ -125,13 +133,27 @@ async function supabaseRequest(env, path, init = {}, operation = path) {
   throw lastError || new Error(`${operation} failed. attemptedHosts=${attemptedHosts.join(",")}`);
 }
 
+async function safeSupabaseRequest(env, path, init, operation, fallback = []) {
+  try {
+    const result = await supabaseRequest(env, path, init, operation);
+    return { ok: true, data: Array.isArray(result) ? result : fallback, error: null };
+  } catch (error) {
+    console.error(`${operation} failed but dashboard will continue`, error);
+    return { ok: false, data: fallback, error: errorDetails(error) };
+  }
+}
+
 async function ensureProfile(env, userId) {
   if (!userId || !hasSupabase(env)) return;
-  await supabaseRequest(env, "profiles?on_conflict=id", {
-    method: "POST",
-    headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-    body: JSON.stringify([{ id: userId, display_name: "Viral OS Operator" }])
-  }, "profiles.upsert");
+  try {
+    await supabaseRequest(env, "profiles?on_conflict=id", {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+      body: JSON.stringify([{ id: userId, display_name: "Viral OS Operator" }])
+    }, "profiles.upsert");
+  } catch (error) {
+    console.error("profiles.upsert failed but dashboard will continue", error);
+  }
 }
 
 function draftText(rowOrDraft) {
@@ -189,7 +211,9 @@ function clientDraft(rowOrDraft) {
     sourceTrace: rowOrDraft.source_trace || rowOrDraft.sourceTrace || [],
     scheduledAt: rowOrDraft.scheduled_at,
     publishedAt: rowOrDraft.published_at,
-    failureReason: rowOrDraft.failure_reason
+    failureReason: rowOrDraft.failure_reason,
+    createdAt: rowOrDraft.created_at,
+    updatedAt: rowOrDraft.updated_at
   };
 }
 
@@ -246,39 +270,40 @@ function clientScheduledPost(row) {
 async function loadDraftsByIdsForUser(env, draftIds, userId) {
   const ids = [...new Set((draftIds || []).filter(isUuid))];
   if (!ids.length) return new Map();
-  const rows = await supabaseRequest(
+  const result = await safeSupabaseRequest(
     env,
     `post_drafts?user_id=eq.${encodeURIComponent(userId)}&id=in.(${ids.map(encodeURIComponent).join(",")})&select=*`,
     { method: "GET" },
-    "post_drafts.select_by_ids"
+    "post_drafts.select_by_ids",
+    []
   );
-  return new Map((Array.isArray(rows) ? rows : []).map((row) => [row.id, row]));
+  return new Map(result.data.map((row) => [row.id, row]));
 }
 
 async function loadApprovalsForUser(env, userId) {
-  const rows = await supabaseRequest(
+  const rows = await safeSupabaseRequest(
     env,
     "approval_queue?select=*&order=approved_at.desc.nullslast,created_at.desc&limit=100",
     { method: "GET" },
-    "approval_queue.dashboard_plain"
+    "approval_queue.dashboard_plain",
+    []
   );
-  const approvalRows = Array.isArray(rows) ? rows : [];
-  const draftsById = await loadDraftsByIdsForUser(env, approvalRows.map((row) => row.draft_id), userId);
-  return approvalRows
+  const draftsById = await loadDraftsByIdsForUser(env, rows.data.map((row) => row.draft_id), userId);
+  return rows.data
     .map((row) => clientApproval({ ...row, draft: draftsById.get(row.draft_id) || null }))
     .filter((approval) => approval.draft);
 }
 
 async function loadScheduledPostsForUser(env, userId) {
-  const rows = await supabaseRequest(
+  const rows = await safeSupabaseRequest(
     env,
     "scheduled_posts?select=*&order=scheduled_at.asc&limit=100",
     { method: "GET" },
-    "scheduled_posts.dashboard_plain"
+    "scheduled_posts.dashboard_plain",
+    []
   );
-  const scheduledRows = Array.isArray(rows) ? rows : [];
-  const draftsById = await loadDraftsByIdsForUser(env, scheduledRows.map((row) => row.draft_id), userId);
-  return scheduledRows
+  const draftsById = await loadDraftsByIdsForUser(env, rows.data.map((row) => row.draft_id), userId);
+  return rows.data
     .map((row) => clientScheduledPost({ ...row, draft: draftsById.get(row.draft_id) || null }))
     .filter((post) => post.draft);
 }
@@ -287,117 +312,117 @@ export async function handleDashboardWithSchedule(request, env) {
   const authIssuer = getAuthIssuerUrl(request);
   const persistenceEnv = authIssuer ? { ...env, SUPABASE_AUTH_ISSUER: authIssuer } : env;
   const userId = getAuthUserId(request);
-  if (hasSupabase(persistenceEnv) && userId) {
-    try {
-      await ensureProfile(persistenceEnv, userId);
-      const [draftRows, persistedApprovals, scheduledPosts, briefRows, auditRows] = await Promise.all([
-        supabaseRequest(persistenceEnv, `post_drafts?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=50`, { method: "GET" }, "post_drafts.dashboard"),
-        loadApprovalsForUser(persistenceEnv, userId).catch((error) => {
-          console.error("approval queue dashboard load failed; falling back to approved drafts", error);
-          return [];
-        }),
-        loadScheduledPostsForUser(persistenceEnv, userId).catch((error) => {
-          console.error("scheduled posts dashboard load failed", error);
-          return [];
-        }),
-        supabaseRequest(persistenceEnv, `research_briefs?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=20`, { method: "GET" }, "research_briefs.dashboard"),
-        supabaseRequest(persistenceEnv, `audit_events?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=20`, { method: "GET" }, "audit_events.dashboard")
-      ]);
-      const drafts = (draftRows || []).map(clientDraft).filter(Boolean);
-      const approvals = mergeApprovalFallbacks(persistedApprovals, drafts);
-      const approvedDraftIds = new Set(approvals.filter((approval) => approval.status === "approved").map((approval) => approval.draftId));
-      const rejectedDraftIds = new Set(approvals.filter((approval) => approval.status === "rejected").map((approval) => approval.draftId));
-      const totalDrafts = drafts.length;
-      const approvedDrafts = approvals.filter((approval) => approval.status === "approved").length;
-      const rejectedDrafts = approvals.filter((approval) => approval.status === "rejected").length;
-      const scheduledPostCount = scheduledPosts.filter((post) => post.status === "scheduled").length;
-      const publishedPostCount = scheduledPosts.filter((post) => post.status === "published").length + drafts.filter((draft) => draft.status === "published").length;
-      const awaitingApproval = drafts.filter((draft) => !approvedDraftIds.has(draft.id) && !rejectedDraftIds.has(draft.id) && (draft.status === "scored" || draft.status === "draft")).length;
-      const failed = scheduledPosts.filter((post) => post.status === "failed").length + drafts.filter((draft) => draft.status === "failed").length;
-      const averageScore = drafts.length ? Math.round(drafts.reduce((sum, draft) => sum + (draft.totalScore || draft.scoreTotal || draft.score || 0), 0) / drafts.length) : 0;
-      return json({
-        ok: true,
-        researchCount: briefRows?.length || 0,
-        draftCount: totalDrafts,
-        queueCount: approvedDrafts,
-        success: true,
-        profile: {
-          id: userId,
-          displayName: "Viral OS Operator",
-          threadsConnected: Boolean(persistenceEnv.THREADS_ACCESS_TOKEN)
-        },
-        drafts,
-        approvalQueue: approvals.filter((approval) => approval.status === "approved"),
-        scheduledPosts,
-        researchBriefs: (briefRows || []).map((brief) => ({
-          id: brief.id,
-          topic: brief.topic,
-          summary: brief.summary,
-          sourceCount: brief.source_count || 0,
-          createdAt: brief.created_at
-        })),
-        publishJobs: scheduledPosts.map((post) => ({
-          id: post.id,
-          draftId: post.draftId,
-          status: post.status,
-          scheduledAt: post.scheduledAt,
-          attemptCount: 0
-        })),
-        auditEvents: (auditRows || []).map((event) => ({
-          id: event.id,
-          entityType: event.entity_type,
-          entityId: event.entity_id,
-          action: event.action,
-          metadata: event.metadata || {},
-          createdAt: event.created_at
-        })),
-        metrics: {
-          totalDrafts,
-          approvedDrafts,
-          rejectedDrafts,
-          scheduledPosts: scheduledPostCount,
-          publishedPosts: publishedPostCount,
-          awaitingApproval,
-          scheduled: scheduledPostCount,
-          failed,
-          published: publishedPostCount,
-          averageScore,
-          sourceBackedDrafts: drafts.filter((draft) => draft.sourceTrace?.length).length
-        }
-      }, persistenceEnv, request);
-    } catch (error) {
-      console.error("dashboard schedule fallback", error);
-    }
+
+  if (!hasSupabase(persistenceEnv)) {
+    return json(apiError("missing_supabase", "Supabase service environment variables are not configured."), persistenceEnv, request, 500);
   }
+  if (!userId) {
+    return json(apiError("unauthorized", "A valid Supabase session token is required."), persistenceEnv, request, 401);
+  }
+
+  await ensureProfile(persistenceEnv, userId);
+
+  const draftRowsResult = await safeSupabaseRequest(
+    persistenceEnv,
+    `post_drafts?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=50`,
+    { method: "GET" },
+    "post_drafts.dashboard",
+    []
+  );
+  const draftRows = draftRowsResult.data;
+  const drafts = draftRows.map(clientDraft).filter(Boolean);
+
+  const [persistedApprovals, scheduledPosts, briefRowsResult, auditRowsResult] = await Promise.all([
+    loadApprovalsForUser(persistenceEnv, userId).catch((error) => {
+      console.error("approval queue dashboard load failed; falling back to approved drafts", error);
+      return [];
+    }),
+    loadScheduledPostsForUser(persistenceEnv, userId).catch((error) => {
+      console.error("scheduled posts dashboard load failed", error);
+      return [];
+    }),
+    safeSupabaseRequest(
+      persistenceEnv,
+      `research_briefs?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=20`,
+      { method: "GET" },
+      "research_briefs.dashboard",
+      []
+    ),
+    safeSupabaseRequest(
+      persistenceEnv,
+      `audit_events?user_id=eq.${encodeURIComponent(userId)}&select=*&order=created_at.desc&limit=20`,
+      { method: "GET" },
+      "audit_events.dashboard_optional",
+      []
+    )
+  ]);
+
+  const approvals = mergeApprovalFallbacks(persistedApprovals, drafts);
+  const approvedDraftIds = new Set(approvals.filter((approval) => approval.status === "approved").map((approval) => approval.draftId));
+  const rejectedDraftIds = new Set(approvals.filter((approval) => approval.status === "rejected").map((approval) => approval.draftId));
+  const totalDrafts = drafts.length;
+  const approvedDrafts = approvals.filter((approval) => approval.status === "approved").length;
+  const rejectedDrafts = approvals.filter((approval) => approval.status === "rejected").length;
+  const scheduledPostCount = scheduledPosts.filter((post) => post.status === "scheduled").length;
+  const publishedPostCount = scheduledPosts.filter((post) => post.status === "published").length + drafts.filter((draft) => draft.status === "published").length;
+  const awaitingApproval = drafts.filter((draft) => !approvedDraftIds.has(draft.id) && !rejectedDraftIds.has(draft.id) && (draft.status === "scored" || draft.status === "draft")).length;
+  const failed = scheduledPosts.filter((post) => post.status === "failed").length + drafts.filter((draft) => draft.status === "failed").length;
+  const averageScore = drafts.length ? Math.round(drafts.reduce((sum, draft) => sum + (draft.totalScore || draft.scoreTotal || draft.score || 0), 0) / drafts.length) : 0;
+  const dashboardWarnings = [
+    !draftRowsResult.ok ? { operation: "post_drafts.dashboard", message: draftRowsResult.error } : null,
+    !briefRowsResult.ok ? { operation: "research_briefs.dashboard", message: briefRowsResult.error } : null,
+    !auditRowsResult.ok ? { operation: "audit_events.dashboard_optional", message: auditRowsResult.error } : null
+  ].filter(Boolean);
+
   return json({
     ok: true,
-    researchCount: 0,
-    draftCount: 0,
-    queueCount: 0,
+    researchCount: briefRowsResult.data.length,
+    draftCount: totalDrafts,
+    queueCount: approvedDrafts,
     success: true,
+    warnings: dashboardWarnings,
     profile: {
-      id: "iwakan-lab",
-      displayName: "Iwakan Lab",
+      id: userId,
+      displayName: "Viral OS Operator",
       threadsConnected: Boolean(persistenceEnv.THREADS_ACCESS_TOKEN)
     },
-    drafts: [],
-    approvalQueue: [],
-    scheduledPosts: [],
-    researchBriefs: [],
-    publishJobs: [],
-    auditEvents: [],
+    drafts,
+    approvalQueue: approvals.filter((approval) => approval.status === "approved"),
+    scheduledPosts,
+    researchBriefs: briefRowsResult.data.map((brief) => ({
+      id: brief.id,
+      topic: brief.topic,
+      summary: brief.summary,
+      sourceCount: brief.source_count || 0,
+      createdAt: brief.created_at
+    })),
+    publishJobs: scheduledPosts.map((post) => ({
+      id: post.id,
+      draftId: post.draftId,
+      status: post.status,
+      scheduledAt: post.scheduledAt,
+      attemptCount: 0
+    })),
+    auditEvents: auditRowsResult.data.map((event) => ({
+      id: event.id,
+      entityType: event.entity_type,
+      entityId: event.entity_id,
+      action: event.action,
+      metadata: event.metadata || {},
+      createdAt: event.created_at
+    })),
     metrics: {
-      totalDrafts: 0,
-      approvedDrafts: 0,
-      rejectedDrafts: 0,
-      scheduledPosts: 0,
-      publishedPosts: 0,
-      awaitingApproval: 0,
-      scheduled: 0,
-      failed: 0,
-      published: 0,
-      averageScore: 0,
-      sourceBackedDrafts: 0
+      totalDrafts,
+      approvedDrafts,
+      rejectedDrafts,
+      scheduledPosts: scheduledPostCount,
+      publishedPosts: publishedPostCount,
+      awaitingApproval,
+      scheduled: scheduledPostCount,
+      failed,
+      published: publishedPostCount,
+      averageScore,
+      sourceBackedDrafts: drafts.filter((draft) => draft.sourceTrace?.length).length
     }
   }, persistenceEnv, request);
 }
