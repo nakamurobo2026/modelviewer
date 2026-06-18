@@ -1,36 +1,28 @@
 const MARKET_DOMAINS = [
-  { domain: "人間関係", category: "empathy", query: "人間関係 悩み 共感 SNS 話題", emotionalAngle: "近い人ほど言いにくい本音", suggestedPostAngle: "関係性の小さなズレを、責めずに言語化する", genres: ["empathy", "comment_bait"] },
-  { domain: "恋愛", category: "controversy", query: "恋愛 価値観 あるある SNS 話題", emotionalAngle: "好きなのにすれ違う感覚", suggestedPostAngle: "恋愛の正解を決めず、賛否が出る余白を残す", genres: ["controversy", "empathy"] },
-  { domain: "子育て", category: "empathy", query: "子育て 共感 疲れ SNS 話題", emotionalAngle: "毎日の小さな限界と救い", suggestedPostAngle: "立派な育児論ではなく、生活の一場面に落とす", genres: ["empathy", "personal_story"] },
-  { domain: "お金", category: "saveability", query: "お金 節約 物価高 家計 SNS 話題", emotionalAngle: "生活防衛と小さな不安", suggestedPostAngle: "数字の話ではなく、買い物中の実感として書く", genres: ["before_after", "comment_bait"] },
-  { domain: "節約", category: "saveability", query: "節約 ライフハック 物価高 SNS 話題", emotionalAngle: "知っておくと少し助かる", suggestedPostAngle: "保存したくなる生活の工夫に変換する", genres: ["creator_process", "before_after"] },
-  { domain: "仕事", category: "empathy", query: "仕事 あるある 職場 ストレス SNS 話題", emotionalAngle: "職場で飲み込んでいる感情", suggestedPostAngle: "働く人の小さな我慢を観察として出す", genres: ["empathy", "failure_story"] },
-  { domain: "転職", category: "curiosity", query: "転職 キャリア 悩み SNS 話題", emotionalAngle: "変わりたいけど怖い", suggestedPostAngle: "成功談ではなく、迷いの瞬間を投稿化する", genres: ["before_after", "personal_story"] },
-  { domain: "AI", category: "surprise", query: "AI 生成AI 仕事 SNS 話題 日本", emotionalAngle: "便利さと怖さが同時に来る", suggestedPostAngle: "AIそのものより、人間側の戸惑いを書く", genres: ["surprise", "controversy"] },
-  { domain: "SNS", category: "curiosity", query: "SNS 疲れ 投稿 あるある Threads 話題", emotionalAngle: "つながっているのに疲れる", suggestedPostAngle: "SNS上の小さな行動の違和感を拾う", genres: ["weird_gap", "comment_bait"] },
-  { domain: "健康", category: "saveability", query: "健康 習慣 睡眠 疲れ SNS 話題", emotionalAngle: "体調の小さな不安", suggestedPostAngle: "大きな健康論ではなく、日々の体感にする", genres: ["micro_observation", "before_after"] },
-  { domain: "ダイエット", category: "controversy", query: "ダイエット 体型 食事 SNS 話題", emotionalAngle: "続けたい気持ちとしんどさ", suggestedPostAngle: "努力自慢ではなく、続かない側の人間味を書く", genres: ["failure_story", "empathy"] },
-  { domain: "メンタル", category: "empathy", query: "メンタル 疲れ 不安 共感 SNS 話題", emotionalAngle: "元気なふりの裏側", suggestedPostAngle: "重くしすぎず、生活の中のサインとして書く", genres: ["quiet_emotion", "empathy"] },
-  { domain: "学校", category: "nostalgia", query: "学校 あるある 懐かしい SNS 話題", emotionalAngle: "思い出と今の距離", suggestedPostAngle: "学校の物や音から記憶を呼び戻す", genres: ["nostalgia", "micro_observation"] },
-  { domain: "趣味", category: "creator_process", query: "趣味 沼 推し活 コレクション SNS 話題", emotionalAngle: "好きなものに時間を溶かす感覚", suggestedPostAngle: "趣味の楽しさより、やめどきのなさを書く", genres: ["creator_process", "comment_bait"] },
-  { domain: "エンタメ", category: "surprise", query: "エンタメ ドラマ 映画 音楽 SNS 話題", emotionalAngle: "みんなが同じ瞬間に反応する", suggestedPostAngle: "作品名依存ではなく、見た後の感情に寄せる", genres: ["surprise", "empathy"] },
-  { domain: "都市伝説", category: "curiosity", query: "都市伝説 噂 不思議 SNS 話題", emotionalAngle: "本当か分からないけど気になる", suggestedPostAngle: "怖がらせすぎず、説明できない余白を残す", genres: ["curiosity", "weird_gap"] },
-  { domain: "地域ネタ", category: "local_change", query: "地域 ニュース 地元 話題 SNS 日本", emotionalAngle: "その土地の人だけ反応する記憶", suggestedPostAngle: "地名に頼らず、地域差が出る行動を書く", genres: ["local_culture", "comment_bait"] },
-  { domain: "ライフハック", category: "saveability", query: "ライフハック 生活の知恵 便利 SNS 話題", emotionalAngle: "すぐ使える小さな得", suggestedPostAngle: "保存したくなる一文にする", genres: ["before_after", "creator_process"] },
-  { domain: "炎上話題", category: "controversy", query: "炎上 話題 賛否 SNS 日本", emotionalAngle: "正しさが割れる空気", suggestedPostAngle: "断罪せず、意見が割れる理由だけ置く", genres: ["controversy", "unpopular_opinion"] },
-  { domain: "比較ネタ", category: "surprise", query: "比較 どっち派 SNS 話題", emotionalAngle: "自分の派閥を言いたくなる", suggestedPostAngle: "二択にしてコメントしやすくする", genres: ["comment_bait", "controversy"] },
-  { domain: "あるある", category: "empathy", query: "あるある 共感 SNS 話題 日本", emotionalAngle: "言われたら分かる日常", suggestedPostAngle: "説明より一場面で共感を作る", genres: ["empathy", "micro_observation"] },
-  { domain: "違和感観察", category: "weird_gap", query: "違和感 日常 観察 SNS 話題", emotionalAngle: "名前のない小さなズレ", suggestedPostAngle: "意味不明にせず、実在しそうな観察にする", genres: ["weird_gap", "micro_observation"] },
-  { domain: "Before/After", category: "before_after", query: "ビフォーアフター 変化 SNS 話題", emotionalAngle: "変化を見る気持ちよさ", suggestedPostAngle: "前後の差を短く見せる", genres: ["before_after", "surprise"] },
-  { domain: "コメント誘発", category: "comment_bait", query: "コメントしたくなる 投稿 SNS 話題", emotionalAngle: "自分の例を出したくなる", suggestedPostAngle: "答えを言い切らず、経験を置ける余白を作る", genres: ["comment_bait", "empathy"] },
-  { domain: "驚き", category: "surprise", query: "意外 驚き 雑学 SNS 話題", emotionalAngle: "思っていた前提が少しズレる", suggestedPostAngle: "知らなかったより、見方が変わる方向にする", genres: ["surprise", "curiosity"] },
-  { domain: "賛否", category: "controversy", query: "賛否 両論 話題 SNS 日本", emotionalAngle: "どちらの気持ちも少し分かる", suggestedPostAngle: "強い断定を避けて、意見を言える形にする", genres: ["controversy", "comment_bait"] },
-  { domain: "懐かしさ", category: "nostalgia", query: "懐かしい 平成 昭和 思い出 SNS 話題", emotionalAngle: "記憶の共有", suggestedPostAngle: "昔話ではなく、今見た瞬間の懐かしさにする", genres: ["nostalgia", "before_after"] },
-  { domain: "共感", category: "empathy", query: "共感 あるある 日常 SNS 話題", emotionalAngle: "自分だけじゃなかった感覚", suggestedPostAngle: "代弁しすぎず、コメントの余白を残す", genres: ["empathy", "comment_bait"] }
+  { domain: "恋愛", category: "女の本音", query: "恋愛 女の本音 Threads 共感 話題", emotionalAngle: "好きなのに素直になれない温度差", suggestedPostAngle: "恋愛心理を説明せず、女性目線の一場面で置く", genres: ["female_truth", "romance_aruaru"] },
+  { domain: "男女の温度差", category: "賛否", query: "男女の温度差 恋愛 あるある SNS 話題", emotionalAngle: "同じ出来事でも感じ方が違うもどかしさ", suggestedPostAngle: "責めずに、気づいてほしいズレとして書く", genres: ["comment_bait", "female_truth"] },
+  { domain: "夜のLINE", category: "夜のLINE", query: "夜 LINE 恋愛 返信 未読 SNS 共感", emotionalAngle: "深夜だけ近くなる関係の寂しさ", suggestedPostAngle: "夜中の通知や未読を情景化する", genres: ["night_line", "沼"] },
+  { domain: "返信速度", category: "脈あり脈なし", query: "返信速度 恋愛 脈あり 脈なし SNS 話題", emotionalAngle: "返信の速さで一日が揺れる感じ", suggestedPostAngle: "返信速度そのものより待っている女の子の動きを書く", genres: ["green_or_red_flag", "comment_bait"] },
+  { domain: "脈あり脈なし", category: "脈あり脈なし", query: "脈あり 脈なし 判定 恋愛 SNS", emotionalAngle: "分かっているのに期待してしまう矛盾", suggestedPostAngle: "判定口調ではなく、自分で察してしまう瞬間にする", genres: ["green_or_red_flag", "female_truth"] },
+  { domain: "元カレ元カノ", category: "元カレ元カノ", query: "元カレ 元カノ 未練 SNS 投稿 話題", emotionalAngle: "終わったはずの人がSNSで現在形になる", suggestedPostAngle: "元カレの投稿を見てしまう指の動きで書く", genres: ["ex_memory", "sns_love"] },
+  { domain: "匂わせ", category: "匂わせ", query: "匂わせ 恋愛 SNS ストーリー あるある", emotionalAngle: "直接言えない本音を遠回しに置く", suggestedPostAngle: "ストーリーや下書きを使って、見てほしい人だけを匂わせる", genres: ["subtle_hint", "sns_love"] },
+  { domain: "浮気疑惑", category: "賛否", query: "浮気疑惑 スマホ 彼氏 SNS 恋愛 あるある", emotionalAngle: "証拠はないのに空気で察する怖さ", suggestedPostAngle: "断罪せず、スマホの置き方や通知だけで不安を描く", genres: ["jealousy", "comment_bait"] },
+  { domain: "友達以上恋人未満", category: "友達以上恋人未満", query: "友達以上恋人未満 恋愛 SNS 共感", emotionalAngle: "壊したくなくて進めない関係", suggestedPostAngle: "改札や帰り道で言えなかった一言を描く", genres: ["more_than_friends", "subtle_hint"] },
+  { domain: "片思い", category: "女の本音", query: "片思い LINE 送れない 恋愛 SNS", emotionalAngle: "重いと思われたくなくて本音を消す", suggestedPostAngle: "送信前に消した一言を中心にする", genres: ["strong_girl", "night_line"] },
+  { domain: "依存", category: "沼", query: "恋愛 依存 沼 SNS あるある", emotionalAngle: "小さな反応だけで機嫌が変わる怖さ", suggestedPostAngle: "既読や足跡だけで安心してしまう場面にする", genres: ["沼", "green_or_red_flag"] },
+  { domain: "嫉妬", category: "嫉妬", query: "嫉妬 恋愛 SNS いいね欄 ストーリー", emotionalAngle: "責められないのに平気ではいられない", suggestedPostAngle: "いいね欄や足跡を見た女の子の沈黙を書く", genres: ["jealousy", "comment_bait"] },
+  { domain: "都合のいい関係", category: "都合のいい関係", query: "都合のいい関係 恋愛 夜 LINE SNS", emotionalAngle: "分かっていても一回の優しさで戻される", suggestedPostAngle: "短い連絡と前回泣いた記憶をつなげる", genres: ["situationship", "adult_distance"] },
+  { domain: "女の本音", category: "女の本音", query: "女の本音 恋愛 あるある Threads", emotionalAngle: "言わないだけで本当は気づいてほしい", suggestedPostAngle: "一人称の本音を短く、説明しすぎず書く", genres: ["female_truth", "subtle_hint"] },
+  { domain: "恋愛あるある", category: "恋愛あるある", query: "恋愛あるある 共感 SNS Threads", emotionalAngle: "笑えるけど当事者だと笑えない矛盾", suggestedPostAngle: "好きじゃない人と好きな人で反応が変わる場面にする", genres: ["romance_aruaru", "comment_bait"] },
+  { domain: "人間関係", category: "女の本音", query: "人間関係 女友達 嫉妬 SNS 共感", emotionalAngle: "仲がいいからこそ比べてしまう気まずさ", suggestedPostAngle: "女友達との会話や通知の見え方で書く", genres: ["female_truth", "comment_bait"] },
+  { domain: "承認欲求", category: "匂わせ", query: "承認欲求 恋愛 SNS ストーリー 好きな人", emotionalAngle: "みんなじゃなく一人に見てほしい気持ち", suggestedPostAngle: "投稿時間や自撮りの撮り直しで見せる", genres: ["sns_love", "subtle_hint"] },
+  { domain: "SNSと恋愛", category: "匂わせ", query: "SNS 恋愛 ストーリー 足跡 いいね あるある", emotionalAngle: "見なくていいものまで見えてしまう恋愛", suggestedPostAngle: "足跡、いいね欄、未読を具体物として使う", genres: ["sns_love", "jealousy"] },
+  { domain: "大人の距離感", category: "都合のいい関係", query: "大人の距離感 恋愛 曖昧な関係 SNS", emotionalAngle: "余裕のふりをした我慢", suggestedPostAngle: "聞きたいことを飲み込む帰り道として描く", genres: ["adult_distance", "female_truth"] },
+  { domain: "寂しさ", category: "夜のLINE", query: "寂しさ 恋愛 夜 SNS 共感", emotionalAngle: "夜だけ本音が出る弱さ", suggestedPostAngle: "ベッドの上のスマホや消した下書きで描く", genres: ["night_line", "strong_girl"] }
 ];
 
-const NOISE = ["fast.com", "speedtest", "login", "signup", "pricing", "affiliate", "coupon", "求人", "広告", "まとめランキング", "テスト", "計測", "通信速度"];
-const USER_INTEREST_BIAS_TERMS = ["工場", "CNC", "cnc", "3Dプリンター", "3dプリンター", "福山市", "府中市", "ものづくり", "製造業", "加工", "切削"];
+const NOISE = ["fast.com", "speedtest", "login", "signup", "pricing", "affiliate", "coupon", "求人", "広告", "まとめランキング", "テスト", "計測", "通信速度", "アダルト", "出会い系", "マッチングアプリ 比較"];
+const UNSAFE_TERMS = ["未成年", "中学生", "高校生", "児童", "裸", "性器", "性交", "セックス", "レイプ", "強姦", "無理やり", "脅し", "監禁", "盗撮", "痴漢"];
 
 function json(data, env, request, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: corsHeaders(env, request.headers.get("Origin")) });
@@ -59,12 +51,7 @@ function text(value) {
 
 function isNoise(value) {
   const normalized = text(value);
-  return NOISE.some((item) => normalized.includes(text(item)));
-}
-
-function hasUserInterestBias(value) {
-  const normalized = text(value);
-  return USER_INTEREST_BIAS_TERMS.some((item) => normalized.includes(text(item)));
+  return NOISE.some((item) => normalized.includes(text(item))) || UNSAFE_TERMS.some((item) => normalized.includes(text(item)));
 }
 
 function similarity(a, b) {
@@ -76,10 +63,10 @@ function similarity(a, b) {
 }
 
 function sourceHint(source, config) {
-  if (!source) return `market fallback / ${config.domain}`;
+  if (!source) return `romance market fallback / ${config.domain}`;
   try {
     const host = new URL(source.url || "https://local.invalid").hostname.replace(/^www\./, "");
-    return `${host} / ${String(source.title || config.domain).slice(0, 40)}`;
+    return `${host} / ${String(source.title || config.domain).slice(0, 42)}`;
   } catch {
     return String(source.title || config.domain).slice(0, 48);
   }
@@ -93,10 +80,10 @@ function scoreSourceForDomain(source, config) {
   const body = text(`${source.title || ""} ${source.content || ""} ${source.url || ""}`);
   const tokens = domainTokens(config);
   const matches = tokens.reduce((sum, token) => sum + (body.includes(token) ? 1 : 0), 0);
-  const socialBoost = /(threads|x\.com|twitter|tiktok|instagram|reddit|togetter|note|yahoo|news|trend|話題|sns|コメント|炎上|共感|賛否)/i.test(`${source.url || ""} ${source.title || ""}`) ? 12 : 0;
+  const socialBoost = /(threads|x\.com|twitter|instagram|tiktok|note|togetter|yahoo|sns|コメント|恋愛|共感|賛否|あるある|匂わせ|line|ストーリー)/i.test(`${source.url || ""} ${source.title || ""} ${source.content || ""}`) ? 16 : 0;
   const freshnessBoost = /(2026|2025|最新|今日|昨日|話題|急増|トレンド|リアルタイム)/i.test(`${source.title || ""} ${source.content || ""}`) ? 10 : 0;
-  const noisePenalty = isNoise(`${source.title || ""} ${source.url || ""} ${source.content || ""}`) ? 80 : 0;
-  return matches * 5 + socialBoost + freshnessBoost - noisePenalty;
+  const noisePenalty = isNoise(`${source.title || ""} ${source.url || ""} ${source.content || ""}`) ? 90 : 0;
+  return matches * 6 + socialBoost + freshnessBoost - noisePenalty;
 }
 
 function pickSource(results, config) {
@@ -111,29 +98,27 @@ function pickSource(results, config) {
 function metricFromSource(source, config, base) {
   const body = `${source?.title || ""} ${source?.content || ""} ${source?.url || ""} ${config.domain} ${config.query}`;
   let value = base;
-  if (/(threads|x\.com|twitter|tiktok|instagram|reddit|togetter|note|yahoo|リアルタイム|trend|トレンド|話題)/i.test(body)) value += 14;
-  if (/(コメント|どっち|賛否|あるある|共感|炎上|議論|反応)/i.test(body)) value += 10;
-  if (/(保存|方法|コツ|節約|健康|チェック|一覧|比較|Before|After|ビフォー|アフター)/i.test(body)) value += 8;
-  if (hasUserInterestBias(body)) value -= 20;
-  if (isNoise(body)) value -= 30;
+  if (/(threads|x\.com|twitter|instagram|tiktok|note|togetter|yahoo|リアルタイム|trend|トレンド|話題|sns)/i.test(body)) value += 14;
+  if (/(コメント|どっち|賛否|あるある|共感|嫉妬|脈あり|脈なし|匂わせ|LINE|未読|元カレ|沼)/i.test(body)) value += 12;
+  if (/(心理|本音|相談|対処|見極め|チェック|保存|まとめ)/i.test(body)) value += 6;
+  if (isNoise(body)) value -= 35;
   return Math.max(1, Math.min(100, Math.round(value)));
 }
 
 function buildKeyword(config, source) {
   const title = String(source?.title || "").replace(/\s+/g, " ").trim();
-  if (title && !isNoise(title) && !hasUserInterestBias(title)) return `${config.domain} / ${title.slice(0, 28)}`;
-  return `${config.domain}で今ひっかかる話題`;
+  if (title && !isNoise(title)) return `${config.domain} / ${title.slice(0, 28)}`;
+  return `${config.domain}で今刺さる恋愛感情`;
 }
 
 function scoreCandidate(candidate, selected) {
-  let score = Math.round(candidate.trend_strength * 0.45 + candidate.comment_potential * 0.32 + candidate.save_potential * 0.23);
-  if (/(SNS|AI|お金|仕事|人間関係|恋愛|健康|炎上|賛否|共感|コメント)/.test(candidate.domain)) score += 4;
-  if (hasUserInterestBias(`${candidate.keyword} ${candidate.source_hint}`) && candidate.trend_strength < 82) score -= 45;
-  if (isNoise(`${candidate.keyword} ${candidate.source_hint}`)) score -= 35;
+  let score = Math.round(candidate.trend_strength * 0.4 + candidate.comment_potential * 0.42 + candidate.save_potential * 0.18);
+  if (/(恋愛|LINE|返信|脈|元カレ|匂わせ|嫉妬|沼|女の本音|SNS)/.test(candidate.domain + candidate.category)) score += 6;
+  if (isNoise(`${candidate.keyword} ${candidate.source_hint}`)) score -= 50;
   for (const picked of selected) {
-    if (picked.domain === candidate.domain) score -= 80;
-    score -= similarity(candidate.keyword, picked.keyword) * 34;
-    score -= similarity(candidate.suggested_post_angle, picked.suggested_post_angle) * 22;
+    if (picked.domain === candidate.domain) score -= 75;
+    score -= similarity(candidate.keyword, picked.keyword) * 32;
+    score -= similarity(candidate.suggested_post_angle, picked.suggested_post_angle) * 20;
   }
   return Math.max(1, Math.min(100, Math.round(score)));
 }
@@ -142,9 +127,9 @@ async function tavily(env, seed) {
   if (!env.TAVILY_API_KEY) return [];
   const seedClause = seed ? ` seed context: ${seed}` : "";
   const query = [
-    "日本 SNS 話題 最新 共感 賛否 コメント トレンド",
-    "Yahoo リアルタイム note Togetter Reddit X Threads 伸びている話題",
-    "人間関係 恋愛 お金 仕事 AI 健康 メンタル エンタメ 炎上 あるある",
+    "日本 Threads 恋愛 女の本音 LINE 未読 返信速度 匂わせ SNS 話題",
+    "恋愛あるある 脈あり 脈なし 元カレ 嫉妬 都合のいい関係 コメント 共感",
+    "夜のLINE ストーリー 足跡 友達以上恋人未満 大人の距離感 SNS",
     seedClause
   ].join(" ");
   const response = await fetch("https://api.tavily.com/search", {
@@ -163,25 +148,25 @@ export async function discoverDiverseTrends(env, seed = "") {
   try {
     results = await tavily(env, seed);
   } catch (error) {
-    console.error("trend discovery tavily fallback", error);
+    console.error("romance trend discovery tavily fallback", error);
   }
 
   const candidates = MARKET_DOMAINS.map((config) => {
     const source = pickSource(results, config);
     const sourceScore = source ? scoreSourceForDomain(source, config) : 0;
-    const trendStrength = metricFromSource(source, config, source ? 56 + Math.min(26, sourceScore) : 44);
-    const commentPotential = metricFromSource(source, config, 52 + (/(コメント|賛否|あるある|共感|恋愛|人間関係|炎上)/.test(config.query) ? 12 : 0));
-    const savePotential = metricFromSource(source, config, 48 + (/(節約|お金|健康|ライフハック|Before|After|比較)/.test(config.query) ? 14 : 0));
+    const trendStrength = metricFromSource(source, config, source ? 58 + Math.min(24, sourceScore) : 50);
+    const commentPotential = metricFromSource(source, config, 58 + (/(コメント|賛否|あるある|恋愛|脈|嫉妬|匂わせ|LINE)/.test(config.query) ? 14 : 0));
+    const savePotential = metricFromSource(source, config, 45 + (/(心理|見極め|判定|対処|女の本音|大人の距離感)/.test(config.query) ? 12 : 0));
     const candidate = {
       keyword: buildKeyword(config, source),
       domain: config.domain,
       category: config.category,
       emotional_angle: config.emotionalAngle,
-      why_it_may_resonate: `${config.domain}は、${config.emotionalAngle}が起きやすく、今のSNSで自分ごと化されやすい。`,
+      why_it_may_resonate: `${config.domain}は、${config.emotionalAngle}が起きやすく、女性目線のThreadsで自分ごと化されやすい。`,
       source_hint: sourceHint(source, config),
       suggested_post_angle: config.suggestedPostAngle,
       suggested_genre: config.genres[0],
-      likely_comments: `${config.domain}で自分の体験や反対意見を置きやすい`,
+      likely_comments: `${config.domain}で、自分の経験・賛否・元カレ元カノ話を置きやすい`,
       trend_strength: trendStrength,
       comment_potential: commentPotential,
       save_potential: savePotential,
@@ -243,7 +228,7 @@ export async function handleTrends(request, env) {
     topics,
     pickedTopic: topics[0]?.keyword || "",
     selectedTrend: topics[0] || null,
-    source: env.TAVILY_API_KEY ? "tavily_market_driven" : "local_market_domains",
+    source: env.TAVILY_API_KEY ? "tavily_romance_market" : "local_romance_market_domains",
     query: seed
   }, env, request);
 }
@@ -290,10 +275,10 @@ export async function handleResearchWithTrend(request, env, ctx, worker, upstrea
     trendDiscovery: { success: true, ok: true, topics: trends, pickedTopic: selectedTrend?.keyword || "", selectedTrend },
     sources: [
       {
-        sourceType: "trend_discovery",
+        sourceType: "romance_trend_discovery",
         priority: "A",
         weight: 0.8,
-        title: selectedTrend ? `${selectedTrend.domain}: ${selectedTrend.keyword}` : "Trend discovery",
+        title: selectedTrend ? `${selectedTrend.domain}: ${selectedTrend.keyword}` : "Romance trend discovery",
         summary: selectedTrend?.why_it_may_resonate || "",
         reliability: selectedTrend?.trend_strength || selectedTrend?.score || 0,
         impact: selectedTrend?.comment_potential || selectedTrend?.score || 0,
