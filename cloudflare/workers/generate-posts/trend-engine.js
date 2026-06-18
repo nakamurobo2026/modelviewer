@@ -1,17 +1,36 @@
-const TREND_CATEGORIES = [
-  ["nostalgia", "古い商店街の看板", "懐かしさと今の生活の距離", "昔からある場所の小さな変化を、ひとつの景色で切り取る", "地域 懐かしい 商店街 閉店 思い出 SNS"],
-  ["curiosity", "誰も説明しない店内ルール", "理由は分からないけど気になる", "普段スルーしている謎の習慣を、観察として出す", "身近な疑問 店舗 ルール なぜ SNS 話題"],
-  ["surprise", "普通の場所が急に別物に見える瞬間", "予想外の見え方", "日常の中で一瞬だけ景色が変わるところを拾う", "日常 驚き あるある 店舗 風景 SNS"],
-  ["local_change", "地方の店が少しずつ変わる感じ", "便利さと寂しさが同時に来る", "閉店や改装ではなく、変化の途中の空気を投稿化する", "地方 店舗 変化 閉店 改装 地域 ニュース"],
-  ["community", "地元だけで共有される小さな常識", "内輪ではないけど近い記憶", "地域の人だけが反応しそうな行動や音を使う", "地域コミュニティ 地元 あるある SNS 話題"],
-  ["controversy", "便利になったのに残る寂しさ", "賛否が分かれる生活の変化", "正解を決めず、どちらの気持ちも残る形にする", "便利 寂しい 地方 生活 変化 議論"],
-  ["everyday_observation", "17時過ぎの店内の音", "言われたら分かる日常の細部", "音、光、人の減り方だけで共感を作る", "日常 観察 レジ音 蛍光灯 店内 あるある"],
-  ["weird_gap", "明るいのに閉店前みたいな場所", "少しだけズレている感じ", "怖がらせず、説明しにくいズレだけ残す", "違和感 日常 変な空気 店舗 SNS"],
-  ["empathy", "店員さんの片付けが始まる時間", "働く人と客の気配が交差する", "誰かを責めず、人の動きから共感を作る", "店員 片付け 閉店前 共感 仕事 SNS"],
-  ["creator_process", "投稿ネタになる前の小さなメモ", "作る人の観察の裏側", "何気ない発見が投稿になるまでの過程を見せる", "クリエイター 投稿ネタ メモ 観察 SNS"]
-].map(([category, base, emotionalAngle, suggestedPostAngle, query]) => ({ category, base, emotionalAngle, suggestedPostAngle, query }));
+const MARKET_DOMAINS = [
+  { domain: "人間関係", category: "empathy", query: "人間関係 悩み 共感 SNS 話題", emotionalAngle: "近い人ほど言いにくい本音", suggestedPostAngle: "関係性の小さなズレを、責めずに言語化する", genres: ["empathy", "comment_bait"] },
+  { domain: "恋愛", category: "controversy", query: "恋愛 価値観 あるある SNS 話題", emotionalAngle: "好きなのにすれ違う感覚", suggestedPostAngle: "恋愛の正解を決めず、賛否が出る余白を残す", genres: ["controversy", "empathy"] },
+  { domain: "子育て", category: "empathy", query: "子育て 共感 疲れ SNS 話題", emotionalAngle: "毎日の小さな限界と救い", suggestedPostAngle: "立派な育児論ではなく、生活の一場面に落とす", genres: ["empathy", "personal_story"] },
+  { domain: "お金", category: "saveability", query: "お金 節約 物価高 家計 SNS 話題", emotionalAngle: "生活防衛と小さな不安", suggestedPostAngle: "数字の話ではなく、買い物中の実感として書く", genres: ["before_after", "comment_bait"] },
+  { domain: "節約", category: "saveability", query: "節約 ライフハック 物価高 SNS 話題", emotionalAngle: "知っておくと少し助かる", suggestedPostAngle: "保存したくなる生活の工夫に変換する", genres: ["creator_process", "before_after"] },
+  { domain: "仕事", category: "empathy", query: "仕事 あるある 職場 ストレス SNS 話題", emotionalAngle: "職場で飲み込んでいる感情", suggestedPostAngle: "働く人の小さな我慢を観察として出す", genres: ["empathy", "failure_story"] },
+  { domain: "転職", category: "curiosity", query: "転職 キャリア 悩み SNS 話題", emotionalAngle: "変わりたいけど怖い", suggestedPostAngle: "成功談ではなく、迷いの瞬間を投稿化する", genres: ["before_after", "personal_story"] },
+  { domain: "AI", category: "surprise", query: "AI 生成AI 仕事 SNS 話題 日本", emotionalAngle: "便利さと怖さが同時に来る", suggestedPostAngle: "AIそのものより、人間側の戸惑いを書く", genres: ["surprise", "controversy"] },
+  { domain: "SNS", category: "curiosity", query: "SNS 疲れ 投稿 あるある Threads 話題", emotionalAngle: "つながっているのに疲れる", suggestedPostAngle: "SNS上の小さな行動の違和感を拾う", genres: ["weird_gap", "comment_bait"] },
+  { domain: "健康", category: "saveability", query: "健康 習慣 睡眠 疲れ SNS 話題", emotionalAngle: "体調の小さな不安", suggestedPostAngle: "大きな健康論ではなく、日々の体感にする", genres: ["micro_observation", "before_after"] },
+  { domain: "ダイエット", category: "controversy", query: "ダイエット 体型 食事 SNS 話題", emotionalAngle: "続けたい気持ちとしんどさ", suggestedPostAngle: "努力自慢ではなく、続かない側の人間味を書く", genres: ["failure_story", "empathy"] },
+  { domain: "メンタル", category: "empathy", query: "メンタル 疲れ 不安 共感 SNS 話題", emotionalAngle: "元気なふりの裏側", suggestedPostAngle: "重くしすぎず、生活の中のサインとして書く", genres: ["quiet_emotion", "empathy"] },
+  { domain: "学校", category: "nostalgia", query: "学校 あるある 懐かしい SNS 話題", emotionalAngle: "思い出と今の距離", suggestedPostAngle: "学校の物や音から記憶を呼び戻す", genres: ["nostalgia", "micro_observation"] },
+  { domain: "趣味", category: "creator_process", query: "趣味 沼 推し活 コレクション SNS 話題", emotionalAngle: "好きなものに時間を溶かす感覚", suggestedPostAngle: "趣味の楽しさより、やめどきのなさを書く", genres: ["creator_process", "comment_bait"] },
+  { domain: "エンタメ", category: "surprise", query: "エンタメ ドラマ 映画 音楽 SNS 話題", emotionalAngle: "みんなが同じ瞬間に反応する", suggestedPostAngle: "作品名依存ではなく、見た後の感情に寄せる", genres: ["surprise", "empathy"] },
+  { domain: "都市伝説", category: "curiosity", query: "都市伝説 噂 不思議 SNS 話題", emotionalAngle: "本当か分からないけど気になる", suggestedPostAngle: "怖がらせすぎず、説明できない余白を残す", genres: ["curiosity", "weird_gap"] },
+  { domain: "地域ネタ", category: "local_change", query: "地域 ニュース 地元 話題 SNS 日本", emotionalAngle: "その土地の人だけ反応する記憶", suggestedPostAngle: "地名に頼らず、地域差が出る行動を書く", genres: ["local_culture", "comment_bait"] },
+  { domain: "ライフハック", category: "saveability", query: "ライフハック 生活の知恵 便利 SNS 話題", emotionalAngle: "すぐ使える小さな得", suggestedPostAngle: "保存したくなる一文にする", genres: ["before_after", "creator_process"] },
+  { domain: "炎上話題", category: "controversy", query: "炎上 話題 賛否 SNS 日本", emotionalAngle: "正しさが割れる空気", suggestedPostAngle: "断罪せず、意見が割れる理由だけ置く", genres: ["controversy", "unpopular_opinion"] },
+  { domain: "比較ネタ", category: "surprise", query: "比較 どっち派 SNS 話題", emotionalAngle: "自分の派閥を言いたくなる", suggestedPostAngle: "二択にしてコメントしやすくする", genres: ["comment_bait", "controversy"] },
+  { domain: "あるある", category: "empathy", query: "あるある 共感 SNS 話題 日本", emotionalAngle: "言われたら分かる日常", suggestedPostAngle: "説明より一場面で共感を作る", genres: ["empathy", "micro_observation"] },
+  { domain: "違和感観察", category: "weird_gap", query: "違和感 日常 観察 SNS 話題", emotionalAngle: "名前のない小さなズレ", suggestedPostAngle: "意味不明にせず、実在しそうな観察にする", genres: ["weird_gap", "micro_observation"] },
+  { domain: "Before/After", category: "before_after", query: "ビフォーアフター 変化 SNS 話題", emotionalAngle: "変化を見る気持ちよさ", suggestedPostAngle: "前後の差を短く見せる", genres: ["before_after", "surprise"] },
+  { domain: "コメント誘発", category: "comment_bait", query: "コメントしたくなる 投稿 SNS 話題", emotionalAngle: "自分の例を出したくなる", suggestedPostAngle: "答えを言い切らず、経験を置ける余白を作る", genres: ["comment_bait", "empathy"] },
+  { domain: "驚き", category: "surprise", query: "意外 驚き 雑学 SNS 話題", emotionalAngle: "思っていた前提が少しズレる", suggestedPostAngle: "知らなかったより、見方が変わる方向にする", genres: ["surprise", "curiosity"] },
+  { domain: "賛否", category: "controversy", query: "賛否 両論 話題 SNS 日本", emotionalAngle: "どちらの気持ちも少し分かる", suggestedPostAngle: "強い断定を避けて、意見を言える形にする", genres: ["controversy", "comment_bait"] },
+  { domain: "懐かしさ", category: "nostalgia", query: "懐かしい 平成 昭和 思い出 SNS 話題", emotionalAngle: "記憶の共有", suggestedPostAngle: "昔話ではなく、今見た瞬間の懐かしさにする", genres: ["nostalgia", "before_after"] },
+  { domain: "共感", category: "empathy", query: "共感 あるある 日常 SNS 話題", emotionalAngle: "自分だけじゃなかった感覚", suggestedPostAngle: "代弁しすぎず、コメントの余白を残す", genres: ["empathy", "comment_bait"] }
+];
 
-const NOISE = ["fast.com", "speedtest", "login", "signup", "pricing", "affiliate", "coupon", "求人", "広告", "まとめランキング"];
+const NOISE = ["fast.com", "speedtest", "login", "signup", "pricing", "affiliate", "coupon", "求人", "広告", "まとめランキング", "テスト", "計測", "通信速度"];
+const USER_INTEREST_BIAS_TERMS = ["工場", "CNC", "cnc", "3Dプリンター", "3dプリンター", "福山市", "府中市", "ものづくり", "製造業", "加工", "切削"];
 
 function json(data, env, request, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: corsHeaders(env, request.headers.get("Origin")) });
@@ -43,6 +62,11 @@ function isNoise(value) {
   return NOISE.some((item) => normalized.includes(text(item)));
 }
 
+function hasUserInterestBias(value) {
+  const normalized = text(value);
+  return USER_INTEREST_BIAS_TERMS.some((item) => normalized.includes(text(item)));
+}
+
 function similarity(a, b) {
   const left = new Set(text(a).split(" ").filter(Boolean));
   const right = new Set(text(b).split(" ").filter(Boolean));
@@ -52,62 +76,81 @@ function similarity(a, b) {
 }
 
 function sourceHint(source, config) {
-  if (!source) return `local fallback / ${config.category}`;
+  if (!source) return `market fallback / ${config.domain}`;
   try {
     const host = new URL(source.url || "https://local.invalid").hostname.replace(/^www\./, "");
-    return `${host} / ${String(source.title || config.base).slice(0, 30)}`;
+    return `${host} / ${String(source.title || config.domain).slice(0, 40)}`;
   } catch {
-    return String(source.title || config.base).slice(0, 40);
+    return String(source.title || config.domain).slice(0, 48);
   }
 }
 
-function pickSource(results, config, index) {
-  const clean = results.filter((item) => !isNoise(`${item.title || ""} ${item.url || ""} ${item.content || ""}`));
-  const tokens = text(`${config.query} ${config.base}`).split(" ").filter(Boolean);
-  const scored = clean.map((item) => {
-    const body = text(`${item.title || ""} ${item.content || ""} ${item.url || ""}`);
-    const matches = tokens.reduce((sum, token) => sum + (body.includes(token) ? 1 : 0), 0);
-    const sourceBoost = /(threads|x\.com|twitter|note|reddit|togetter|yahoo|news|local|地域|地方|商店街)/i.test(`${item.url || ""} ${item.title || ""}`) ? 8 : 0;
-    return { item, score: matches * 4 + sourceBoost };
-  }).sort((a, b) => b.score - a.score);
-  return scored[index % Math.max(scored.length, 1)]?.item || clean[index % Math.max(clean.length, 1)] || null;
+function domainTokens(config) {
+  return text(`${config.domain} ${config.query} ${config.emotionalAngle} ${config.suggestedPostAngle}`).split(" ").filter(Boolean);
 }
 
-function buildKeyword(seed, config, source) {
-  const seedText = String(seed || "").trim();
+function scoreSourceForDomain(source, config) {
+  const body = text(`${source.title || ""} ${source.content || ""} ${source.url || ""}`);
+  const tokens = domainTokens(config);
+  const matches = tokens.reduce((sum, token) => sum + (body.includes(token) ? 1 : 0), 0);
+  const socialBoost = /(threads|x\.com|twitter|tiktok|instagram|reddit|togetter|note|yahoo|news|trend|話題|sns|コメント|炎上|共感|賛否)/i.test(`${source.url || ""} ${source.title || ""}`) ? 12 : 0;
+  const freshnessBoost = /(2026|2025|最新|今日|昨日|話題|急増|トレンド|リアルタイム)/i.test(`${source.title || ""} ${source.content || ""}`) ? 10 : 0;
+  const noisePenalty = isNoise(`${source.title || ""} ${source.url || ""} ${source.content || ""}`) ? 80 : 0;
+  return matches * 5 + socialBoost + freshnessBoost - noisePenalty;
+}
+
+function pickSource(results, config) {
+  const clean = results.filter((item) => !isNoise(`${item.title || ""} ${item.url || ""} ${item.content || ""}`));
+  const scored = clean
+    .map((item) => ({ item, score: scoreSourceForDomain(item, config) }))
+    .filter((row) => row.score > 0)
+    .sort((a, b) => b.score - a.score);
+  return scored[0]?.item || null;
+}
+
+function metricFromSource(source, config, base) {
+  const body = `${source?.title || ""} ${source?.content || ""} ${source?.url || ""} ${config.domain} ${config.query}`;
+  let value = base;
+  if (/(threads|x\.com|twitter|tiktok|instagram|reddit|togetter|note|yahoo|リアルタイム|trend|トレンド|話題)/i.test(body)) value += 14;
+  if (/(コメント|どっち|賛否|あるある|共感|炎上|議論|反応)/i.test(body)) value += 10;
+  if (/(保存|方法|コツ|節約|健康|チェック|一覧|比較|Before|After|ビフォー|アフター)/i.test(body)) value += 8;
+  if (hasUserInterestBias(body)) value -= 20;
+  if (isNoise(body)) value -= 30;
+  return Math.max(1, Math.min(100, Math.round(value)));
+}
+
+function buildKeyword(config, source) {
   const title = String(source?.title || "").replace(/\s+/g, " ").trim();
-  const hint = title && !isNoise(title) ? title.slice(0, 24) : config.base;
-  if (!seedText) return config.base;
-  if (similarity(seedText, config.base) > 0.35) return `${seedText} / ${config.category}`;
-  return `${seedText}から見る${hint}`;
+  if (title && !isNoise(title) && !hasUserInterestBias(title)) return `${config.domain} / ${title.slice(0, 28)}`;
+  return `${config.domain}で今ひっかかる話題`;
 }
 
 function scoreCandidate(candidate, selected) {
-  const body = `${candidate.keyword} ${candidate.emotional_angle} ${candidate.why_it_may_resonate} ${candidate.suggested_post_angle} ${candidate.source_hint}`;
-  let score = 64;
-  if (/(地方|地域|商店街|駅前|スーパー|店|閉店|改装|地元|看板|駐車場)/.test(body)) score += 10;
-  if (/(音|光|匂い|人|棚|レジ|夕方|17時|雨|蛍光灯|入口|通路)/.test(body)) score += 8;
-  if (/(けど|なのに|一方で|変わる|残る|ズレ|少し)/.test(body)) score += 7;
-  if (/(気になる|共有|賛否|話したく|分かる|誰か)/.test(body)) score += 7;
-  if (isNoise(body)) score -= 24;
+  let score = Math.round(candidate.trend_strength * 0.45 + candidate.comment_potential * 0.32 + candidate.save_potential * 0.23);
+  if (/(SNS|AI|お金|仕事|人間関係|恋愛|健康|炎上|賛否|共感|コメント)/.test(candidate.domain)) score += 4;
+  if (hasUserInterestBias(`${candidate.keyword} ${candidate.source_hint}`) && candidate.trend_strength < 82) score -= 45;
+  if (isNoise(`${candidate.keyword} ${candidate.source_hint}`)) score -= 35;
   for (const picked of selected) {
-    score -= similarity(candidate.keyword, picked.keyword) * 28;
-    score -= similarity(candidate.suggested_post_angle, picked.suggested_post_angle) * 18;
+    if (picked.domain === candidate.domain) score -= 80;
+    score -= similarity(candidate.keyword, picked.keyword) * 34;
+    score -= similarity(candidate.suggested_post_angle, picked.suggested_post_angle) * 22;
   }
   return Math.max(1, Math.min(100, Math.round(score)));
 }
 
 async function tavily(env, seed) {
   if (!env.TAVILY_API_KEY) return [];
+  const seedClause = seed ? ` seed context: ${seed}` : "";
   const query = [
-    seed || "日本 地域 SNS 話題",
-    "地方 日常 観察 懐かしい 変化 共感",
-    "SNS あるある 違和感 地域 コミュニティ"
+    "日本 SNS 話題 最新 共感 賛否 コメント トレンド",
+    "Yahoo リアルタイム note Togetter Reddit X Threads 伸びている話題",
+    "人間関係 恋愛 お金 仕事 AI 健康 メンタル エンタメ 炎上 あるある",
+    seedClause
   ].join(" ");
   const response = await fetch("https://api.tavily.com/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ api_key: env.TAVILY_API_KEY, query, search_depth: "basic", max_results: 12, include_answer: true })
+    body: JSON.stringify({ api_key: env.TAVILY_API_KEY, query, search_depth: "basic", max_results: 20, include_answer: true })
   });
   const raw = await response.text();
   if (!response.ok) throw new Error(`Tavily trends ${response.status}: ${raw.slice(0, 300)}`);
@@ -123,36 +166,71 @@ export async function discoverDiverseTrends(env, seed = "") {
     console.error("trend discovery tavily fallback", error);
   }
 
-  const selected = [];
-  for (const config of TREND_CATEGORIES) {
-    const source = pickSource(results, config, selected.length);
+  const candidates = MARKET_DOMAINS.map((config) => {
+    const source = pickSource(results, config);
+    const sourceScore = source ? scoreSourceForDomain(source, config) : 0;
+    const trendStrength = metricFromSource(source, config, source ? 56 + Math.min(26, sourceScore) : 44);
+    const commentPotential = metricFromSource(source, config, 52 + (/(コメント|賛否|あるある|共感|恋愛|人間関係|炎上)/.test(config.query) ? 12 : 0));
+    const savePotential = metricFromSource(source, config, 48 + (/(節約|お金|健康|ライフハック|Before|After|比較)/.test(config.query) ? 14 : 0));
     const candidate = {
-      keyword: buildKeyword(seed, config, source),
+      keyword: buildKeyword(config, source),
+      domain: config.domain,
       category: config.category,
       emotional_angle: config.emotionalAngle,
-      why_it_may_resonate: `${config.base}は、${config.emotionalAngle}を短い観察にしやすい。`,
+      why_it_may_resonate: `${config.domain}は、${config.emotionalAngle}が起きやすく、今のSNSで自分ごと化されやすい。`,
       source_hint: sourceHint(source, config),
       suggested_post_angle: config.suggestedPostAngle,
+      suggested_genre: config.genres[0],
+      likely_comments: `${config.domain}で自分の体験や反対意見を置きやすい`,
+      trend_strength: trendStrength,
+      comment_potential: commentPotential,
+      save_potential: savePotential,
       score: 0
     };
-    candidate.score = scoreCandidate(candidate, selected);
+    candidate.score = scoreCandidate(candidate, []);
+    return candidate;
+  });
+
+  const selected = [];
+  for (const candidate of candidates.sort((a, b) => b.score - a.score)) {
+    const scored = { ...candidate, score: scoreCandidate(candidate, selected) };
+    if (scored.score < 35) continue;
+    if (selected.some((item) => item.domain === scored.domain)) continue;
+    if (selected.some((item) => similarity(item.keyword, scored.keyword) > 0.52)) continue;
     selected.push({
-      ...candidate,
-      emotionalAngle: candidate.emotional_angle,
-      whyItMayResonate: candidate.why_it_may_resonate,
-      sourceBackedHint: candidate.source_hint,
-      suggestedPostAngle: candidate.suggested_post_angle
+      ...scored,
+      emotionalAngle: scored.emotional_angle,
+      whyItMayResonate: scored.why_it_may_resonate,
+      sourceBackedHint: scored.source_hint,
+      suggestedPostAngle: scored.suggested_post_angle,
+      suggestedGenre: scored.suggested_genre,
+      likelyComments: scored.likely_comments,
+      trendStrength: scored.trend_strength,
+      commentPotential: scored.comment_potential,
+      savePotential: scored.save_potential
     });
+    if (selected.length >= 10) break;
   }
 
-  return selected
-    .sort((a, b) => b.score - a.score)
-    .reduce((list, candidate) => {
-      if (list.filter((item) => item.category === candidate.category).length >= 2) return list;
-      if (list.some((item) => similarity(item.keyword, candidate.keyword) > 0.55)) return list;
-      return [...list, candidate];
-    }, [])
-    .slice(0, 10);
+  if (selected.length >= 10) return selected.slice(0, 10);
+
+  for (const fallback of candidates.sort((a, b) => b.trend_strength - a.trend_strength)) {
+    if (selected.some((item) => item.domain === fallback.domain)) continue;
+    selected.push({
+      ...fallback,
+      emotionalAngle: fallback.emotional_angle,
+      whyItMayResonate: fallback.why_it_may_resonate,
+      sourceBackedHint: fallback.source_hint,
+      suggestedPostAngle: fallback.suggested_post_angle,
+      suggestedGenre: fallback.suggested_genre,
+      likelyComments: fallback.likely_comments,
+      trendStrength: fallback.trend_strength,
+      commentPotential: fallback.comment_potential,
+      savePotential: fallback.save_potential
+    });
+    if (selected.length >= 10) break;
+  }
+  return selected.slice(0, 10);
 }
 
 export async function handleTrends(request, env) {
@@ -165,7 +243,7 @@ export async function handleTrends(request, env) {
     topics,
     pickedTopic: topics[0]?.keyword || "",
     selectedTrend: topics[0] || null,
-    source: env.TAVILY_API_KEY ? "tavily_diverse" : "local_diverse",
+    source: env.TAVILY_API_KEY ? "tavily_market_driven" : "local_market_domains",
     query: seed
   }, env, request);
 }
@@ -177,10 +255,14 @@ export async function handleResearchWithTrend(request, env, ctx, worker, upstrea
   const selectedTrend = trends[0] || null;
   const enrichedBody = selectedTrend ? {
     ...body,
-    topic: seedTopic ? `${seedTopic} / ${selectedTrend.category} / ${selectedTrend.suggested_post_angle}` : selectedTrend.keyword,
+    topic: seedTopic ? `${selectedTrend.keyword} / ${selectedTrend.domain} / ${selectedTrend.suggested_post_angle}` : selectedTrend.keyword,
     trendCategory: selectedTrend.category,
+    trendDomain: selectedTrend.domain,
     emotionalAngle: selectedTrend.emotional_angle,
-    suggestedPostAngle: selectedTrend.suggested_post_angle
+    suggestedPostAngle: selectedTrend.suggested_post_angle,
+    trendStrength: selectedTrend.trend_strength,
+    commentPotential: selectedTrend.comment_potential,
+    savePotential: selectedTrend.save_potential
   } : body;
   const headers = new Headers(request.headers);
   headers.set("Content-Type", "application/json");
@@ -204,17 +286,18 @@ export async function handleResearchWithTrend(request, env, ctx, worker, upstrea
     topic: data.topic || enrichedBody.topic,
     selectedTrend,
     trendCategory: selectedTrend?.category,
+    trendDomain: selectedTrend?.domain,
     trendDiscovery: { success: true, ok: true, topics: trends, pickedTopic: selectedTrend?.keyword || "", selectedTrend },
     sources: [
       {
         sourceType: "trend_discovery",
         priority: "A",
         weight: 0.8,
-        title: selectedTrend ? `${selectedTrend.category}: ${selectedTrend.keyword}` : "Trend discovery",
+        title: selectedTrend ? `${selectedTrend.domain}: ${selectedTrend.keyword}` : "Trend discovery",
         summary: selectedTrend?.why_it_may_resonate || "",
-        reliability: selectedTrend?.score || 0,
-        impact: selectedTrend?.score || 0,
-        extractedElements: selectedTrend ? [selectedTrend.emotional_angle, selectedTrend.suggested_post_angle] : []
+        reliability: selectedTrend?.trend_strength || selectedTrend?.score || 0,
+        impact: selectedTrend?.comment_potential || selectedTrend?.score || 0,
+        extractedElements: selectedTrend ? [selectedTrend.domain, selectedTrend.emotional_angle, selectedTrend.suggested_post_angle] : []
       },
       ...(Array.isArray(data.sources) ? data.sources : [])
     ],
@@ -223,7 +306,8 @@ export async function handleResearchWithTrend(request, env, ctx, worker, upstrea
       ...(selectedTrend ? [
         { elementType: "trend_category", value: selectedTrend.category, score: selectedTrend.score },
         { elementType: "emotional_angle", value: selectedTrend.emotional_angle, score: selectedTrend.score },
-        { elementType: "suggested_post_angle", value: selectedTrend.suggested_post_angle, score: selectedTrend.score }
+        { elementType: "suggested_post_angle", value: selectedTrend.suggested_post_angle, score: selectedTrend.score },
+        { elementType: "angle", value: `domain:${selectedTrend.domain}`, score: selectedTrend.trend_strength }
       ] : [])
     ]
   }, env, request, response.status);
