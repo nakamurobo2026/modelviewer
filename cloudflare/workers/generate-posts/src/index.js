@@ -3,6 +3,7 @@ import { handleResearchWithTrend, handleTrends, corsHeaders } from "../trend-eng
 import { handleResearchWithCompatiblePersistence } from "../research-persistence-engine.js";
 import { handleDraftGenerateWithLearning } from "../draft-learning-engine.js";
 import { handleUpdateDraft, handlePublishPlaceholder } from "../draft-mutation-engine.js";
+import { handleDeepenDraftResearch, handleRewriteWithResearch } from "../deep-research-engine.js";
 import { handlePublishDryRun } from "../publish-dry-run-engine.js";
 import { handleApprovalQueue, handleApproveDraft, handleRejectDraft } from "../approval-engine.js";
 import { handleDashboardWithSchedule } from "../dashboard-engine.js";
@@ -42,6 +43,8 @@ export default {
       if (request.method === "DELETE" && url.pathname.startsWith("/api/schedule/")) return handleDeleteSchedule(request, env, url.pathname.split("/").pop());
       if (request.method === "GET" && url.pathname === "/api/trends") return handleTrends(request, env);
       if (request.method === "POST" && url.pathname === "/api/drafts/generate") return handleDraftGenerateWithLearning(request, env);
+      if (request.method === "POST" && url.pathname === "/api/drafts/deepen-research") return handleDeepenDraftResearch(request, env);
+      if (request.method === "POST" && url.pathname === "/api/drafts/rewrite-with-research") return handleRewriteWithResearch(request, env);
       if (request.method === "PATCH" && url.pathname.startsWith("/api/drafts/")) return handleUpdateDraft(request, env, url.pathname.split("/").pop());
       if (request.method === "POST" && url.pathname === "/api/drafts/approve") return handleApproveDraft(request, env);
       if (request.method === "POST" && url.pathname === "/api/drafts/reject") return handleRejectDraft(request, env);
