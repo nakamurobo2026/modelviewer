@@ -202,9 +202,14 @@ function validatePreview(text, scheduledPost, draft) {
   if (/https?:\/\/\S+|www\./i.test(text)) warnings.push("Text contains a URL.");
   if (/\{\s*"|"\s*:|scoreDetail|viralScore|totalScore|hookScore|commentScore|saveScore|shareScore|research_summary|sources|source_ids|reasoning|reliability/i.test(text)) warnings.push("Text may contain JSON, source IDs, research notes, or internal scoring artifacts.");
   if (/調査によると|この記事では|について解説します|出典|引用|ソース|研究|分析結果|レポート|SEO|信頼度|取得元|source|research|reliability/i.test(text)) warnings.push("Text may still read like a research report instead of a Threads post.");
+  if (/^\s*(?:[-*・]|\d+[.)、])\s+/m.test(text)) warnings.push("Text contains bullet/list formatting.");
   if (/(^|\s)#[\p{L}\p{N}_]+/u.test(text)) warnings.push("Hashtags were detected. Viral OS avoids hashtags unless explicitly requested.");
   if (scheduledPost?.status !== "scheduled") warnings.push(`Scheduled post status is ${scheduledPost?.status || "unknown"}, not scheduled.`);
   return warnings;
+}
+
+function readinessFromWarnings(warnings) {
+  return warnings.length === 0 ? "ready" : "needs_edit";
 }
 
 async function loadScheduledPost(env, scheduledPostId) {
@@ -253,6 +258,7 @@ export async function handlePublishDryRun(request, env) {
       success: true,
       platform: "threads",
       dryRun: true,
+      publishReadiness: readinessFromWarnings(warnings),
       scheduledPostId: scheduledPost.id,
       draftId: draft.id,
       text,
