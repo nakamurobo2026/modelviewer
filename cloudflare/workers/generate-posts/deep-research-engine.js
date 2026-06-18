@@ -164,7 +164,7 @@ function buildEnrichedContext(draft, gaps, research) {
   const opposing = gaps.opposingAngles;
   const hints = [
     ...gaps.betterSceneHints,
-    ...facts.map((fact) => fact.split("。|.")[0]).filter(Boolean).slice(0, 3)
+    ...facts.map((fact) => fact.split(/[。.]/)[0]).filter(Boolean).slice(0, 3)
   ].slice(0, 6);
   return {
     draftId: draft.id,
