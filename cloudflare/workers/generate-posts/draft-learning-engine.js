@@ -413,7 +413,7 @@ export async function handleDraftGenerateWithLearning(request, env) {
       drafts: finalDrafts,
       learningApplied: true,
       learningSummary: learning.summary,
-      writer: "threads-post-writer-v2",
+      writer: "threads-post-writer-v3",
       persistence: {
         ok: !partialSuccess,
         partial_success: partialSuccess,
