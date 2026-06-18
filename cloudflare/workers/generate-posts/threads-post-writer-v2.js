@@ -1,15 +1,37 @@
-const THREAD_STYLES = [
-  ["curiosity", "なぜか", "理由は分からないけど、そこで一回だけ足が止まる。"],
-  ["nostalgia", "昔から知ってる場所ほど", "変わったのは店じゃなくて、見てるこっちかもしれない。"],
-  ["empathy", "これ、たぶん分かる人いる", "誰かに説明するほどではないのに、妙に残る。"],
-  ["surprise", "普通の場所なのに", "見慣れてるものが急に知らない顔をする。"],
-  ["controversy", "便利になったのに", "便利と好きって、たまに別の話になる。"],
-  ["local observation", "地方の店って", "町のリズムが先に出る瞬間がある。"],
-  ["creator point of view", "投稿にするほどでもないけど", "こういう小さい違和感だけ、なぜかメモに残る。"],
-  ["comment bait", "あの時間の空気", "場所は違っても、同じ感じを見た人いそう。"],
-  ["quiet emotion", "静かというより", "音が少なくなって、景色だけ残る感じ。"],
-  ["sharp one-liner", "閉店前って", "棚より先に空気が片付いてる。"]
+const GENRE_TAXONOMY = [
+  { genre: "empathy", label: "共感", angle_type: "shared feeling", trigger: "empathy", buzz_elements: ["あるある", "気持ちの代弁", "コメント余白"], score: 84 },
+  { genre: "nostalgia", label: "懐かしさ", angle_type: "memory recall", trigger: "nostalgia", buzz_elements: ["昭和感", "記憶", "保存したくなる"], score: 82 },
+  { genre: "curiosity", label: "好奇心", angle_type: "small mystery", trigger: "curiosity", buzz_elements: ["なぜ感", "違和感", "続きを考えたくなる"], score: 83 },
+  { genre: "surprise", label: "驚き", angle_type: "unexpected shift", trigger: "surprise", buzz_elements: ["意外性", "見方の反転", "発見"], score: 81 },
+  { genre: "controversy", label: "賛否", angle_type: "soft disagreement", trigger: "controversy", buzz_elements: ["賛否", "価値観", "語りたくなる"], score: 80 },
+  { genre: "personal_story", label: "個人体験", angle_type: "first person memory", trigger: "empathy", buzz_elements: ["自分語り", "生活感", "人間味"], score: 79 },
+  { genre: "local_culture", label: "地元文化", angle_type: "regional identity", trigger: "local observation", buzz_elements: ["地元性", "地域共有", "ローカル拡散"], score: 85 },
+  { genre: "one_line_punch", label: "一言パンチ", angle_type: "compressed punch", trigger: "surprise", buzz_elements: ["短文", "刺さる一言", "引用されやすい"], score: 78 },
+  { genre: "comment_bait", label: "コメント誘発", angle_type: "open loop", trigger: "comment bait", buzz_elements: ["答えたくなる", "経験募集", "余白"], score: 86 },
+  { genre: "creator_process", label: "制作過程", angle_type: "behind the note", trigger: "creator point of view", buzz_elements: ["観察メモ", "作り手視点", "過程"], score: 77 },
+  { genre: "failure_story", label: "失敗談", angle_type: "small regret", trigger: "empathy", buzz_elements: ["失敗", "反省", "人間味"], score: 80 },
+  { genre: "before_after", label: "Before/After", angle_type: "contrast", trigger: "surprise", buzz_elements: ["変化", "比較", "保存性"], score: 82 },
+  { genre: "unpopular_opinion", label: "逆張り", angle_type: "unpopular opinion", trigger: "controversy", buzz_elements: ["少数派", "賛否", "反応"], score: 81 },
+  { genre: "micro_observation", label: "微細観察", angle_type: "tiny scene", trigger: "curiosity", buzz_elements: ["細部", "情景", "分かる感"], score: 84 },
+  { genre: "weird_gap", label: "変なズレ", angle_type: "weird gap", trigger: "curiosity", buzz_elements: ["違和感", "ズレ", "不思議"], score: 83 }
 ];
+
+const CATEGORY_TO_GENRES = {
+  Auto: [],
+  "共感": ["empathy", "personal_story", "failure_story", "micro_observation"],
+  "懐かしさ": ["nostalgia", "before_after", "local_culture", "personal_story"],
+  "違和感": ["weird_gap", "curiosity", "micro_observation", "surprise"],
+  "賛否": ["controversy", "unpopular_opinion", "before_after", "comment_bait"],
+  "驚き": ["surprise", "curiosity", "before_after", "weird_gap"],
+  "あるある": ["empathy", "micro_observation", "comment_bait", "local_culture"],
+  "失敗談": ["failure_story", "personal_story", "empathy", "creator_process"],
+  "制作過程": ["creator_process", "micro_observation", "curiosity", "one_line_punch"],
+  "一言パンチ": ["one_line_punch", "weird_gap", "unpopular_opinion", "surprise"],
+  "コメント誘発": ["comment_bait", "controversy", "empathy", "weird_gap"],
+  "地元文化": ["local_culture", "nostalgia", "empathy", "micro_observation"],
+  "Before/After": ["before_after", "nostalgia", "surprise", "controversy"],
+  "炎上注意": ["unpopular_opinion", "controversy", "comment_bait", "before_after"]
+};
 
 const BAD_PUBLIC_PHRASES = /調査によると|この記事では|について解説します|出典|引用|ソース|研究|分析結果|レポート|SEO|信頼度|取得元|source|research|reliability|score|viralScore|totalScore|source_ids/gi;
 
@@ -40,11 +62,12 @@ function pickFirst(material, patterns, fallback) {
 function observationFromDrafts(drafts) {
   const material = drafts.map((draft) => `${draft.title || ""} ${draft.hook || ""} ${draft.body || ""} ${draft.cta || ""} ${draft.text || ""}`).join(" ");
   return {
-    place: pickFirst(material, [/(地方スーパー|スーパー|商店街|駅前|道の駅|個人店|喫茶店|ドラッグストア|ホームセンター|市役所|地方駅|古い病院|学校|閉店する店|昔からある店)/], "スーパー"),
-    time: pickFirst(material, [/(閉店前|17時過ぎ|夕方|夜|深夜|雨の日|最後の日|平日の昼過ぎ|朝の開店直後)/], "閉店前"),
-    sound: pickFirst(material, [/(レジ音|BGM|店内放送|蛍光灯|台車の音|自動ドア|雨の音|冷蔵ケースの音)/], "レジの音"),
-    object: pickFirst(material, [/(棚|駐車場|看板|惣菜売り場|入口|袋詰め台|通路|空き店舗|木材売り場|ガラス戸|値引きシール)/], "棚"),
-    sourceText: stripBadPhrases(material).slice(0, 280)
+    place: pickFirst(material, [/(地方スーパー|スーパー|商店街|駅前|道の駅|個人店|喫茶店|ドラッグストア|ホームセンター|市役所|地方駅|古い病院|学校|閉店する店|昔からある店|公民館|団地|古い店)/], "スーパー"),
+    time: pickFirst(material, [/(閉店前|17時過ぎ|夕方|夜|深夜|雨の日|最後の日|平日の昼過ぎ|朝の開店直後|昼休み後)/], "閉店前"),
+    sound: pickFirst(material, [/(レジ音|BGM|店内放送|蛍光灯|台車の音|自動ドア|雨の音|冷蔵ケースの音|チャイム|足音)/], "レジの音"),
+    object: pickFirst(material, [/(棚|駐車場|看板|惣菜売り場|入口|袋詰め台|通路|空き店舗|木材売り場|ガラス戸|値引きシール|ベンチ|掲示板)/], "棚"),
+    people: pickFirst(material, [/(店員|常連|学生|お年寄り|親子|誰もいない|人が少ない|近所の人)/], "人が少ない"),
+    sourceText: stripBadPhrases(material).slice(0, 320)
   };
 }
 
@@ -68,27 +91,90 @@ function padIfTooShort(text, closing) {
   return `${text} ${closing}`.trim();
 }
 
-function buildPublicPost(style, observation, index) {
-  const [trigger, opener, closing] = style;
-  const { place, time, sound, object } = observation;
-  const variants = {
-    curiosity: `${time}の${place}って、${opener}${object}の前だけ空気が変わる。${sound}だけ残って、買い物してるのに少しだけ別の場所にいる感じがする。`,
-    nostalgia: `${opener}、${time}の${place}で急に昔っぽく見える瞬間がある。${object}の色とか${sound}の残り方で、子どもの頃の買い物まで少し戻ってくる。`,
-    empathy: `${time}の${place}で${sound}だけ聞こえると、急に店全体が終わりに向かってる感じがする。急かされてないのに、こっちまで少し早く帰りたくなる。`,
-    surprise: `${opener}、${time}の${place}は一瞬だけ知らない店みたいになる。${object}が広く見えて、${sound}だけ妙に近い。毎日ある場所ほど、急に顔が変わる。`,
-    controversy: `${opener}、${place}の便利さが少し寂しく見える時がある。${time}に${object}が整いすぎてると、昔のごちゃっとした店の方を思い出してしまう。`,
-    "local observation": `${place}は${time}になると、商品より先に町の気配が出る。${sound}が小さく残って、${object}の前だけ一日の終わりが少し早い。`,
-    "creator point of view": `${opener}、${time}の${place}で${object}を見た時の違和感はメモしたくなる。${sound}だけ残る感じ、投稿にする前からもう少し物語っぽい。`,
-    "comment bait": `${time}の${place}、${sound}だけ残るあの感じ。${object}の前で少し立ち止まる人、たぶん自分だけじゃない気がする。`,
-    "quiet emotion": `${opener}、${time}の${place}は音が減って景色だけ残る。${object}の色が少し暗く見えて、町が先に眠り始めたみたいになる。`,
-    "sharp one-liner": `${opener}、${object}より先に空気が片付いてる。${time}の${place}で${sound}だけ残ると、町の電源が少し落ちた感じがする。`
+function genreBoost(genre, options) {
+  let boost = 0;
+  if (options?.prioritizeCommentability && ["comment_bait", "controversy", "empathy", "unpopular_opinion"].includes(genre)) boost += 6;
+  if (options?.prioritizeSaveability && ["nostalgia", "before_after", "creator_process", "micro_observation"].includes(genre)) boost += 5;
+  if (options?.prioritizeLocalShareability && ["local_culture", "nostalgia", "empathy", "weird_gap"].includes(genre)) boost += 7;
+  return boost;
+}
+
+function selectGenres(options = {}) {
+  const category = String(options.buzzCategory || "Auto");
+  if (options.mixAllGenres || category === "Auto") return GENRE_TAXONOMY;
+  const preferred = CATEGORY_TO_GENRES[category] || [];
+  const preferredItems = preferred.map((genre) => GENRE_TAXONOMY.find((item) => item.genre === genre)).filter(Boolean);
+  const rest = GENRE_TAXONOMY.filter((item) => !preferred.includes(item.genre));
+  return [...preferredItems, ...rest];
+}
+
+function buildTextForGenre(item, observation) {
+  const { place, time, sound, object, people } = observation;
+  const templates = {
+    empathy: `${time}の${place}で${sound}だけ聞こえると、急に店全体が終わりに向かってる感じがする。急かされてないのに、こっちまで少し早く帰りたくなる。こういうの、説明しづらい。`,
+    nostalgia: `${place}の${object}って、${time}になると急に昔の色に戻る瞬間がある。${sound}の残り方まで古くて、買い物してるだけなのに子どもの頃の記憶が少し混ざる。`,
+    curiosity: `${time}の${place}って、なぜか${object}の前だけ空気が変わる。${sound}は同じなのに、そこだけ少し別の店みたいに見える。あれ、何でなんだろう。`,
+    surprise: `普通の${place}なのに、${time}になると一瞬だけ知らない場所みたいになる。${object}が広く見えて、${sound}だけ妙に近い。毎日ある景色ほど、急に顔が変わる。`,
+    controversy: `${place}って便利になったはずなのに、${time}の${object}を見ると少し寂しくなる。整ってる店より、昔のごちゃっとした店の方が好きだった人もいそう。`,
+    personal_story: `前に${time}の${place}で、${object}の前にしばらく立ってしまった。買う物は決まってたのに、${sound}だけ残る感じが妙に引っかかった。たぶんあの日だけじゃない。`,
+    local_culture: `地元の${place}は、${time}になると商品より先に町の癖が出る。${people}の動きと${sound}だけで、今日の町の温度がだいたい分かる気がする。`,
+    one_line_punch: `${time}の${place}、${object}より先に空気が片付いてる。${sound}だけ残ると、町の電源が少し落ちた感じがする。短いけど、あの感じだけ妙に本当。`,
+    comment_bait: `${time}の${place}で${sound}だけ残るあの感じ、場所は違っても見たことある人いそう。${object}の前で一回止まる理由、自分でもよく分からない。`,
+    creator_process: `こういう投稿を考える時、派手な出来事より${time}の${place}みたいな小さい場面の方が残る。${object}と${sound}だけで、なぜか一文になりそうな時がある。`,
+    failure_story: `${place}で急いで買い物を済ませようとしたのに、${time}の${object}の前で止まってしまった。用事は終わったのに、${sound}だけ持って帰った感じがする。`,
+    before_after: `${place}は昼間だと普通なのに、${time}になると別の場所に見える。${object}は同じ、${sound}も同じ。でも人の少なさだけで、景色の意味が変わる。`,
+    unpopular_opinion: `正直、明るくて新しい店より、${time}の${place}みたいに少し古い空気が残ってる場所の方が落ち着く。便利さだけで消えない良さってある。`,
+    micro_observation: `${time}の${place}、${object}の影だけ少し濃く見える時がある。${sound}は小さいのに、そこだけ妙に目立つ。誰も気にしてなさそうな細部ほど残る。`,
+    weird_gap: `${place}の${object}だけ、${time}になると時間の進み方がズレて見える。${sound}は普通なのに、そこだけ一拍遅い。変と言うほどじゃないけど、ずっと気になる。`
   };
-  const hook = stripBadPhrases(Object.prototype.hasOwnProperty.call(variants, trigger) ? variants[trigger].split("。")[0] + "。" : `${time}の${place}って、少し変に見える瞬間がある。`);
-  const raw = stripBadPhrases(variants[trigger] || variants.curiosity);
+  return stripBadPhrases(templates[item.genre] || templates.micro_observation);
+}
+
+function buildPublicPost(item, observation, index, options) {
+  const raw = buildTextForGenre(item, observation);
+  const closing = item.genre === "comment_bait" ? "似た場所を思い出した人、たぶんいる。" : item.buzz_elements[0];
   const postText = compactToLimit(padIfTooShort(raw, closing), 220);
+  const hook = stripBadPhrases(postText.split("。")[0] + "。");
   const body = stripBadPhrases(postText.replace(hook, "").trim());
+  const total = Math.max(0, Math.min(100, item.score + genreBoost(item.genre, options) + ((index * 3) % 7)));
+  const detail = {
+    post_text: postText,
+    hook,
+    body,
+    closing_line: closing,
+    comment_bait: item.genre === "comment_bait" ? "自分の地元にもあるか言いたくなる" : item.buzz_elements.join(" / "),
+    emotional_trigger: item.trigger,
+    emotionalTrigger: item.trigger,
+    genre: item.genre,
+    angle_type: item.angle_type,
+    angleType: item.angle_type,
+    buzz_elements: item.buzz_elements,
+    buzzElements: item.buzz_elements,
+    viral_score: total,
+    viralScore: {
+      curiosity: item.genre === "curiosity" || item.genre === "weird_gap" ? 86 : 70,
+      nostalgia: item.genre === "nostalgia" || item.genre === "before_after" ? 86 : 68,
+      surprise: item.genre === "surprise" || item.genre === "one_line_punch" ? 84 : 69,
+      empathy: item.genre === "empathy" || item.genre === "personal_story" ? 86 : 70,
+      controversy: item.genre === "controversy" || item.genre === "unpopular_opinion" ? 84 : 58,
+      commentability: item.genre === "comment_bait" || item.genre === "controversy" ? 90 : 78,
+      total
+    },
+    totalScore: total,
+    internal: {
+      research_summary: observation.sourceText,
+      sources: [],
+      scoring: { style: item.trigger, writer: "threads-post-writer-v3", genre: item.genre, angle_type: item.angle_type },
+      reasoning: "Generated from diversified genre taxonomy and filtered away from repeated quiet-observation structures."
+    }
+  };
   return {
     id: crypto.randomUUID(),
+    genre: item.genre,
+    angle_type: item.angle_type,
+    angleType: item.angle_type,
+    buzz_elements: item.buzz_elements,
+    buzzElements: item.buzz_elements,
     post_text: postText,
     postText,
     text: postText,
@@ -96,38 +182,21 @@ function buildPublicPost(style, observation, index) {
     body,
     closing_line: closing,
     closingLine: closing,
-    comment_bait: trigger === "comment bait" ? "似た空気を見た場所を言いたくなる余白" : closing,
-    commentBait: trigger === "comment bait" ? "似た空気を見た場所を言いたくなる余白" : closing,
+    comment_bait: detail.comment_bait,
+    commentBait: detail.comment_bait,
     cta: closing,
-    emotional_trigger: trigger,
-    emotionalTrigger: trigger,
-    viral_score: 76 + ((index * 5) % 18),
-    viralScore: { curiosity: 70, nostalgia: 70, surprise: 70, empathy: 70, controversy: 60, commentability: 78, total: 76 + ((index * 5) % 18) },
+    emotional_trigger: item.trigger,
+    emotionalTrigger: item.trigger,
+    viral_score: total,
+    viralScore: detail.viralScore,
     source_ids: [],
     sourceIds: [],
     category: "threads",
-    hookType: trigger,
-    score: 76 + ((index * 5) % 18),
-    scoreTotal: 76 + ((index * 5) % 18),
-    totalScore: 76 + ((index * 5) % 18),
-    scoreDetail: {
-      post_text: postText,
-      hook,
-      body,
-      closing_line: closing,
-      comment_bait: trigger === "comment bait" ? "似た空気を見た場所を言いたくなる余白" : closing,
-      emotional_trigger: trigger,
-      emotionalTrigger: trigger,
-      viral_score: 76 + ((index * 5) % 18),
-      viralScore: { curiosity: 70, nostalgia: 70, surprise: 70, empathy: 70, controversy: 60, commentability: 78, total: 76 + ((index * 5) % 18) },
-      source_ids: [],
-      internal: {
-        research_summary: observation.sourceText,
-        sources: [],
-        scoring: { style: trigger, writer: "threads-post-writer-v3" },
-        reasoning: "Converted internal research material into final public Threads text."
-      }
-    },
+    hookType: item.genre,
+    score: total,
+    scoreTotal: total,
+    totalScore: total,
+    scoreDetail: detail,
     sourceTrace: []
   };
 }
@@ -144,15 +213,49 @@ function isUsablePost(draft) {
   return true;
 }
 
-export function rewriteDraftsToThreadsNative(drafts, researchId) {
+function similarityKey(draft) {
+  const text = draft.post_text || draft.text || "";
+  const opening = text.slice(0, 18).replace(/[、。\s]/g, "");
+  const conclusion = text.split("。").filter(Boolean).slice(-1)[0]?.slice(0, 18) || "";
+  return `${draft.genre}:${opening}:${conclusion}`;
+}
+
+function diversify(posts) {
+  const seenGenres = new Set();
+  const seenOpenings = new Set();
+  const selected = [];
+  for (const post of posts) {
+    const opening = (post.post_text || post.text || "").slice(0, 12).replace(/[、。\s]/g, "");
+    if (seenGenres.has(post.genre)) continue;
+    if (seenOpenings.has(opening)) continue;
+    if (!isUsablePost(post)) continue;
+    seenGenres.add(post.genre);
+    seenOpenings.add(opening);
+    selected.push(post);
+    if (selected.length >= 10) break;
+  }
+  if (selected.length >= 10) return selected;
+  const keys = new Set(selected.map(similarityKey));
+  for (const post of posts) {
+    const key = similarityKey(post);
+    if (keys.has(key) || !isUsablePost(post)) continue;
+    selected.push(post);
+    keys.add(key);
+    if (selected.length >= 10) break;
+  }
+  return selected.slice(0, 10);
+}
+
+export function rewriteDraftsToThreadsNative(drafts, researchId, options = {}) {
   const observation = observationFromDrafts(Array.isArray(drafts) ? drafts : []);
-  const posts = THREAD_STYLES.map((style, index) => {
-    const post = buildPublicPost(style, observation, index);
+  const genres = selectGenres(options);
+  const posts = genres.map((item, index) => {
+    const post = buildPublicPost(item, observation, index, options);
     post.source_ids = [researchId].filter(Boolean);
     post.sourceIds = post.source_ids;
     post.sourceTrace = post.source_ids;
     post.scoreDetail.source_ids = post.source_ids;
     return post;
   });
-  return posts.filter(isUsablePost).slice(0, 10);
+  return diversify(posts);
 }
