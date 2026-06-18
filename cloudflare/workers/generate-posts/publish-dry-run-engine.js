@@ -93,7 +93,7 @@ function supabaseRestBaseUrlCandidates(env) {
 }
 
 function isUuid(value) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(String(value || ""));
 }
 
 async function supabaseRequest(env, path, init = {}, operation = path) {
@@ -179,6 +179,11 @@ function publicPostText(draft, detail) {
   );
 }
 
+function draftGenre(draft) {
+  const detail = draft?.score_detail || draft?.scoreDetail || {};
+  return detail.genre || draft?.genre || draft?.hook_type || draft?.hookType || detail.emotional_trigger || detail.emotionalTrigger || "unknown";
+}
+
 export function buildThreadsPost(draft) {
   const detail = draft?.score_detail || draft?.scoreDetail || {};
   const directPostText = publicPostText(draft, detail);
@@ -259,6 +264,7 @@ export async function handlePublishDryRun(request, env) {
       platform: "threads",
       dryRun: true,
       publishReadiness: readinessFromWarnings(warnings),
+      genre: draftGenre(draft),
       scheduledPostId: scheduledPost.id,
       draftId: draft.id,
       text,
