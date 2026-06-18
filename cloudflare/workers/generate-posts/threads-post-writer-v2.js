@@ -11,13 +11,17 @@ const THREAD_STYLES = [
   ["sharp one-liner", "閉店前って", "棚より先に空気が片付いてる。"]
 ];
 
+const BAD_PUBLIC_PHRASES = /調査によると|この記事では|について解説します|出典|引用|ソース|研究|分析結果|レポート|SEO|信頼度|取得元|source|research|reliability|score|viralScore|totalScore|source_ids/gi;
+
 function stripBadPhrases(value) {
   return String(value || "")
     .replace(/https?:\/\/\S+/g, "")
+    .replace(/www\.\S+/g, "")
     .replace(/#[\p{L}\p{N}_]+/gu, "")
-    .replace(/調査によると|この記事では|について解説します|出典|引用|ソース|研究|分析結果|レポート|SEO/gi, "")
+    .replace(BAD_PUBLIC_PHRASES, "")
     .replace(/[{}[\]"]+/g, "")
-    .replace(/\b(score|scoreDetail|viralScore|totalScore|hookScore|commentScore|saveScore|shareScore|research_summary|sources|reasoning)\b\s*:?\s*\d*/gi, "")
+    .replace(/\b(scoreDetail|hookScore|commentScore|saveScore|shareScore|research_summary|sources|reasoning)\b\s*:?\s*\d*/gi, "")
+    .replace(/^\s*(?:[-*・]|\d+[.)、])\s+/gm, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -117,8 +121,8 @@ function buildPublicPost(style, observation, index) {
       internal: {
         research_summary: observation.sourceText,
         sources: [],
-        scoring: { style: trigger, writer: "threads-post-writer-v2" },
-        reasoning: "Converted research material into a public human-observation style post."
+        scoring: { style: trigger, writer: "threads-post-writer-v3" },
+        reasoning: "Converted internal research material into final public Threads text."
       }
     },
     sourceTrace: []
@@ -128,9 +132,10 @@ function buildPublicPost(style, observation, index) {
 function isUsablePost(draft) {
   const text = draft.post_text || draft.postText || draft.text || "";
   if (countJapaneseChars(text) < 80 || countJapaneseChars(text) > 220) return false;
-  if (/https?:\/\//.test(text)) return false;
-  if (/調査によると|この記事では|について解説します|SEO|出典|引用/.test(text)) return false;
-  if (/^[\s\-*・]/m.test(text)) return false;
+  if (/https?:\/\/|www\./.test(text)) return false;
+  if (BAD_PUBLIC_PHRASES.test(text)) return false;
+  BAD_PUBLIC_PHRASES.lastIndex = 0;
+  if (/^\s*(?:[-*・]|\d+[.)、])\s+/m.test(text)) return false;
   return true;
 }
 
