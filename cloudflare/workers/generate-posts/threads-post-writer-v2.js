@@ -17,6 +17,7 @@ const GENRE_TAXONOMY = [
 ];
 
 const CATEGORY_TO_GENRES = {
+  "自動ミックス": [],
   Auto: [],
   "共感": ["empathy", "personal_story", "failure_story", "micro_observation"],
   "懐かしさ": ["nostalgia", "before_after", "local_culture", "personal_story"],
@@ -29,8 +30,22 @@ const CATEGORY_TO_GENRES = {
   "一言パンチ": ["one_line_punch", "weird_gap", "unpopular_opinion", "surprise"],
   "コメント誘発": ["comment_bait", "controversy", "empathy", "weird_gap"],
   "地元文化": ["local_culture", "nostalgia", "empathy", "micro_observation"],
+  "Before / After": ["before_after", "nostalgia", "surprise", "controversy"],
   "Before/After": ["before_after", "nostalgia", "surprise", "controversy"],
   "炎上注意": ["unpopular_opinion", "controversy", "comment_bait", "before_after"]
+};
+
+const PERSONA_PROFILES = {
+  "違和感ハンター": { suffix: "あの小さいズレ、見逃せない。", tone: "違和感を見つける観察者", prefer: ["weird_gap", "curiosity", "micro_observation"] },
+  "地元あるある職人": { suffix: "地元の人だけ、たぶん分かる。", tone: "地域の共通体験", prefer: ["local_culture", "empathy", "comment_bait"] },
+  "昭和ノスタルジー語り": { suffix: "古い光って、記憶まで連れてくる。", tone: "懐かしさと色温度", prefer: ["nostalgia", "before_after", "personal_story"] },
+  "炎上しない賛否メーカー": { suffix: "好き嫌いが分かれるけど、少し分かる。", tone: "安全な賛否", prefer: ["controversy", "unpopular_opinion", "before_after"] },
+  "深夜ラジオの独白": { suffix: "深夜にだけ言える話として。", tone: "独り言と余白", prefer: ["personal_story", "empathy", "weird_gap"] },
+  "町の観察者": { suffix: "町はたまに、音で表情を変える。", tone: "町の細部観察", prefer: ["micro_observation", "local_culture", "curiosity"] },
+  "職人の裏側語り": { suffix: "作る側になると、こういう細部ばかり残る。", tone: "制作過程", prefer: ["creator_process", "micro_observation", "one_line_punch"] },
+  "失敗談コレクター": { suffix: "こういう小さい失敗ほど、あとで残る。", tone: "失敗と人間味", prefer: ["failure_story", "personal_story", "empathy"] },
+  "一言パンチ職人": { suffix: "短いけど、これで十分な気がする。", tone: "短文の切れ味", prefer: ["one_line_punch", "weird_gap", "unpopular_opinion"] },
+  "コメント誘発屋": { suffix: "似た場所、思い出した人いそう。", tone: "コメント余白", prefer: ["comment_bait", "empathy", "controversy"] }
 };
 
 const BAD_PUBLIC_PHRASES = /調査によると|この記事では|について解説します|出典|引用|ソース|研究|分析結果|レポート|SEO|信頼度|取得元|source|research|reliability|score|viralScore|totalScore|source_ids/gi;
@@ -96,15 +111,24 @@ function genreBoost(genre, options) {
   if (options?.prioritizeCommentability && ["comment_bait", "controversy", "empathy", "unpopular_opinion"].includes(genre)) boost += 6;
   if (options?.prioritizeSaveability && ["nostalgia", "before_after", "creator_process", "micro_observation"].includes(genre)) boost += 5;
   if (options?.prioritizeLocalShareability && ["local_culture", "nostalgia", "empathy", "weird_gap"].includes(genre)) boost += 7;
+  if (options?.strongStyle && ["one_line_punch", "weird_gap", "unpopular_opinion", "comment_bait"].includes(genre)) boost += 4;
+  if (options?.safeMode && ["controversy", "unpopular_opinion"].includes(genre)) boost -= 4;
   return boost;
 }
 
 function selectGenres(options = {}) {
-  const category = String(options.buzzCategory || "Auto");
-  if (options.mixAllGenres || category === "Auto") return GENRE_TAXONOMY;
-  const preferred = CATEGORY_TO_GENRES[category] || [];
-  const preferredItems = preferred.map((genre) => GENRE_TAXONOMY.find((item) => item.genre === genre)).filter(Boolean);
-  const rest = GENRE_TAXONOMY.filter((item) => !preferred.includes(item.genre));
+  const category = String(options.buzzCategory || "自動ミックス");
+  const persona = PERSONA_PROFILES[options.persona] || null;
+  const personaPreferred = persona?.prefer || [];
+  if (options.mixAllGenres || category === "Auto" || category === "自動ミックス") {
+    const preferred = personaPreferred.map((genre) => GENRE_TAXONOMY.find((item) => item.genre === genre)).filter(Boolean);
+    const rest = GENRE_TAXONOMY.filter((item) => !personaPreferred.includes(item.genre));
+    return [...preferred, ...rest];
+  }
+  const categoryPreferred = CATEGORY_TO_GENRES[category] || [];
+  const merged = [...new Set([...personaPreferred, ...categoryPreferred])];
+  const preferredItems = merged.map((genre) => GENRE_TAXONOMY.find((item) => item.genre === genre)).filter(Boolean);
+  const rest = GENRE_TAXONOMY.filter((item) => !merged.includes(item.genre));
   return [...preferredItems, ...rest];
 }
 
@@ -130,13 +154,51 @@ function buildTextForGenre(item, observation) {
   return stripBadPhrases(templates[item.genre] || templates.micro_observation);
 }
 
+function applyPersonaTone(text, item, options = {}) {
+  const personaName = options.persona || "町の観察者";
+  const profile = PERSONA_PROFILES[personaName] || PERSONA_PROFILES["町の観察者"];
+  let output = text;
+  if (personaName === "一言パンチ職人") output = output.replace(/。/g, "。 ").split("。 ").slice(0, 2).join("。 ").trim();
+  if (personaName === "深夜ラジオの独白") output = output.replace(/^/, "これ、夜中にふと思い出したんだけど。 ");
+  if (personaName === "炎上しない賛否メーカー" && item.genre === "unpopular_opinion") output = output.replace(/^正直、/, "好み分かれるけど、");
+  if (personaName === "職人の裏側語り" && item.genre !== "creator_process") output = `${output} 投稿にするなら、この小さい引っかかりを残したい。`;
+  if (personaName === "コメント誘発屋" && item.genre !== "comment_bait") output = `${output} 似た場面、他にもありそう。`;
+  if (options.strongStyle) output = output.replace(/気がする/g, "気がしてならない").replace(/少し/g, "妙に");
+  if (options.safeMode) output = output.replace(/嫌い/g, "苦手").replace(/おかしい/g, "気になる").replace(/炎上/g, "反応が分かれる");
+  return compactToLimit(padIfTooShort(stripBadPhrases(output), profile.suffix), 220);
+}
+
+function spreadReason(item, options = {}) {
+  const persona = PERSONA_PROFILES[options.persona] || PERSONA_PROFILES["町の観察者"];
+  const reasons = {
+    empathy: "自分の生活にも置き換えやすく、共感コメントが生まれやすい。",
+    nostalgia: "記憶を刺激し、保存や思い出コメントにつながりやすい。",
+    curiosity: "理由を考えたくなる余白があり、反応が分散しにくい。",
+    surprise: "普通の景色の見方を反転させるため、引用されやすい。",
+    controversy: "強すぎない賛否で、自分の好みを言いたくなる。",
+    personal_story: "個人体験に見えるため、返信の心理的ハードルが低い。",
+    local_culture: "地域差が出るため、地元の人が反応しやすい。",
+    one_line_punch: "短く覚えやすく、スクショや引用に向いている。",
+    comment_bait: "答えを断定せず、似た体験を集めやすい。",
+    creator_process: "作り手目線に寄るため、同業者や発信者に刺さりやすい。",
+    failure_story: "小さな失敗は人間味が出て、返信されやすい。",
+    before_after: "変化が分かりやすく、保存して見返す理由がある。",
+    unpopular_opinion: "安全な逆張りで、賛成と反対の両方を呼びやすい。",
+    micro_observation: "細部の発見があり、分かる人だけが反応したくなる。",
+    weird_gap: "言語化しにくいズレを代弁し、コメントで補足されやすい。"
+  };
+  return `${reasons[item.genre] || reasons.micro_observation} 文体: ${persona.tone}。`;
+}
+
 function buildPublicPost(item, observation, index, options) {
-  const raw = buildTextForGenre(item, observation);
+  const raw = applyPersonaTone(buildTextForGenre(item, observation), item, options);
   const closing = item.genre === "comment_bait" ? "似た場所を思い出した人、たぶんいる。" : item.buzz_elements[0];
   const postText = compactToLimit(padIfTooShort(raw, closing), 220);
   const hook = stripBadPhrases(postText.split("。")[0] + "。");
   const body = stripBadPhrases(postText.replace(hook, "").trim());
   const total = Math.max(0, Math.min(100, item.score + genreBoost(item.genre, options) + ((index * 3) % 7)));
+  const why = spreadReason(item, options);
+  const persona = options.persona || "町の観察者";
   const detail = {
     post_text: postText,
     hook,
@@ -145,11 +207,14 @@ function buildPublicPost(item, observation, index, options) {
     comment_bait: item.genre === "comment_bait" ? "自分の地元にもあるか言いたくなる" : item.buzz_elements.join(" / "),
     emotional_trigger: item.trigger,
     emotionalTrigger: item.trigger,
+    persona,
     genre: item.genre,
     angle_type: item.angle_type,
     angleType: item.angle_type,
     buzz_elements: item.buzz_elements,
     buzzElements: item.buzz_elements,
+    why_it_may_spread: why,
+    whyItMaySpread: why,
     viral_score: total,
     viralScore: {
       curiosity: item.genre === "curiosity" || item.genre === "weird_gap" ? 86 : 70,
@@ -164,17 +229,20 @@ function buildPublicPost(item, observation, index, options) {
     internal: {
       research_summary: observation.sourceText,
       sources: [],
-      scoring: { style: item.trigger, writer: "threads-post-writer-v3", genre: item.genre, angle_type: item.angle_type },
-      reasoning: "Generated from diversified genre taxonomy and filtered away from repeated quiet-observation structures."
+      scoring: { style: item.trigger, writer: "threads-post-writer-v3", persona, genre: item.genre, angle_type: item.angle_type },
+      reasoning: "Generated from diversified genre taxonomy, persona tone, and Japanese UX controls."
     }
   };
   return {
     id: crypto.randomUUID(),
+    persona,
     genre: item.genre,
     angle_type: item.angle_type,
     angleType: item.angle_type,
     buzz_elements: item.buzz_elements,
     buzzElements: item.buzz_elements,
+    why_it_may_spread: why,
+    whyItMaySpread: why,
     post_text: postText,
     postText,
     text: postText,
