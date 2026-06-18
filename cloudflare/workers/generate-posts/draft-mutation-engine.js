@@ -16,7 +16,7 @@ function hasSupabase(env) {
 }
 
 function isUuid(value) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(String(value || ""));
 }
 
 function getAuthUserId(request) {
@@ -51,15 +51,26 @@ async function supabaseRequest(env, path, init = {}) {
 
 function clientDraft(row) {
   const detail = row.score_detail || {};
+  const postText = detail.post_text || detail.postText || row.text;
   return {
     id: row.id,
+    post_text: postText,
+    postText,
     title: detail.title || row.category || "Threads draft",
     hook: detail.hook || "",
-    body: detail.body || row.text,
-    cta: detail.cta || "",
-    emotionalTrigger: detail.emotionalTrigger || row.hook_type || "empathy",
+    body: detail.body || postText,
+    cta: detail.cta || detail.closing_line || "",
+    closing_line: detail.closing_line || detail.cta || "",
+    closingLine: detail.closing_line || detail.cta || "",
+    comment_bait: detail.comment_bait || detail.commentHook || "",
+    commentBait: detail.comment_bait || detail.commentHook || "",
+    emotional_trigger: detail.emotional_trigger || detail.emotionalTrigger || row.hook_type || "empathy",
+    emotionalTrigger: detail.emotionalTrigger || detail.emotional_trigger || row.hook_type || "empathy",
+    viral_score: detail.viral_score || detail.viralScore?.total || row.score_total || 0,
     viralScore: detail.viralScore || { total: row.score_total || 0 },
-    text: row.text,
+    source_ids: detail.source_ids || row.source_trace || [],
+    sourceIds: detail.source_ids || row.source_trace || [],
+    text: postText,
     status: row.status,
     category: row.category,
     hookType: row.hook_type,
@@ -71,6 +82,23 @@ function clientDraft(row) {
   };
 }
 
+async function loadExistingDraft(env, draftId, userId) {
+  const rows = await supabaseRequest(env, `post_drafts?id=eq.${encodeURIComponent(draftId)}&user_id=eq.${encodeURIComponent(userId)}&select=*`, {
+    method: "GET"
+  });
+  return Array.isArray(rows) ? rows[0] : null;
+}
+
+function patchPublicTextDetail(existingDetail, text) {
+  return {
+    ...(existingDetail || {}),
+    post_text: text,
+    postText: text,
+    body: text,
+    public_post_text: text
+  };
+}
+
 export async function handleUpdateDraft(request, env, draftId) {
   if (!hasSupabase(env)) return json(apiError("missing_supabase", "Supabase service environment variables are not configured."), env, request, 500);
   const userId = getAuthUserId(request);
@@ -79,7 +107,13 @@ export async function handleUpdateDraft(request, env, draftId) {
 
   const body = await request.json().catch(() => ({}));
   const update = {};
-  if (typeof body.text === "string") update.text = body.text.slice(0, 2000);
+  const incomingText = typeof body.text === "string" ? body.text.slice(0, 2000).trim() : "";
+  if (incomingText) {
+    const existing = await loadExistingDraft(env, draftId, userId);
+    if (!existing) return json(apiError("draft_not_found", "Draft was not found for this user."), env, request, 404);
+    update.text = incomingText;
+    update.score_detail = patchPublicTextDetail(existing.score_detail, incomingText);
+  }
   if (typeof body.status === "string") update.status = body.status;
   if (typeof body.scheduledAt === "string") update.scheduled_at = body.scheduledAt;
   if (!Object.keys(update).length) return json(apiError("empty_update", "No supported draft fields were provided."), env, request, 400);
