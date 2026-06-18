@@ -7,7 +7,7 @@ function hasSupabase(env) {
 }
 
 function isUuid(value) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(String(value || ""));
 }
 
 function getAuthUserId(request) {
@@ -154,6 +154,11 @@ function detailFromDraft(draft) {
     comment_bait: draft.comment_bait || draft.commentBait || existing.comment_bait || existing.commentHook || "",
     emotional_trigger: draft.emotional_trigger || draft.emotionalTrigger || existing.emotional_trigger || existing.emotionalTrigger || draft.hookType || "empathy",
     emotionalTrigger: draft.emotionalTrigger || draft.emotional_trigger || existing.emotionalTrigger || existing.emotional_trigger || draft.hookType || "empathy",
+    genre: draft.genre || existing.genre || draft.hookType || "micro_observation",
+    angle_type: draft.angle_type || draft.angleType || existing.angle_type || existing.angleType || "observation",
+    angleType: draft.angleType || draft.angle_type || existing.angleType || existing.angle_type || "observation",
+    buzz_elements: safeArray(draft.buzz_elements || draft.buzzElements || existing.buzz_elements || existing.buzzElements),
+    buzzElements: safeArray(draft.buzzElements || draft.buzz_elements || existing.buzzElements || existing.buzz_elements),
     viral_score: draft.viral_score || draft.viralScore?.total || existing.viral_score || existing.viralScore?.total || draft.scoreTotal || draft.score || 0,
     viralScore: draft.viralScore || existing.viralScore || { total: draft.scoreTotal || draft.score || 0 },
     source_ids: safeArray(draft.source_ids || draft.sourceIds || existing.source_ids || draft.sourceTrace),
@@ -179,6 +184,11 @@ function clientDraft(rowOrDraft) {
       commentBait: detail.comment_bait || detail.commentHook || "",
       emotional_trigger: detail.emotional_trigger || detail.emotionalTrigger || rowOrDraft.hook_type || "empathy",
       emotionalTrigger: detail.emotionalTrigger || detail.emotional_trigger || rowOrDraft.hook_type || "empathy",
+      genre: detail.genre || rowOrDraft.hook_type || "micro_observation",
+      angle_type: detail.angle_type || detail.angleType || "observation",
+      angleType: detail.angleType || detail.angle_type || "observation",
+      buzz_elements: detail.buzz_elements || detail.buzzElements || [],
+      buzzElements: detail.buzzElements || detail.buzz_elements || [],
       viral_score: detail.viral_score || detail.viralScore?.total || rowOrDraft.score_total || 0,
       viralScore: detail.viralScore || { total: rowOrDraft.score_total || 0 },
       source_ids: detail.source_ids || rowOrDraft.source_trace || [],
@@ -295,7 +305,7 @@ function draftRow(draft, userId, researchId, linkColumn = "research_brief_id") {
     text: draftText(draft),
     status: "scored",
     category: draft.category || "threads",
-    hook_type: draft.emotional_trigger || draft.emotionalTrigger || draft.hookType || detail.emotional_trigger || "empathy",
+    hook_type: draft.genre || draft.emotional_trigger || draft.emotionalTrigger || draft.hookType || detail.emotional_trigger || "empathy",
     score_total: draft.totalScore || draft.scoreTotal || draft.score || 0,
     score_detail: detail,
     source_trace: safeArray(draft.source_ids || draft.sourceIds || draft.sourceTrace || [researchId])
@@ -378,6 +388,16 @@ async function persistAdjustedDrafts(env, drafts) {
   return { ok: rejected.length === 0, rejected: rejected.length };
 }
 
+function draftOptionsFromBody(body) {
+  return {
+    buzzCategory: body.buzzCategory || body.buzz_category || "Auto",
+    mixAllGenres: body.mixAllGenres !== false && body.mix_all_genres !== false,
+    prioritizeCommentability: Boolean(body.prioritizeCommentability || body.prioritize_commentability),
+    prioritizeSaveability: Boolean(body.prioritizeSaveability || body.prioritize_saveability),
+    prioritizeLocalShareability: Boolean(body.prioritizeLocalShareability || body.prioritize_local_shareability)
+  };
+}
+
 export async function handleDraftGenerateWithLearning(request, env) {
   const requestForBody = request.clone();
   const body = await requestForBody.json().catch(() => ({}));
@@ -398,7 +418,8 @@ export async function handleDraftGenerateWithLearning(request, env) {
   }
 
   try {
-    const publicDrafts = rewriteDraftsToThreadsNative(data.drafts, researchId);
+    const draftOptions = draftOptionsFromBody(body);
+    const publicDrafts = rewriteDraftsToThreadsNative(data.drafts, researchId, draftOptions);
     const learning = await loadLearningContext(env);
     const rankedDrafts = applyLearningRanking(publicDrafts, learning);
     const persisted = await persistGeneratedDrafts(env, request, researchId, rankedDrafts);
@@ -414,6 +435,7 @@ export async function handleDraftGenerateWithLearning(request, env) {
       learningApplied: true,
       learningSummary: learning.summary,
       writer: "threads-post-writer-v3",
+      draftOptions,
       persistence: {
         ok: !partialSuccess,
         partial_success: partialSuccess,
