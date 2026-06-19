@@ -121,6 +121,29 @@ function sceneStrength(scene, text) {
   return Math.max(0, Math.min(100, score));
 }
 
+function clamp100(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Math.max(0, Math.min(100, Math.round(number)));
+}
+
+function maleAttentionScores(item, scene, text, options = {}) {
+  const genre = item.genre || "female_truth";
+  const persona = String(options.persona || "匂わせ女子");
+  const mysteryHits = (text.match(/匂わせ|言えない|気づいて|見てほしい|曖昧|未読|足跡|送れなかった|消した|伏せられた|夜中|深夜|続き|分からない|気になる/g) || []).length;
+  const attractionHits = (text.match(/好き|会いたい|優しい|帰したくない|嫉妬|期待|沼|距離感|本音|弱い|待てる|雑な人|気分|温度差/g) || []).length;
+  const commentHits = (text.match(/ある？|あるよね|いる？|ない？|なんで|どれくらい|気にしないでいられる|分からない/g) || []).length;
+  const genreBoost = ["subtle_hint", "night_line", "green_or_red_flag", "jealousy", "situationship", "沼", "comment_bait", "sns_love"].includes(genre) ? 10 : 4;
+  const personaBoost = /匂わせ|夜更かし|本音|強がり|毒舌|返信速度|脈なし|沼らせ|大人の距離感/.test(persona) ? 8 : 4;
+  const ambiguityBoost = /言い切らない|曖昧|匂わせ|余白|気づいて/.test(`${persona} ${text}`) ? 8 : 2;
+  const safetyPenalty = UNSAFE_ROMANCE.test(text) ? 100 : 0;
+
+  const male_attention_score = clamp100(48 + genreBoost + personaBoost + ambiguityBoost + mysteryHits * 5 + attractionHits * 3 - safetyPenalty);
+  const dm_trigger_score = clamp100(42 + genreBoost + mysteryHits * 5 + (/DM|返信|LINE|会いたい|気づいて|見てほしい|帰したくない/.test(text) ? 10 : 0) + (/直接|送れない|言えない/.test(text) ? 8 : 0) - safetyPenalty);
+  const comment_trigger_score = clamp100(45 + commentHits * 10 + (genre === "comment_bait" ? 14 : 0) + (/あるよね|いる？|ない？|なんで/.test(text) ? 9 : 0) - safetyPenalty);
+  return { male_attention_score, dm_trigger_score, comment_trigger_score };
+}
+
 function buildTextForGenre(item, scene) {
   const intro = {
     female_truth: `${scene.scene}\n\n${scene.emotion}。${scene.meaning}。`,
@@ -183,9 +206,12 @@ function rejectReason(draft) {
   return "";
 }
 
-function spreadReason(item, scene, sceneScore, options = {}) {
+function spreadReason(item, scene, sceneScore, options = {}, maleScores = {}) {
   const persona = PERSONA_PROFILES[options.persona] || PERSONA_PROFILES["匂わせ女子"];
-  return `${scene.place}の${scene.object}という恋愛シーンが明確で、${scene.domain}の温度差を自分ごと化しやすい。scene_strength ${sceneScore}。文体: ${persona.tone}。`;
+  const maleLine = maleScores.male_attention_score
+    ? `男性注意 ${maleScores.male_attention_score} / DM誘発 ${maleScores.dm_trigger_score} / コメント誘発 ${maleScores.comment_trigger_score}。`
+    : "男性読者が距離感を想像しやすい。";
+  return `${scene.place}の${scene.object}という恋愛シーンが明確で、${scene.domain}の温度差を自分ごと化しやすい。${maleLine}scene_strength ${sceneScore}。文体: ${persona.tone}。`;
 }
 
 function sceneScoreFromDraft(draft) {
@@ -197,12 +223,13 @@ function buildPublicPost(item, sceneCard, index, options) {
   const raw = applyPersonaTone(buildTextForGenre(item, scene), item, options);
   const postText = compactToLimit(raw, 180);
   const sceneScore = sceneStrength(scene, postText);
-  const total = Math.max(0, Math.min(100, Math.round(item.score + scoreBoost(item.genre, options) + sceneScore * 0.2 + ((index * 3) % 5))));
+  const maleScores = maleAttentionScores(item, scene, postText, options);
+  const total = Math.max(0, Math.min(100, Math.round(item.score + scoreBoost(item.genre, options) + sceneScore * 0.18 + maleScores.male_attention_score * 0.18 + maleScores.dm_trigger_score * 0.12 + maleScores.comment_trigger_score * 0.14 + ((index * 3) % 5))));
   const persona = options.persona || "匂わせ女子";
-  const buzzElements = [...new Set([scene.domain, item.label, "female_voice", "romance_scene", ...item.buzz_elements])];
-  const why = spreadReason(item, scene, sceneScore, options);
-  const detail = { post_text: postText, hook: scene.scene_lines[0], body: scene.observation, closing_line: scene.comment_question, comment_bait: scene.comment_question, emotional_trigger: item.trigger, emotionalTrigger: item.trigger, persona, domain: scene.domain, genre: item.genre, angle_type: item.label, angleType: item.label, buzz_elements: buzzElements, buzzElements, scene_strength: sceneScore, sceneStrength: sceneScore, scene, why_it_may_spread: why, whyItMaySpread: why, viral_score: total, viralScore: { curiosity: ["subtle_hint", "green_or_red_flag", "沼"].includes(item.genre) ? 90 : 72, nostalgia: item.genre === "ex_memory" ? 88 : 64, surprise: ["sns_love", "comment_bait"].includes(item.genre) ? 84 : 70, empathy: ["female_truth", "romance_aruaru", "strong_girl"].includes(item.genre) ? 91 : 74, controversy: ["situationship", "jealousy"].includes(item.genre) ? 88 : 58, commentability: ["comment_bait", "green_or_red_flag", "romance_aruaru"].includes(item.genre) ? 94 : 80, total }, totalScore: total, internal: { domain: scene.domain, source_topic: scene.topic, writer: "female-romance-scene-engine" } };
-  const draft = { id: crypto.randomUUID(), persona, domain: scene.domain, genre: item.genre, angle_type: item.label, angleType: item.label, buzz_elements: buzzElements, buzzElements, scene_strength: sceneScore, sceneStrength: sceneScore, scene, why_it_may_spread: why, whyItMaySpread: why, post_text: postText, postText, text: postText, hook: detail.hook, body: detail.body, closing_line: scene.comment_question, closingLine: scene.comment_question, comment_bait: scene.comment_question, commentBait: scene.comment_question, cta: scene.comment_question, emotional_trigger: item.trigger, emotionalTrigger: item.trigger, viral_score: total, viralScore: detail.viralScore, source_ids: [], sourceIds: [], category: scene.domain, hookType: item.genre, score: total, scoreTotal: total, totalScore: total, scoreDetail: detail, sourceTrace: [] };
+  const buzzElements = [...new Set([scene.domain, item.label, "female_voice", "male_attention", "romance_tension", "romance_scene", ...item.buzz_elements])];
+  const why = spreadReason(item, scene, sceneScore, options, maleScores);
+  const detail = { post_text: postText, hook: scene.scene_lines[0], body: scene.observation, closing_line: scene.comment_question, comment_bait: scene.comment_question, emotional_trigger: item.trigger, emotionalTrigger: item.trigger, persona, target_audience: "adult_men", targetAudience: "adult_men", domain: scene.domain, genre: item.genre, angle_type: item.label, angleType: item.label, buzz_elements: buzzElements, buzzElements, scene_strength: sceneScore, sceneStrength: sceneScore, ...maleScores, maleAttentionScore: maleScores.male_attention_score, dmTriggerScore: maleScores.dm_trigger_score, commentTriggerScore: maleScores.comment_trigger_score, scene, why_it_may_spread: why, whyItMaySpread: why, viral_score: total, viralScore: { curiosity: ["subtle_hint", "green_or_red_flag", "沼"].includes(item.genre) ? 90 : 72, nostalgia: item.genre === "ex_memory" ? 88 : 64, surprise: ["sns_love", "comment_bait"].includes(item.genre) ? 84 : 70, empathy: ["female_truth", "romance_aruaru", "strong_girl"].includes(item.genre) ? 91 : 74, controversy: ["situationship", "jealousy"].includes(item.genre) ? 88 : 58, commentability: ["comment_bait", "green_or_red_flag", "romance_aruaru"].includes(item.genre) ? 94 : 80, male_attention: maleScores.male_attention_score, dm_trigger: maleScores.dm_trigger_score, comment_trigger: maleScores.comment_trigger_score, total }, totalScore: total, internal: { domain: scene.domain, source_topic: scene.topic, writer: "female-romance-scene-engine", target_audience: "adult_men" } };
+  const draft = { id: crypto.randomUUID(), persona, target_audience: "adult_men", targetAudience: "adult_men", domain: scene.domain, genre: item.genre, angle_type: item.label, angleType: item.label, buzz_elements: buzzElements, buzzElements, scene_strength: sceneScore, sceneStrength: sceneScore, ...maleScores, maleAttentionScore: maleScores.male_attention_score, dmTriggerScore: maleScores.dm_trigger_score, commentTriggerScore: maleScores.comment_trigger_score, scene, why_it_may_spread: why, whyItMaySpread: why, post_text: postText, postText, text: postText, hook: detail.hook, body: detail.body, closing_line: scene.comment_question, closingLine: scene.comment_question, comment_bait: scene.comment_question, commentBait: scene.comment_question, cta: scene.comment_question, emotional_trigger: item.trigger, emotionalTrigger: item.trigger, viral_score: total, viralScore: detail.viralScore, source_ids: [], sourceIds: [], category: scene.domain, hookType: item.genre, score: total, scoreTotal: total, totalScore: total, scoreDetail: detail, sourceTrace: [] };
   const reason = rejectReason(draft);
   if (reason) draft.rejectedBySceneEngine = reason;
   return draft;
@@ -216,7 +243,7 @@ function isUsablePost(draft) {
   BAD_PUBLIC_PHRASES.lastIndex = 0;
   const hasBadPhrase = BAD_PUBLIC_PHRASES.test(text);
   BAD_PUBLIC_PHRASES.lastIndex = 0;
-  return !hasBadPhrase && !UNSAFE_ROMANCE.test(text);
+  return !hasBadPhrase && !UNSAFE_ROMANCE.test(text) && (draft.male_attention_score ?? draft.scoreDetail?.male_attention_score ?? 0) >= 58;
 }
 
 function diversify(posts) {
@@ -235,7 +262,7 @@ function diversify(posts) {
     rememberDomain(post);
     if (selected.length >= 10) break;
   }
-  for (const post of posts.sort((a, b) => ((b.totalScore || 0) + sceneScoreFromDraft(b) * 0.2) - ((a.totalScore || 0) + sceneScoreFromDraft(a) * 0.2))) {
+  for (const post of posts.sort((a, b) => ((b.totalScore || 0) + sceneScoreFromDraft(b) * 0.18 + (b.male_attention_score || b.scoreDetail?.male_attention_score || 0) * 0.2 + (b.dm_trigger_score || b.scoreDetail?.dm_trigger_score || 0) * 0.12 + (b.comment_trigger_score || b.scoreDetail?.comment_trigger_score || 0) * 0.14) - ((a.totalScore || 0) + sceneScoreFromDraft(a) * 0.18 + (a.male_attention_score || a.scoreDetail?.male_attention_score || 0) * 0.2 + (a.dm_trigger_score || a.scoreDetail?.dm_trigger_score || 0) * 0.12 + (a.comment_trigger_score || a.scoreDetail?.comment_trigger_score || 0) * 0.14))) {
     if (selected.includes(post) || !isUsablePost(post) || !canUseDomain(post)) continue;
     selected.push(post);
     rememberDomain(post);
