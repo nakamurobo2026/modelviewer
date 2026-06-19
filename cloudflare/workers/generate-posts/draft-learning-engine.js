@@ -514,22 +514,37 @@ function draftOptionsFromBody(body) {
   };
 }
 
-function draftDiagnostics(researchId, originalDrafts, publicDrafts, draftOptions, fallbackUsed = false) {
-  const rejected = Array.isArray(publicDrafts) ? publicDrafts.filter((draft) => draft.rejectedBySceneEngine) : [];
-  const reasonCounts = rejected.reduce((acc, draft) => {
-    const reason = draft.rejectedBySceneEngine || "unknown";
+function draftDiagnostics(researchId, originalDrafts, publicDrafts, draftOptions, fallbackUsed = false, savedCount = 0) {
+  const writerDiagnostics = Array.isArray(publicDrafts?.diagnostics) ? publicDrafts.diagnostics : [];
+  const rejected = writerDiagnostics.filter((item) => item.status === "rejected" || item.reject_reason);
+  const reasonCounts = rejected.reduce((acc, item) => {
+    const reason = item.reject_reason || "unknown";
     acc[reason] = (acc[reason] || 0) + 1;
     return acc;
   }, {});
+  const generatedCount = Number(publicDrafts?.generated_count || (Array.isArray(originalDrafts) ? originalDrafts.length : 0));
+  const returnedCount = Array.isArray(publicDrafts) ? publicDrafts.length : 0;
+  const rejectedCount = Number(publicDrafts?.rejected_count ?? rejected.length);
   return {
     researchId,
-    generatedCount: Array.isArray(originalDrafts) ? originalDrafts.length : 0,
-    returnedCount: Array.isArray(publicDrafts) ? publicDrafts.length : 0,
-    rejectedCount: rejected.length,
+    research_id: researchId,
+    generated_count: generatedCount,
+    generatedCount,
+    saved_count: savedCount,
+    savedCount,
+    returned_count: returnedCount,
+    returnedCount,
+    rejected_count: rejectedCount,
+    rejectedCount,
     rejectionReasons: reasonCounts,
+    rejection_reasons: reasonCounts,
+    diagnostics: writerDiagnostics,
     activePersona: draftOptions.persona,
+    active_persona: draftOptions.persona,
     activeBuzzCategory: draftOptions.buzzCategory,
+    active_buzz_category: draftOptions.buzzCategory,
     fallbackUsed,
+    fallback_used: fallbackUsed,
     note: fallbackUsed ? "Scene/safety validator returned zero usable drafts, so safe romance fallback drafts were generated." : "Draft generation completed."
   };
 }
@@ -569,6 +584,8 @@ export async function handleDraftGenerateWithLearning(request, env) {
       scoreDetail: { ...(draft.scoreDetail || {}), generationDiagnostics: diagnostics }
     }));
     const persisted = await persistGeneratedDrafts(env, request, researchId, rankedDrafts);
+    const savedCount = Number(persisted.persistence?.inserted ?? (Array.isArray(persisted.drafts) ? persisted.drafts.length : 0));
+    diagnostics = { ...diagnostics, saved_count: savedCount, savedCount };
     const finalDrafts = applyLearningRanking(persisted.drafts, learning).map((draft) => ({
       ...draft,
       generationDiagnostics: diagnostics,
@@ -586,6 +603,10 @@ export async function handleDraftGenerateWithLearning(request, env) {
       draftOptions,
       draftDiagnostics: diagnostics,
       generationDiagnostics: diagnostics,
+      generated_count: diagnostics.generated_count,
+      saved_count: diagnostics.saved_count,
+      rejected_count: diagnostics.rejected_count,
+      diagnostics: diagnostics.diagnostics,
       persistence: {
         ok: !partialSuccess,
         partial_success: partialSuccess,
