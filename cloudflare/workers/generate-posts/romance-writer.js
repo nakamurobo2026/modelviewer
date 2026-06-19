@@ -20,6 +20,27 @@ const FORBIDDEN_TERMS = [
   "考察",
   "観察"
 ];
+const POETIC_ONLY_TERMS = ["余韻", "静寂", "夜空", "月", "星", "涙", "記憶だけ", "匂いだけ", "光だけ", "夢みたい"];
+const HUMAN_WEAKNESS_TERMS = [
+  "さみしい",
+  "寂しい",
+  "不安",
+  "恥ずかしい",
+  "嫉妬",
+  "未練",
+  "伸びない",
+  "見てほしい",
+  "気になる",
+  "めんどくさい",
+  "分かってる",
+  "強がった",
+  "勘違い",
+  "嘘",
+  "普通に",
+  "ごめん",
+  "怖い",
+  "待ってる"
+];
 
 export function romanceCorsHeaders(env, origin) {
   const configured = [env.ALLOWED_ORIGIN, env.ALLOWED_ORIGINS]
@@ -120,16 +141,31 @@ function formatPost(text) {
 
 function validatePost(text) {
   const reasons = [];
+  const humanityScore = scoreHumanity(text);
+  const poeticOnlyCount = POETIC_ONLY_TERMS.filter((term) => text.includes(term)).length;
   for (const term of FORBIDDEN_TERMS) {
     if (text.includes(term)) reasons.push(`forbidden_term:${term}`);
   }
-  if (!/(私|正直|なんか|たぶん|まだ|きっと|会いたい|返事|通知|既読|未読|嘘|もういい|知らない名前|消せない|優しく|勘違い)/.test(text)) {
+  if (!/(私|正直|なんか|たぶん|まだ|きっと|会いたい|返事|通知|既読|未読|嘘|もういい|知らない名前|消せない|優しく|勘違い|さみしい|寂しい|不安|嫉妬|伸びない|見てほしい|めんどくさい)/.test(text)) {
     reasons.push("missing_first_person_or_implied_female_voice");
   }
   if (/(です|ます|について|重要|理由|方法|すべき|しましょう|アドバイス|分析|調査|説明)/.test(text)) reasons.push("explanatory_or_advice_tone");
   if (text.split("\n").some((line) => line.length > 14)) reasons.push("line_too_long");
   if (!/(\.\.\.|かも|だけ|まだ|なのに|きっと|はずなのに)$/.test(text.trim())) reasons.push("resolved_ending");
+  if (humanityScore < 72) reasons.push("low_humanity_score");
+  if (poeticOnlyCount >= 2 && humanityScore < 86) reasons.push("poem_only");
   return { ok: reasons.length === 0, reasons };
+}
+
+function scoreHumanity(text) {
+  let score = 48;
+  const weaknessHits = HUMAN_WEAKNESS_TERMS.filter((term) => text.includes(term)).length;
+  score += weaknessHits * 8;
+  if (/(正直|なんか|たぶん|私|普通に|ごめん|ほんとは)/.test(text)) score += 12;
+  if (/(伸びない|見てほしい|待ってる|気になる|勘違い|めんどくさい|嫉妬|不安|さみしい|寂しい)/.test(text)) score += 16;
+  if (/(余韻|静寂|夜空|月|星|夢みたい|透明|美しい)/.test(text)) score -= 18;
+  if (/(だけ|かも|まだ|なのに|はずなのに)$/.test(text.trim())) score += 6;
+  return Math.max(0, Math.min(100, score));
 }
 
 function scorePost(text) {
@@ -140,13 +176,15 @@ function scorePost(text) {
   const dmTrigger = /(嘘かも|ほんとは|聞けない|しないで|まだ|なのに|かも)/.test(text) ? 94 : 78;
   const attentionSeeking = /(通知|言われたい|見てる|気づいて|もういい|返事いらない)/.test(text) ? 94 : 78;
   const tease = /(だけ|かも|なのに|しないで|嘘かも|きっと)/.test(text) ? 92 : 76;
+  const humanity = scoreHumanity(text);
   const save = Math.round((femaleVoice + romanceTension + unresolved) / 3);
-  const comment = Math.round((maleAttention + dmTrigger + unresolved) / 3);
-  const quote = Math.round((femaleVoice + romanceTension + tease) / 3);
-  const total = Math.round((femaleVoice + romanceTension + save + comment + quote + maleAttention + dmTrigger + attentionSeeking + tease) / 9);
+  const comment = Math.round((maleAttention + dmTrigger + unresolved + humanity) / 4);
+  const quote = Math.round((femaleVoice + romanceTension + tease + humanity) / 4);
+  const total = Math.round((femaleVoice + romanceTension + save + comment + quote + maleAttention + dmTrigger + attentionSeeking + tease + humanity * 2) / 11);
   return {
     female_voice_score: femaleVoice,
     romance_tension_score: romanceTension,
+    humanity_score: humanity,
     save_score: save,
     comment_score: comment,
     quote_score: quote,
@@ -161,20 +199,20 @@ function scorePost(text) {
 function seedsFor(brief) {
   const material = `${brief?.topic || ""} ${brief?.summary || ""}`;
   const seeds = [
-    "正直\n\n会いたいより\n\n会いたいって\n言われたい\n\nだけ",
-    "寝たって\n言ったあとも\n\n通知だけ\n見てる\n\nまだ",
+    "threads全然\n伸びなくて\n\n普通に\nさみしい\n\nだけ",
+    "正直\n\nかわいく\n見られたい\n\nだけ",
+    "私\nめんどくさいって\n\n自分で\n分かってる\n\nなのに",
+    "嫉妬してない\nふりしたけど\n\n普通に\nしてた\n\nかも",
     "返事いらない\nって言ったの\n\n嘘かも",
     "もういい\nって言った時ほど\n\nほんとは\nよくない\n\nなのに",
     "優しくされたら\nすぐ勘違いする\n\nだから\nしないで\n\nかも",
-    "私だけ\n終わった恋を\n\n美化してる\nわけじゃない\n\nはずなのに",
     "なんでもない\nふりだけ\n\n上手くなる\n\nまだ",
-    "知らない名前に\n反応した\n\n聞けないのに",
-    "既読より\n\n未読の方が\n期待できる日がある\n\nかも",
-    "好きじゃないなら\n\nそんな言い方\nしないで\n\nきっと"
+    "好きじゃないなら\n\nそんな言い方\nしないで\n\nきっと",
+    "待ってない\nふりして\n\n普通に\n待ってる\n\nまだ"
   ];
-  if (/返信|既読|未読|LINE|連絡/.test(material)) seeds.unshift("返信遅いの\n苦手なのに\n\n好きになるのは\nだいたい\n返信遅い\n\nまだ");
-  if (/元カレ|元彼|元カノ|昔の恋|未練/.test(material)) seeds.unshift("消したはずの名前\n\nまだ\n予測に出てくる\n\nだけ");
-  if (/嫉妬|匂わせ|名前|他の子|浮気/.test(material)) seeds.unshift("知らない名前に\n\n反応した私が\nいちばん嫌\n\nなのに");
+  if (/返信|既読|未読|LINE|連絡/.test(material)) seeds.unshift("返信遅いの\n苦手なのに\n\n普通に\n待ってる\n\nまだ");
+  if (/元カレ|元彼|元カノ|昔の恋|未練/.test(material)) seeds.unshift("未練って\n言われたら\n\nたぶん\n否定できない\n\nまだ");
+  if (/嫉妬|匂わせ|名前|他の子|浮気/.test(material)) seeds.unshift("嫉妬してない\nふりしたの\n\n普通に\n嘘かも");
   return seeds.slice(0, 10);
 }
 
