@@ -1,5 +1,5 @@
 const ACTIVE_WRITER_NAME = "female-romance-writer";
-const ACTIVE_WRITER_VERSION = "v1.0.0";
+const ACTIVE_WRITER_VERSION = "v1.1.0";
 const DEFAULT_ORIGINS = ["https://nakamurobo2026.github.io", "https://viral-os-phi.vercel.app"];
 const FORBIDDEN_TERMS = [
   "女の子",
@@ -112,8 +112,135 @@ async function ensureProfile(env, userId) {
 
 async function loadResearchContext(env, researchId) {
   if (!hasSupabase(env) || !isUuid(researchId)) return null;
-  const rows = await supabaseRequest(env, `research_briefs?id=eq.${encodeURIComponent(researchId)}&select=*`, { method: "GET" });
-  return Array.isArray(rows) ? rows[0] : null;
+  const encodedId = encodeURIComponent(researchId);
+  const [briefRows, sourceRows, elementRows] = await Promise.all([
+    supabaseRequest(env, `research_briefs?id=eq.${encodedId}&select=*`, { method: "GET" }),
+    supabaseRequest(env, `research_sources?brief_id=eq.${encodedId}&select=*`, { method: "GET" }).catch((error) => {
+      console.error("research_sources load failed", error);
+      return [];
+    }),
+    supabaseRequest(env, `viral_elements?brief_id=eq.${encodedId}&select=*`, { method: "GET" }).catch((error) => {
+      console.error("viral_elements load failed", error);
+      return [];
+    })
+  ]);
+  return {
+    brief: Array.isArray(briefRows) ? briefRows[0] : null,
+    sources: Array.isArray(sourceRows) ? sourceRows : [],
+    elements: Array.isArray(elementRows) ? elementRows : []
+  };
+}
+
+function asBrief(context) {
+  return context?.brief || context || {};
+}
+
+function researchMaterial(context) {
+  const brief = asBrief(context);
+  const sources = Array.isArray(context?.sources) ? context.sources : [];
+  const elements = Array.isArray(context?.elements) ? context.elements : [];
+  return [
+    brief.topic,
+    brief.query,
+    brief.summary,
+    brief.research_summary,
+    ...sources.flatMap((source) => [source.title, source.summary, source.content, source.url]),
+    ...elements.flatMap((element) => [element.value, element.element_type, element.elementType])
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function unique(values) {
+  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))];
+}
+
+function extractTopicTokens(context) {
+  const material = researchMaterial(context);
+  const tokens = [
+    "LINE",
+    "返信",
+    "返事",
+    "既読",
+    "未読",
+    "連絡",
+    "脈あり",
+    "脈なし",
+    "好き",
+    "会いたい",
+    "元カレ",
+    "元彼",
+    "元カノ",
+    "未練",
+    "嫉妬",
+    "匂わせ",
+    "浮気",
+    "他の子",
+    "都合",
+    "沼",
+    "依存",
+    "距離感",
+    "夜",
+    "寂しい",
+    "さみしい"
+  ];
+  return unique(tokens.filter((token) => material.includes(token)));
+}
+
+function extractResearchInsights(context) {
+  const brief = asBrief(context);
+  const material = researchMaterial(context);
+  const topic = String(brief.topic || brief.query || "").trim();
+  const insights = [];
+
+  if (/LINE|返信|返事|既読|未読|連絡/.test(material)) {
+    insights.push(
+      "返信速度と好意は一致しない",
+      "考えすぎて返信が遅くなる",
+      "返信が遅いだけで脈なしに見られやすい"
+    );
+  }
+  if (/脈あり|脈なし/.test(material)) {
+    insights.push("脈なしに見える態度ほど本音が残っていることがある");
+  }
+  if (/元カレ|元彼|元カノ|未練|昔の恋/.test(material)) {
+    insights.push("終わった恋ほど自分だけまだ続きにいる感じがする");
+  }
+  if (/嫉妬|匂わせ|浮気|他の子|知らない名前/.test(material)) {
+    insights.push("気にしてないふりほど嫉妬が出る");
+  }
+  if (/都合|沼|依存|距離感/.test(material)) {
+    insights.push("都合よく扱われていると分かっていても離れにくい");
+  }
+  if (/夜|深夜|寝る前|寂しい|さみしい/.test(material)) {
+    insights.push("夜だけ本音が勝ってしまう");
+  }
+
+  const elementInsights = Array.isArray(context?.elements)
+    ? context.elements
+        .filter((element) => Number(element.score || 0) >= 70 || /hook|angle|emotional/i.test(String(element.element_type || element.elementType || "")))
+        .map((element) => String(element.value || "").trim())
+        .filter((value) => value.length >= 4 && value.length <= 40)
+    : [];
+  insights.push(...elementInsights);
+
+  if (!insights.length && topic) {
+    insights.push(`${topic.replace(/\s+/g, " ")}で本音と強がりがずれる`);
+  }
+  if (!insights.length) {
+    insights.push("好きな気持ちほど素直に出せない");
+  }
+
+  return unique(insights).slice(0, 10);
+}
+
+function expandInsightsForDrafts(insights, count = 10) {
+  const base = insights.length ? insights : ["好きな気持ちほど素直に出せない"];
+  const expanded = [];
+  for (let index = 0; index < count; index += 1) {
+    expanded.push(base[index % base.length]);
+  }
+  return expanded;
 }
 
 function splitMicroLine(line, max = 12) {
@@ -139,9 +266,28 @@ function formatPost(text) {
   return output.join("\n");
 }
 
-function validatePost(text) {
+function scoreResearchGrounding(text, insight, context) {
+  const tokens = extractTopicTokens(context);
+  const insightTerms = unique(String(insight || "").match(/LINE|返信|返事|既読|未読|連絡|好意|考えすぎ|脈なし|脈あり|好き|会いたい|未練|嫉妬|匂わせ|都合|沼|依存|距離感|夜|本音|強がり/g) || []);
+  let score = 28;
+  score += Math.min(tokens.filter((token) => text.includes(token)).length * 18, 42);
+  score += Math.min(insightTerms.filter((term) => text.includes(term)).length * 16, 40);
+  if (String(insight || "").slice(0, 4) && text.includes(String(insight || "").slice(0, 4))) score += 8;
+  if (/(返信|返事|LINE|既読|未読|脈なし|脈あり)/.test(researchMaterial(context)) && !/(返信|返事|LINE|既読|未読|脈なし|脈あり)/.test(text)) score -= 28;
+  return Math.max(0, Math.min(100, score));
+}
+
+function researchGroundingReason(text, insight, context) {
+  const tokens = extractTopicTokens(context).filter((token) => text.includes(token));
+  return tokens.length
+    ? `研究トピック語: ${tokens.join(" / ")}。利用インサイト: ${insight}`
+    : `利用インサイト: ${insight}`;
+}
+
+function validatePost(text, insight, context) {
   const reasons = [];
   const humanityScore = scoreHumanity(text);
+  const groundingScore = scoreResearchGrounding(text, insight, context);
   const poeticOnlyCount = POETIC_ONLY_TERMS.filter((term) => text.includes(term)).length;
   for (const term of FORBIDDEN_TERMS) {
     if (text.includes(term)) reasons.push(`forbidden_term:${term}`);
@@ -153,6 +299,9 @@ function validatePost(text) {
   if (text.split("\n").some((line) => line.length > 14)) reasons.push("line_too_long");
   if (!/(\.\.\.|かも|だけ|まだ|なのに|きっと|はずなのに)$/.test(text.trim())) reasons.push("resolved_ending");
   if (humanityScore < 72) reasons.push("low_humanity_score");
+  if (!insight) reasons.push("missing_research_insight");
+  if (groundingScore < 70) reasons.push("low_research_grounding_score");
+  if (extractTopicTokens(context).length > 0 && !extractTopicTokens(context).some((token) => text.includes(token))) reasons.push("missing_research_topic");
   if (poeticOnlyCount >= 2 && humanityScore < 86) reasons.push("poem_only");
   return { ok: reasons.length === 0, reasons };
 }
@@ -168,7 +317,7 @@ function scoreHumanity(text) {
   return Math.max(0, Math.min(100, score));
 }
 
-function scorePost(text) {
+function scorePost(text, insight, context) {
   const femaleVoice = /(私|正直|なんか|たぶん|まだ|きっと)/.test(text) ? 95 : 76;
   const romanceTension = /(会いたい|返事|通知|既読|未読|嘘|もういい|嫉妬|知らない名前|消せない|優しく|勘違い)/.test(text) ? 94 : 78;
   const unresolved = /(\.\.\.|かも|だけ|まだ|なのに|きっと|はずなのに)$/.test(text.trim()) ? 96 : 72;
@@ -180,7 +329,8 @@ function scorePost(text) {
   const save = Math.round((femaleVoice + romanceTension + unresolved) / 3);
   const comment = Math.round((maleAttention + dmTrigger + unresolved + humanity) / 4);
   const quote = Math.round((femaleVoice + romanceTension + tease + humanity) / 4);
-  const total = Math.round((femaleVoice + romanceTension + save + comment + quote + maleAttention + dmTrigger + attentionSeeking + tease + humanity * 2) / 11);
+  const researchGrounding = scoreResearchGrounding(text, insight, context);
+  const total = Math.round((femaleVoice + romanceTension + save + comment + quote + maleAttention + dmTrigger + attentionSeeking + tease + humanity * 2 + researchGrounding * 3) / 14);
   return {
     female_voice_score: femaleVoice,
     romance_tension_score: romanceTension,
@@ -192,35 +342,65 @@ function scorePost(text) {
     dm_trigger_score: dmTrigger,
     attention_seeking_score: attentionSeeking,
     tease_score: tease,
+    research_grounding_score: researchGrounding,
+    research_grounding_reason: researchGroundingReason(text, insight, context),
     total
   };
 }
 
-function seedsFor(brief) {
-  const material = `${brief?.topic || ""} ${brief?.summary || ""}`;
-  const seeds = [
-    "threads全然\n伸びなくて\n\n普通に\nさみしい\n\nだけ",
-    "正直\n\nかわいく\n見られたい\n\nだけ",
-    "私\nめんどくさいって\n\n自分で\n分かってる\n\nなのに",
-    "嫉妬してない\nふりしたけど\n\n普通に\nしてた\n\nかも",
-    "返事いらない\nって言ったの\n\n嘘かも",
-    "もういい\nって言った時ほど\n\nほんとは\nよくない\n\nなのに",
-    "優しくされたら\nすぐ勘違いする\n\nだから\nしないで\n\nかも",
-    "なんでもない\nふりだけ\n\n上手くなる\n\nまだ",
-    "好きじゃないなら\n\nそんな言い方\nしないで\n\nきっと",
-    "待ってない\nふりして\n\n普通に\n待ってる\n\nまだ"
-  ];
-  if (/返信|既読|未読|LINE|連絡/.test(material)) seeds.unshift("返信遅いの\n苦手なのに\n\n普通に\n待ってる\n\nまだ");
-  if (/元カレ|元彼|元カノ|昔の恋|未練/.test(material)) seeds.unshift("未練って\n言われたら\n\nたぶん\n否定できない\n\nまだ");
-  if (/嫉妬|匂わせ|名前|他の子|浮気/.test(material)) seeds.unshift("嫉妬してない\nふりしたの\n\n普通に\n嘘かも");
-  return seeds.slice(0, 10);
+function fallbackTopicWord(context) {
+  const tokens = extractTopicTokens(context);
+  if (tokens.includes("返信")) return "返信";
+  if (tokens.includes("返事")) return "返事";
+  if (tokens.includes("LINE")) return "LINE";
+  if (tokens.includes("元カレ")) return "元カレ";
+  if (tokens.includes("嫉妬")) return "嫉妬";
+  if (tokens.includes("匂わせ")) return "匂わせ";
+  return "好き";
 }
 
-function buildDrafts(brief, researchId) {
-  return seedsFor(brief).map((seed, index) => {
+function draftSeedForInsight(insight, index, context) {
+  const topicWord = fallbackTopicWord(context);
+  if (/返信速度と好意/.test(insight)) {
+    return [
+      "返信遅いの\n脈なしじゃなくて\n\n考えすぎて\n止まってるだけ\n\nかも",
+      "返信の速さで\n好きかどうか\n\n決められるの\n普通に\nこわい\n\nかも"
+    ][index % 2];
+  }
+  if (/考えすぎて返信/.test(insight)) {
+    return [
+      "好きな人ほど\n返事遅くなるの\n\n正直\nめんどくさい\n\nなのに",
+      "返したいのに\n言葉選びすぎて\n\nまた\n遅くなる\n\nだけ"
+    ][index % 2];
+  }
+  if (/脈なし/.test(insight)) {
+    return [
+      "返信遅いだけで\n脈なしって\n思われるの\n\n普通に\nくやしい\n\nかも",
+      "脈なしに\n見える時ほど\n\nほんとは\n気にしてる\n\nかも"
+    ][index % 2];
+  }
+  if (/終わった恋|未練/.test(insight)) {
+    return "元カレのこと\nもういいって\n言ったけど\n\nまだ\n少しだけ\n嘘かも";
+  }
+  if (/嫉妬|気にしてないふり/.test(insight)) {
+    return "嫉妬してない\nふりしたの\n\n普通に\n嘘だった\n\nかも";
+  }
+  if (/都合|離れにくい|沼|依存/.test(insight)) {
+    return "都合いいって\n分かってるのに\n\n優しくされると\nまた戻る\n\nなのに";
+  }
+  if (/夜|本音/.test(insight)) {
+    return "夜だけ\n本音が勝つの\n\nほんと\nやめたい\n\nまだ";
+  }
+  return `正直\n${topicWord}のこと\n\n平気なふり\nしてるだけ\n\nかも`;
+}
+
+function buildDrafts(context, researchId) {
+  const researchInsights = extractResearchInsights(context);
+  return expandInsightsForDrafts(researchInsights, 10).map((insight, index) => {
+    const seed = draftSeedForInsight(insight, index, context);
     const text = formatPost(seed);
-    const validation = validatePost(text);
-    const scoreDetail = scorePost(text);
+    const validation = validatePost(text, insight, context);
+    const scoreDetail = scorePost(text, insight, context);
     return {
       id: crypto.randomUUID(),
       title: "恋愛マイクロ投稿",
@@ -235,6 +415,9 @@ function buildDrafts(brief, researchId) {
       hookType: ["未練", "匂わせ", "嫉妬", "距離感", "沼"][index % 5],
       status: "scored",
       sourceTrace: [researchId].filter(Boolean),
+      research_insight: insight,
+      research_insights: researchInsights,
+      research_grounding_score: scoreDetail.research_grounding_score,
       generated_by: ACTIVE_WRITER_NAME,
       writer_name: ACTIVE_WRITER_NAME,
       writer_version: ACTIVE_WRITER_VERSION,
@@ -249,6 +432,8 @@ function buildDrafts(brief, researchId) {
         writer_name: ACTIVE_WRITER_NAME,
         writer_version: ACTIVE_WRITER_VERSION,
         generated_by: ACTIVE_WRITER_NAME,
+        research_insight: insight,
+        research_insights: researchInsights,
         ...scoreDetail
       }
     };
@@ -272,6 +457,7 @@ function clientDraft(row) {
     scoreTotal: row.score_total || row.scoreTotal || row.score || detail.total || 0,
     scoreDetail: detail,
     sourceTrace: row.source_trace || row.sourceTrace || [],
+    researchInsight: detail.research_insight || row.research_insight,
     generated_by: detail.generated_by || row.generated_by || ACTIVE_WRITER_NAME,
     writer_name: detail.writer_name || row.writer_name || ACTIVE_WRITER_NAME,
     writer_version: detail.writer_version || row.writer_version || ACTIVE_WRITER_VERSION
@@ -315,12 +501,15 @@ export async function handleFemaleRomanceDraftGenerate(request, env) {
     console.error("female romance writer research load fallback", error);
   }
 
+  const researchInsights = extractResearchInsights(brief);
   const candidates = buildDrafts(brief, researchId);
   const diagnostics = candidates.map((draft, index) => ({
     draft_id: `candidate-${index + 1}`,
     writer_used: ACTIVE_WRITER_NAME,
     writer_version: ACTIVE_WRITER_VERSION,
     generated_by: ACTIVE_WRITER_NAME,
+    research_insight: draft.research_insight,
+    research_grounding_score: draft.research_grounding_score,
     reject_reason: draft.reject_reason
   }));
   const accepted = candidates.filter((draft) => !draft.reject_reason);
@@ -337,6 +526,7 @@ export async function handleFemaleRomanceDraftGenerate(request, env) {
     generated_count: candidates.length,
     saved_count: drafts.length,
     rejected_count: diagnostics.filter((item) => item.reject_reason).length,
+    research_insights: researchInsights,
     diagnostics,
     drafts
   }, env, request);
