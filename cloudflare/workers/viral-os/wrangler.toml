@@ -1,0 +1,9 @@
+name = "viral-os-api"
+main = "src/index.ts"
+compatibility_date = "2026-06-13"
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[vars]
+OPENAI_MODEL = "gpt-5-mini"
